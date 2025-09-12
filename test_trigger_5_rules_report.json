@@ -1,0 +1,24 @@
+{
+  "file_scanned": "d:\\task7\\terraform_new\\test_trigger_5_rules.tf",
+  "vulnerabilities_found": 3,
+  "findings": [
+    {
+      "ruleId": "disabling_logging_is_security_sensitive",
+      "message": "Disabling logging is security-sensitive: bad_bucket has logging disabled or not configured.",
+      "severity": "Major",
+      "file": "d:\\task7\\terraform_new\\test_trigger_5_rules.tf"
+    },
+    {
+      "ruleId": "disabling_logging_is_security_sensitive",
+      "message": "Disabling logging is security-sensitive: public_bucket has logging disabled or not configured.",
+      "severity": "Major",
+      "file": "d:\\task7\\terraform_new\\test_trigger_5_rules.tf"
+    },
+    {
+      "ruleId": "disabling_s3_bucket_mfa_delete_is_security_sensitive",
+      "message": "Disabling S3 bucket MFA delete is security-sensitive",
+      "severity": "Minor",
+      "file": "d:\\task7\\terraform_new\\test_trigger_5_rules.tf"
+    }
+  ]
+}
