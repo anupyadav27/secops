@@ -1,0 +1,133 @@
+{
+  "rule_id": "break_and_continue_should_not_be_used_outside_a_loop",
+  "title": "Break and continue statements should not be used outside loops",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when `break` or `continue` statements are used outside of loop constructs (for/while loops). These statements are only meaningful within loops and their use elsewhere indicates a logical error that will raise a `SyntaxError` at runtime. Such issues often occur due to incorrect code refactoring or misunderstanding of control flow statements.",
+  "message": "Remove this '{{statement_type}}' statement or place it inside a loop; it has no effect outside a loop and will cause a syntax error.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "bug",
+    "error-prone",
+    "python",
+    "control-flow",
+    "logical-error"
+  ],
+  "impact": {
+    "short_term": "The code will fail to compile/run, causing immediate runtime errors (SyntaxError).",
+    "long_term": "May lead to debugging difficulties if the error isn't caught early, and could mask other logical issues in the codebase."
+  },
+  "recommendation": "Either remove the `break`/`continue` statement entirely if it's not needed, or restructure your code to place it within an appropriate loop construct. If you intended to exit a function early, use `return` instead of `break`.",
+  "references": [
+    {
+      "title": "Python Documentation: break and continue Statements",
+      "url": "https://docs.python.org/3/tutorial/controlflow.html#break-and-continue-statements-and-else-clauses-on-loops"
+    },
+    {
+      "title": "Python SyntaxError for break/continue outside loop",
+      "url": "https://stackoverflow.com/questions/14261569/syntaxerror-break-outside-loop"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "for item in collection:\n    if item == 'stop':\n        break  # Correct usage inside a loop\n    print(item)",
+        "description": "The `break` statement is properly used within a `for` loop to exit early when a condition is met."
+      },
+      {
+        "code": "while condition:\n    if some_check:\n        continue  # Correct usage inside a while loop\n    do_something()",
+        "description": "The `continue` statement is correctly placed within a `while` loop to skip the current iteration."
+      },
+      {
+        "code": "def process_data(data):\n    if not data:\n        return  # Using return instead of break for early exit\n    # process data here",
+        "description": "Using `return` instead of `break` when exiting a function early (correct approach)."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def check_value(value):\n    if value > 100:\n        break  # Error: break outside loop\n    return value * 2",
+        "description": "The `break` statement is incorrectly used outside any loop context, which will cause a SyntaxError."
+      },
+      {
+        "code": "if user_input == 'quit':\n    continue  # Error: continue outside loop\nprint('Processing...')",
+        "description": "The `continue` statement is misplaced in an `if` block with no surrounding loop."
+      },
+      {
+        "code": "class MyClass:\n    def method(self):\n        break  # Error: break in class method without loop",
+        "description": "A `break` statement appears in a method definition without any enclosing loop structure."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-correctness",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": {
+    "technical": "Python's `break` and `continue` statements are designed to alter the flow of loop execution. When used outside a loop context, they serve no purpose and violate Python's syntax rules, resulting in a `SyntaxError` that prevents the program from running. This is always a bug, not a stylistic issue.",
+    "maintenance": "Such errors can be particularly problematic during refactoring, where loop structures might be removed or modified without updating the control flow statements within them. This creates hidden bugs that only manifest at runtime.",
+    "readability": "Even if the code somehow runs (which it won't), the presence of these statements outside loops creates confusion for other developers who might assume they serve some purpose."
+  },
+  "how_to_fix": {
+    "description": "Fixing this issue involves either removing the misplaced statement or restructuring the code to properly contain it within a loop.",
+    "steps": [
+      "1. **Identify the misplaced statement**: Locate the `break` or `continue` statement that's outside a loop.",
+      "2. **Determine intent**: Decide whether the statement was meant to be in a loop or if it's no longer needed.",
+      "3. **Fix options**:",
+      "   - If the statement was accidental: Simply remove the `break` or `continue` line.",
+      "   - If you meant to exit a function: Replace `break` with `return`.",
+      "   - If you meant to skip logic: Replace with proper conditional logic using `if` statements.",
+      "   - If you actually need loop control: Wrap the code in an appropriate `for` or `while` loop.",
+      "4. **Test the changes**: Verify that the modified code behaves as intended without syntax errors."
+    ],
+    "common_pitfalls": [
+      "Assuming `break` works like `return` (it doesn't - it only exits loops).",
+      "Forgetting to update related logic when moving loop control statements.",
+      "Using `continue` in non-loop contexts where you actually want to skip to the next iteration of something that isn't a loop."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-691",
+        "name": "Insufficient Control Flow Management",
+        "description": "The product does not properly manage its control flow, such as allowing arbitrary jumps or alters to the instruction pointer."
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": [
+          "Break",
+          "Continue"
+        ]
+      },
+      {
+        "check_type": "ancestor_check",
+        "ancestor_types": [
+          "For",
+          "While"
+        ],
+        "condition": "not_has_ancestor"
+      },
+      {
+        "check_type": "context_check",
+        "context": "function_scope",
+        "condition": "exists"
+      }
+    ]
+  }
+}

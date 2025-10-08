@@ -1,0 +1,150 @@
+{
+  "rule_id": "all_code_should_be_reachable",
+  "title": "All code should be reachable",
+  "type": "BUG",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "MEDIUM"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Unreachable code is code that can never be executed. This usually happens when there is a return, break, continue, or raise statement before the code, or when a condition is always false. Unreachable code is dead code: it increases maintenance costs, can hide bugs, and makes the codebase harder to understand.",
+  "message": "Unreachable code detected. This code will never be executed.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "cwe",
+    "unused",
+    "bug-prone"
+  ],
+  "impact": {
+    "reliability": "Medium impact on code maintainability and potential for hidden bugs",
+    "maintainability": "High impact on code clarity and maintenance effort"
+  },
+  "recommendation": "Remove unreachable code or restructure the logic to make the code reachable if it serves a purpose.",
+  "references": [
+    {
+      "title": "Python PEP 8 - Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource Rules - Unreachable Code",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1763"
+    },
+    {
+      "title": "CWE-561: Dead Code",
+      "url": "https://cwe.mitre.org/data/definitions/561.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Code after return statement",
+        "code": "def process_data():\n    return \"processed\"\n    print(\"This will never execute\")  # Unreachable code"
+      },
+      {
+        "description": "Code after break statement",
+        "code": "for i in range(10):\n    if i == 5:\n        break\n        print(f\"After break: {i}\")  # Unreachable code"
+      },
+      {
+        "description": "Code after continue statement",
+        "code": "for i in range(10):\n    if i % 2 == 0:\n        continue\n        print(f\"After continue: {i}\")  # Unreachable code"
+      },
+      {
+        "description": "Code after raise statement",
+        "code": "def validate_input(value):\n    if value < 0:\n        raise ValueError(\"Negative value\")\n        print(\"This will never execute\")  # Unreachable code"
+      },
+      {
+        "description": "Code in always-false condition",
+        "code": "if False:\n    print(\"This will never execute\")  # Unreachable code"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "All code is reachable",
+        "code": "def process_data(condition):\n    if condition:\n        return \"processed\"\n    print(\"This can execute if condition is False\")\n    return \"default\""
+      },
+      {
+        "description": "Proper control flow",
+        "code": "for i in range(10):\n    if i == 5:\n        print(f\"Found 5: {i}\")\n        break\n    print(f\"Processing: {i}\")"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "priority": "Medium",
+    "effort": "Low"
+  },
+  "why_is_this_an_issue": "Unreachable code creates several problems: (1) It increases the codebase size without providing any functionality, (2) It can confuse developers who might think the code serves a purpose, (3) It can hide bugs or logic errors in the surrounding code, (4) It makes code reviews more difficult as reviewers need to identify dead code, (5) It can lead to false assumptions about code behavior during debugging.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify unreachable code blocks after return, break, continue, or raise statements"
+    },
+    {
+      "step": 2,
+      "description": "Determine if the unreachable code was intended to execute under certain conditions"
+    },
+    {
+      "step": 3,
+      "description": "If the code is truly unnecessary, remove it completely"
+    },
+    {
+      "step": 4,
+      "description": "If the code should execute, restructure the control flow (move statements before return/break/continue)"
+    },
+    {
+      "step": 5,
+      "description": "For conditional unreachable code, review the conditions to ensure they can evaluate to true when needed"
+    },
+    {
+      "step": 6,
+      "description": "Run tests to ensure removing or restructuring doesn't break functionality"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [
+      561
+    ],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-1763",
+  "scope": "Main",
+  "securityStandards": {
+    "CWE": [
+      561
+    ]
+  },
+  "quickfix": "infeasible",
+  "logic": {
+    "comment": "TODO: refine logic - Currently detects control flow statements that may cause unreachable code. Ideally should detect the unreachable statements following these, but that requires complex AST traversal and block analysis.",
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Detect return statements that may leave subsequent code unreachable",
+        "check_type": "node_type",
+        "value": "Return"
+      },
+      {
+        "comment": "Detect break statements that may leave subsequent code unreachable",
+        "check_type": "node_type", 
+        "value": "Break"
+      },
+      {
+        "comment": "Detect continue statements that may leave subsequent code unreachable",
+        "check_type": "node_type",
+        "value": "Continue"
+      },
+      {
+        "comment": "Detect raise statements that may leave subsequent code unreachable",
+        "check_type": "node_type",
+        "value": "Raise"
+      }
+    ]
+  }
+}

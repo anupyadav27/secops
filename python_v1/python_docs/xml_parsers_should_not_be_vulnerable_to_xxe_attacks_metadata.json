@@ -1,0 +1,134 @@
+{
+  "rule_id": "xml_parsers_should_not_be_vulnerable_to_xxe_attacks",
+  "title": "XML parsers should not be vulnerable to XXE attacks",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Blocker",
+  "description": "XML External Entity (XXE) attacks exploit vulnerabilities in XML parsers that process external entity references. When XML parsers are configured to resolve external entities, attackers can inject malicious XML that references external files, URLs, or system resources. This can lead to sensitive file disclosure, server-side request forgery (SSRF), denial of service attacks, and in some cases remote code execution. XML parsers should be configured securely to disable external entity processing and other dangerous features.",
+  "message": "Make sure this XML parser is not vulnerable to XXE attacks.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "security",
+    "xml",
+    "xxe",
+    "vulnerability",
+    "cwe"
+  ],
+  "impact": "XXE vulnerabilities can lead to sensitive information disclosure (reading local files, internal network scanning), denial of service attacks (billion laughs attack, quadratic blowup), server-side request forgery (SSRF), and potentially remote code execution. Attackers can access configuration files, source code, databases, and other sensitive resources on the server.",
+  "recommendation": "Disable external entity processing in XML parsers by setting appropriate security flags. Use secure parser configurations such as disabling DTD processing, external entity resolution, and network access. Consider using defusedxml library for additional security or configure standard parsers with secure settings.",
+  "references": [
+    {
+      "title": "OWASP XXE Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
+    },
+    {
+      "title": "SonarSource - Python Rules - S2755",
+      "url": "https://rules.sonarsource.com/python/RSPEC-2755/"
+    },
+    {
+      "title": "CWE-611: Improper Restriction of XXE Reference",
+      "url": "https://cwe.mitre.org/data/definitions/611.html"
+    },
+    {
+      "title": "Python defusedxml Library",
+      "url": "https://pypi.org/project/defusedxml/"
+    },
+    {
+      "title": "OWASP Top 10 2021 - A05 Security Misconfiguration",
+      "url": "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import xml.etree.ElementTree as ET\nimport xml.dom.minidom as minidom\nfrom xml.sax import make_parser\nimport lxml.etree as etree\n\n# Vulnerable: Default xml.etree.ElementTree configuration\ndef parse_xml_vulnerable1(xml_data):\n    root = ET.fromstring(xml_data)  # Vulnerable to XXE\n    return root\n\n# Vulnerable: xml.dom.minidom without security settings\ndef parse_xml_vulnerable2(xml_file):\n    dom = minidom.parse(xml_file)  # Vulnerable to XXE\n    return dom\n\n# Vulnerable: SAX parser without security configuration\ndef parse_xml_vulnerable3(xml_file):\n    parser = make_parser()  # Vulnerable to XXE\n    parser.parse(xml_file)\n\n# Vulnerable: lxml with default settings\ndef parse_xml_vulnerable4(xml_data):\n    parser = etree.XMLParser()  # Vulnerable to XXE\n    root = etree.fromstring(xml_data, parser)\n    return root\n\n# Vulnerable: iterparse without protection\ndef parse_xml_vulnerable5(xml_file):\n    for event, elem in ET.iterparse(xml_file):  # Vulnerable to XXE\n        process_element(elem)",
+        "description": "XML parsers using default configurations that allow external entity processing, making them vulnerable to XXE attacks."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import xml.etree.ElementTree as ET\nimport xml.dom.minidom as minidom\nfrom xml.sax import make_parser\nfrom xml.sax.handler import feature_external_ges, feature_external_pes\nimport lxml.etree as etree\nimport defusedxml.ElementTree as safe_ET\nimport defusedxml.minidom as safe_minidom\n\n# Secure: Using defusedxml (recommended)\ndef parse_xml_secure1(xml_data):\n    root = safe_ET.fromstring(xml_data)\n    return root\n\ndef parse_xml_secure2(xml_file):\n    dom = safe_minidom.parse(xml_file)\n    return dom\n\n# Secure: Configuring standard parsers safely\ndef parse_xml_secure3(xml_data):\n    # Create XMLParser with security settings\n    parser = ET.XMLParser()\n    # Disable external entity processing\n    parser.entity = {}\n    root = ET.fromstring(xml_data, parser)\n    return root\n\n# Secure: lxml with security configuration\ndef parse_xml_secure4(xml_data):\n    parser = etree.XMLParser(\n        resolve_entities=False,  # Disable entity resolution\n        no_network=True,        # Disable network access\n        dtd_validation=False,   # Disable DTD validation\n        load_dtd=False         # Don't load DTD\n    )\n    root = etree.fromstring(xml_data, parser)\n    return root\n\n# Secure: SAX parser with security features disabled\ndef parse_xml_secure5(xml_file):\n    parser = make_parser()\n    parser.setFeature(feature_external_ges, False)  # Disable external general entities\n    parser.setFeature(feature_external_pes, False)  # Disable external parameter entities\n    parser.parse(xml_file)\n\n# Secure: Using iterparse with custom parser\ndef parse_xml_secure6(xml_file):\n    parser = etree.XMLParser(\n        resolve_entities=False,\n        no_network=True,\n        dtd_validation=False,\n        load_dtd=False\n    )\n    for event, elem in etree.iterparse(xml_file, parser=parser):\n        process_element(elem)",
+        "description": "Secure XML parsing using defusedxml library or properly configured standard parsers with external entity processing disabled."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Security",
+    "security": "Critical - Prevents file disclosure, SSRF, and DoS attacks",
+    "automation": "High - Can be automatically detected through parser configuration analysis",
+    "compliance": "Critical - Addresses OWASP Top 10, CWE, and PCI DSS requirements"
+  },
+  "why_is_this_an_issue": "XXE vulnerabilities occur when XML parsers process external entity references without proper security controls. Attackers can craft malicious XML documents that reference external files (file:// scheme), internal network resources (http:// scheme), or use recursive entity definitions to cause denial of service. This can lead to unauthorized file access, network scanning, credential theft, and system compromise. The vulnerability is particularly dangerous because it can be exploited through any XML input processed by the application, including configuration files, data imports, and API requests.",
+  "how_to_fix": "1. Use the defusedxml library instead of standard XML parsers for maximum security. 2. If using standard parsers, disable external entity processing by setting resolve_entities=False, no_network=True, and load_dtd=False. 3. For xml.sax parsers, disable external general entities and parameter entities using setFeature(). 4. Validate and sanitize XML input before parsing. 5. Use allowlists for acceptable XML content and schemas. 6. Implement proper error handling to avoid information disclosure. 7. Keep XML parsing libraries updated to the latest versions.",
+  "security_mappings": {
+    "CWE": "CWE-611: Improper Restriction of XML External Entity Reference, CWE-827: Improper Control of Document Type Definition",
+    "CERT": "",
+    "OWASP": "A05:2021 - Security Misconfiguration"
+  },
+  "logic": {
+    "comment": "// TODO: Complex logic needed to detect insecure XML parser configurations. Current logic detects XML parsing function calls but cannot analyze security configuration context.",
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "regex",
+                "property_path": ["func", "attr"],
+                "regex": "^(fromstring|parse|iterparse|XMLParser|XMLTreeBuilder)$"
+              },
+              {
+                "check_type": "regex",
+                "property_path": ["func", "id"],
+                "regex": "^(make_parser)$"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "ImportFrom"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "regex",
+                "property_path": ["module"],
+                "regex": "^(xml\\.etree\\.ElementTree|xml\\.dom\\.minidom|xml\\.sax|lxml\\.etree)$"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Import"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["names", "*", "name"],
+            "regex": "^(xml|lxml)$"
+          }
+        ]
+      }
+    ]
+  }
+}

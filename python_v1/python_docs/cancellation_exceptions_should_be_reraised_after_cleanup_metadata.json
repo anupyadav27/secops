@@ -1,0 +1,213 @@
+{
+  "rule_id": "cancellation_exceptions_should_be_reraised_after_cleanup",
+  "title": "Cancellation exceptions should be re-raised after cleanup operations",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects cases where cancellation exceptions (like `asyncio.CancelledError` or similar) are caught but not properly re-raised after cleanup operations. When cancellation is requested, it's important to honor that request by propagating the cancellation after performing necessary cleanup, otherwise the program may continue running when it should be terminating. This can lead to resource leaks, inconsistent states, or violation of expected program termination behavior.",
+  "message": "Re-raise this cancellation exception after cleanup operations to properly honor the cancellation request.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "bug",
+    "reliability",
+    "exception-handling",
+    "asyncio",
+    "cleanup",
+    "python"
+  ],
+  "impact": "Failing to re-raise cancellation exceptions can lead to: 1) Resources not being properly released during shutdown sequences, 2) The program continuing to execute when it should be terminating, 3) Inconsistent application state during shutdown procedures, 4) Violation of expected behavior in cooperative cancellation patterns, particularly in async contexts.",
+  "recommendation": "When catching cancellation exceptions (like `asyncio.CancelledError`), always re-raise them after performing necessary cleanup operations. Use a `finally` block or explicit re-raise after cleanup code to ensure the cancellation propagates properly.",
+  "references": [
+    {
+      "title": "Python asyncio - Cancellation",
+      "url": "https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel"
+    },
+    {
+      "title": "Python Exception Handling - Built-in Exceptions",
+      "url": "https://docs.python.org/3/library/exceptions.html#asyncio.CancelledError"
+    },
+    {
+      "title": "SonarSource - Proper Exception Handling",
+      "url": "https://rules.sonarsource.com/python/tag/exception-handling/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\n\nasync def my_task():\n    try:\n        # Some async operation\n        await asyncio.sleep(10)\n    except asyncio.CancelledError:\n        # Perform cleanup\n        print(\"Cleaning up...\")\n        raise  # Re-raise the cancellation\n    finally:\n        # Alternative pattern\n        print(\"This also works for cleanup\")",
+        "description": "Properly re-raises the cancellation exception after cleanup, ensuring the cancellation propagates correctly."
+      },
+      {
+        "code": "async def resource_handler():\n    resource = None\n    try:\n        resource = await acquire_resource()\n        # Use resource\n        await process_resource(resource)\n    except asyncio.CancelledError:\n        if resource:\n            await release_resource(resource)\n        raise  # Critical: re-raise after cleanup",
+        "description": "Handles resource cleanup before re-raising the cancellation, following best practices for resource management during cancellation."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def bad_task():\n    try:\n        await asyncio.sleep(10)\n    except asyncio.CancelledError:\n        # Cleanup but no re-raise\n        print(\"Cleaning up...\")\n        # Missing raise statement!",
+        "description": "Catches the cancellation but fails to re-raise it, effectively ignoring the cancellation request."
+      },
+      {
+        "code": "async def resource_leak():\n    resource = await acquire_resource()\n    try:\n        await process_resource(resource)\n    except asyncio.CancelledError:\n        # Only cleanup, no propagation\n        await release_resource(resource)\n        # Program continues when it should terminate",
+        "description": "Performs cleanup but doesn't re-raise the cancellation, which may leave the program in an inconsistent state during shutdown."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "reliability",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": "recommended",
+      "integration_test": "recommended"
+    }
+  },
+  "why_is_this_an_issue": "Cancellation exceptions represent explicit requests to terminate operations, typically during shutdown sequences or when tasks are no longer needed. When these exceptions are caught but not re-raised, the cancellation signal is effectively ignored, which can lead to several problems:\n\n1. **Resource Leaks**: Resources that should be released during shutdown may remain allocated\n2. **Zombie Tasks**: Async tasks may continue running when they should be terminating\n3. **Inconsistent State**: The application may remain in a partially shutdown state\n4. **Violation of Contracts**: Many async frameworks expect cancellation to propagate properly\n5. **Delayed Shutdown**: Applications may take longer to shut down than expected\n\nThis is particularly critical in async contexts where cooperative cancellation is a fundamental pattern for resource management and graceful shutdown.",
+  "how_to_fix": {
+    "description": "To fix this issue, ensure that any caught cancellation exceptions are properly re-raised after performing necessary cleanup operations.",
+    "steps": [
+      "1. Identify all catch blocks that handle cancellation exceptions (like `asyncio.CancelledError` or similar)",
+      "2. Verify that each catch block either:\n      - Explicitly re-raises the exception after cleanup (using `raise` without arguments), or\n      - Uses a `finally` block for cleanup while allowing the exception to propagate naturally",
+      "3. For cases where cleanup is needed before re-raising:\n      - Perform all necessary cleanup operations in the except block\n      - Add an explicit `raise` statement as the last operation in the except block",
+      "4. For simple cases where no cleanup is needed before the exception propagates:\n      - Consider removing the try-except block entirely if it only catches cancellation exceptions",
+      "5. Test the modified code to ensure:\n      - Cleanup operations still execute properly\n      - Cancellation requests are properly honored\n      - No resources are leaked during cancellation"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "name": "Improper Check or Handling of Exceptional Conditions",
+        "description": "Failing to properly handle cancellation exceptions can lead to improper resource management during exceptional conditions."
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "name": "Prevent exceptions while cleaning up resources",
+        "description": "While not exactly the same, the principle of proper resource cleanup during exceptional conditions applies."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "ExceptHandler"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Try"
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "type"
+            ],
+            "condition": {
+              "check_type": "equals",
+              "value": {
+                "attribute": "id",
+                "value": "CancelledError"
+              }
+            }
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "type"
+            ],
+            "condition": {
+              "check_type": "equals",
+              "value": {
+                "attribute": "attr",
+                "value": "CancelledError"
+              }
+            }
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "type"
+            ],
+            "condition": {
+              "check_type": "equals",
+              "value": {
+                "module": "asyncio",
+                "name": "CancelledError"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "contains",
+              "property_path": [
+                "body"
+              ],
+              "value": {
+                "node_type": "Raise",
+                "condition": {
+                  "check_type": "not",
+                  "condition": {
+                    "check_type": "property_exists",
+                    "property_path": [
+                      "exc"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "check_type": "property_exists",
+              "property_path": [
+                "parent",
+                "finalbody"
+              ]
+            },
+            {
+              "operator": "and",
+              "conditions": [
+                {
+                  "check_type": "property_exists",
+                  "property_path": [
+                    "parent",
+                    "orelse"
+                  ]
+                },
+                {
+                  "check_type": "contains",
+                  "property_path": [
+                    "parent",
+                    "orelse"
+                  ],
+                  "value": {
+                    "node_type": "Raise"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

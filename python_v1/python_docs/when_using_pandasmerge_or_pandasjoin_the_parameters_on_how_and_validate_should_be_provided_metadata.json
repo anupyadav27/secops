@@ -1,0 +1,151 @@
+{
+  "rule_id": "when_using_pandasmerge_or_pandasjoin_the_parameters_on_how_and_validate_should_be_provided",
+  "title": "When using pandas.merge or pandas.join, the parameters on, how and validate should be provided",
+  "type": "CODE_SMELL",
+  "code": {
+    "impacts": {
+      "MAINTAINABILITY": "MEDIUM"
+    },
+    "attribute": "CLEAR"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "When using pandas.merge() or pandas.join() methods, the parameters 'on', 'how', and 'validate' should be explicitly provided to make the merge behavior clear and prevent unexpected results. Omitting these parameters can lead to implicit behavior that may not be obvious to other developers and can cause bugs when data changes.",
+  "message": "When using pandas.merge or pandas.join, the parameters on, how and validate should be provided",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "pandas",
+    "data-science",
+    "clarity",
+    "maintainability"
+  ],
+  "impact": {
+    "maintainability": "High impact on code clarity and preventing merge-related bugs",
+    "reliability": "Medium impact on preventing unexpected data merge behavior"
+  },
+  "recommendation": "Always explicitly specify the 'on', 'how', and 'validate' parameters when using pandas merge() or join() operations to make the intended behavior clear.",
+  "references": [
+    {
+      "title": "pandas.DataFrame.merge Documentation",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html"
+    },
+    {
+      "title": "pandas.DataFrame.join Documentation", 
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.join.html"
+    },
+    {
+      "title": "Merging and Joining DataFrames",
+      "url": "https://pandas.pydata.org/docs/user_guide/merging.html"
+    },
+    {
+      "title": "SonarSource Rules - Pandas Parameters",
+      "url": "https://rules.sonarsource.com/python/RSPEC-6735"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Using merge() without explicit parameters",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key': ['A', 'B'], 'value1': [1, 2]})\ndf2 = pd.DataFrame({'key': ['A', 'C'], 'value2': [3, 4]})\n\n# Missing 'on', 'how', and 'validate' parameters\nresult = df1.merge(df2)  # Unclear merge behavior"
+      },
+      {
+        "description": "Using join() without explicit parameters",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'value1': [1, 2]}, index=['A', 'B'])\ndf2 = pd.DataFrame({'value2': [3, 4]}, index=['A', 'C'])\n\n# Missing 'how' and 'validate' parameters\nresult = df1.join(df2)  # Unclear join behavior"
+      },
+      {
+        "description": "Partial specification of parameters",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key': ['A', 'B'], 'value1': [1, 2]})\ndf2 = pd.DataFrame({'key': ['A', 'C'], 'value2': [3, 4]})\n\n# Only 'on' specified, missing 'how' and 'validate'\nresult = df1.merge(df2, on='key')"
+      },
+      {
+        "description": "pandas.merge function call without parameters",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key': ['A', 'B'], 'value1': [1, 2]})\ndf2 = pd.DataFrame({'key': ['A', 'C'], 'value2': [3, 4]})\n\n# Using pandas.merge function without explicit parameters\nresult = pd.merge(df1, df2)"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Proper merge with all parameters specified",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key': ['A', 'B'], 'value1': [1, 2]})\ndf2 = pd.DataFrame({'key': ['A', 'C'], 'value2': [3, 4]})\n\n# All parameters explicitly specified\nresult = df1.merge(df2, on='key', how='inner', validate='one_to_one')"
+      },
+      {
+        "description": "Proper join with all parameters specified",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'value1': [1, 2]}, index=['A', 'B'])\ndf2 = pd.DataFrame({'value2': [3, 4]}, index=['A', 'C'])\n\n# All parameters explicitly specified\nresult = df1.join(df2, how='outer', validate='one_to_one')"
+      },
+      {
+        "description": "Using pandas.merge function with explicit parameters",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key': ['A', 'B'], 'value1': [1, 2]})\ndf2 = pd.DataFrame({'key': ['A', 'C'], 'value2': [3, 4]})\n\n# Using pandas.merge with all required parameters\nresult = pd.merge(df1, df2, on='key', how='left', validate='many_to_one')"
+      },
+      {
+        "description": "Complex merge with multiple keys and validation",
+        "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'key1': ['A', 'B'], 'key2': [1, 2], 'value1': [10, 20]})\ndf2 = pd.DataFrame({'key1': ['A', 'C'], 'key2': [1, 3], 'value2': [30, 40]})\n\n# Explicit parameters with multiple keys\nresult = df1.merge(df2, on=['key1', 'key2'], how='outer', validate='one_to_many')"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "priority": "Medium",
+    "effort": "Low"
+  },
+  "why_is_this_an_issue": "When merge() or join() operations are performed without explicit parameters, pandas uses default behaviors that may not be obvious: (1) Default merge behavior can lead to unexpected results when data structure changes, (2) Missing 'how' parameter defaults to 'inner' join which may silently exclude data, (3) Missing 'validate' parameter can hide data quality issues like duplicate keys, (4) Implicit behavior makes code harder to understand and maintain, (5) Can lead to subtle bugs when datasets evolve over time, (6) Makes debugging more difficult when merge results are unexpected.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify all pandas merge() and join() operations in your code"
+    },
+    {
+      "step": 2,
+      "description": "For merge() operations, explicitly specify the 'on' parameter to define which columns to merge on"
+    },
+    {
+      "step": 3,
+      "description": "Add the 'how' parameter to specify the type of join (inner, outer, left, right)"
+    },
+    {
+      "step": 4,
+      "description": "Include the 'validate' parameter to check for data quality (one_to_one, one_to_many, many_to_one, many_to_many)"
+    },
+    {
+      "step": 5,
+      "description": "For join() operations, specify the 'how' and 'validate' parameters explicitly"
+    },
+    {
+      "step": 6,
+      "description": "Test the merge/join operations to ensure they produce the expected results"
+    },
+    {
+      "step": 7,
+      "description": "Document the rationale for the chosen parameter values in comments if the logic is complex"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-6735",
+  "scope": "All",
+  "quickfix": "covered",
+  "logic": {
+    "comment": "TODO: refine logic - Currently detects all pandas merge/join calls. Should analyze if required parameters (on, how, validate) are missing.",
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Detect any Call node with merge or join as attribute (simplified detection)",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["func", "attr"],
+            "regex": "^(merge|join)$"
+          }
+        ]
+      }
+    ]
+  }
+}

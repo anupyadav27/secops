@@ -1,0 +1,169 @@
+{
+  "rule_id": "values_assigned_to_variables_should_match_their_type_annotations",
+  "title": "Values assigned to variables should match their type annotations",
+  "type": "CODE_SMELL",
+  "code": {
+    "impacts": {
+      "MAINTAINABILITY": "MEDIUM"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "When variables are annotated with type hints in Python, the values assigned to them should match those type annotations. Type annotations serve as documentation and enable better static analysis, but assigning incompatible values defeats their purpose and can lead to runtime errors or unexpected behavior. While Python doesn't enforce type annotations at runtime, maintaining consistency between annotations and actual values improves code maintainability, readability, and helps catch potential bugs during development.",
+  "message": "The value assigned to variable '{{variable_name}}' does not match its type annotation '{{expected_type}}'.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "typing",
+    "confusing",
+    "convention",
+    "maintainability"
+  ],
+  "impact": {
+    "reliability": "Medium impact as type mismatches can lead to runtime errors and unexpected behavior in type-checked environments",
+    "maintainability": "High impact on code clarity as inconsistent type annotations make code harder to understand and maintain"
+  },
+  "recommendation": "Either change the assigned value to match the type annotation, or update the type annotation to reflect the actual type being assigned. Consider using Union types if multiple types are legitimately expected.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Values assigned to variables should match their type annotations",
+      "url": "https://rules.sonarsource.com/python/RSPEC-5890"
+    },
+    {
+      "title": "Python Type Hints",
+      "url": "https://docs.python.org/3/library/typing.html"
+    },
+    {
+      "title": "PEP 484 - Type Hints",
+      "url": "https://peps.python.org/pep-0484/"
+    },
+    {
+      "title": "mypy - Static Type Checker for Python",
+      "url": "https://mypy.readthedocs.io/en/stable/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "String assigned to integer-annotated variable",
+        "code": "age: int = \"25\"  # Type mismatch: string assigned to int annotation"
+      },
+      {
+        "description": "Integer assigned to string-annotated variable",
+        "code": "name: str = 123  # Type mismatch: int assigned to str annotation"
+      },
+      {
+        "description": "List assigned to single-item annotation",
+        "code": "value: int = [1, 2, 3]  # Type mismatch: list assigned to int annotation"
+      },
+      {
+        "description": "None assigned to non-optional annotation",
+        "code": "count: int = None  # Type mismatch: None assigned to non-optional int"
+      },
+      {
+        "description": "Wrong container type assigned",
+        "code": "numbers: List[int] = (1, 2, 3)  # Type mismatch: tuple assigned to List annotation"
+      },
+      {
+        "description": "Incompatible class instance",
+        "code": "from typing import List\n\nclass Person:\n    pass\n\nclass Dog:\n    pass\n\npeople: List[Person] = [Dog()]  # Type mismatch: Dog instance in List[Person]"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Correct integer assignment",
+        "code": "age: int = 25  # Correct: int assigned to int annotation"
+      },
+      {
+        "description": "Correct string assignment",
+        "code": "name: str = \"John\"  # Correct: str assigned to str annotation"
+      },
+      {
+        "description": "Correct list assignment",
+        "code": "numbers: List[int] = [1, 2, 3]  # Correct: List[int] assigned to List[int] annotation"
+      },
+      {
+        "description": "Optional type with None",
+        "code": "from typing import Optional\n\ncount: Optional[int] = None  # Correct: None allowed in Optional[int]"
+      },
+      {
+        "description": "Union type allowing multiple types",
+        "code": "from typing import Union\n\nvalue: Union[int, str] = \"hello\"  # Correct: str is allowed in Union[int, str]"
+      },
+      {
+        "description": "Compatible class instance",
+        "code": "from typing import List\n\nclass Person:\n    pass\n\nclass Student(Person):\n    pass\n\npeople: List[Person] = [Student()]  # Correct: Student is subclass of Person"
+      },
+      {
+        "description": "Correct generic type usage",
+        "code": "from typing import Dict\n\nscores: Dict[str, int] = {\"Alice\": 95, \"Bob\": 87}  # Correct type match"
+      }
+    ]
+  },
+  "why_is_this_an_issue": "Type annotations in Python serve as both documentation and enable static type checking tools to catch potential errors. When values assigned to annotated variables don't match their declared types, it creates confusion for developers and defeats the purpose of type hints. This inconsistency can lead to runtime errors in type-checked environments, makes code harder to understand and maintain, and reduces the effectiveness of static analysis tools. Additionally, it can indicate logical errors or incomplete refactoring where the wrong type is being assigned to a variable.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify the variable with the type annotation mismatch"
+    },
+    {
+      "step": 2,
+      "description": "Determine if the assigned value or the type annotation is correct"
+    },
+    {
+      "step": 3,
+      "description": "If the value is correct: Update the type annotation to match the actual type being assigned"
+    },
+    {
+      "step": 4,
+      "description": "If the annotation is correct: Change the assigned value to match the expected type"
+    },
+    {
+      "step": 5,
+      "description": "Consider using Union types if multiple types are legitimately expected"
+    },
+    {
+      "step": 6,
+      "description": "Use Optional[Type] for variables that can be None"
+    },
+    {
+      "step": 7,
+      "description": "Run static type checkers (mypy, pyright) to verify the fix"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-5890",
+  "scope": "Main",
+  "securityStandards": {},
+  "quickfix": "feasible",
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "comment": "Check for annotated assignment nodes (AnnAssign)",
+        "check_type": "node_type",
+        "property_path": [],
+        "value": "AnnAssign"
+      },
+      {
+        "comment": "Check if the assignment has a value (not just annotation)",
+        "check_type": "required_present",
+        "property_path": ["value"]
+      },
+      {
+        "comment": "Exclude None assignments to Optional types",
+        "check_type": "type_annotation_mismatch",
+        "property_path": ["annotation", "value"],
+        "annotation_path": ["annotation"],
+        "value_path": ["value"]
+      }
+    ]
+  }
+}

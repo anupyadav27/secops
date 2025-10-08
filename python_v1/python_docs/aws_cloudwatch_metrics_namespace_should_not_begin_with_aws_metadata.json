@@ -1,0 +1,162 @@
+{
+  "rule_id": "aws_cloudwatch_metrics_namespace_should_not_begin_with_aws",
+  "title": "AWS CloudWatch metrics namespace should not begin with 'AWS/'",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that AWS CloudWatch custom metrics namespaces do not begin with 'AWS/' as this prefix is reserved for AWS service metrics. Using this reserved namespace can lead to conflicts with AWS internal metrics and may cause unexpected behavior in monitoring systems. Custom metrics should use unique namespaces that clearly identify your application or organization.",
+  "message": "Change this CloudWatch metrics namespace to not begin with 'AWS/'. The 'AWS/' prefix is reserved for AWS service metrics.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "aws",
+    "cloudwatch",
+    "convention",
+    "best-practice",
+    "python",
+    "monitoring"
+  ],
+  "impact": "Using the reserved 'AWS/' namespace can cause metric collisions with AWS service metrics, leading to: 1) Difficulty distinguishing between custom and AWS service metrics 2) Potential overwriting of important AWS service metrics 3) Confusion in monitoring dashboards and alerts 4) Possible future compatibility issues if AWS expands its metric namespace usage",
+  "recommendation": "Use a custom namespace prefix that identifies your organization or application (e.g., 'MyCompany/', 'MyApp/'). This ensures clear separation from AWS service metrics and follows AWS best practices for custom metrics.",
+  "references": [
+    {
+      "title": "AWS CloudWatch Custom Metrics Naming Conventions",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Namespace"
+    },
+    {
+      "title": "AWS CloudWatch Best Practices",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/best_practices.html"
+    },
+    {
+      "title": "AWS Reserved Metrics Namespaces",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-services-namespace-reference.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import boto3\n\ncloudwatch = boto3.client('cloudwatch')\n\n# Good: Custom namespace that doesn't start with 'AWS/'\ncloudwatch.put_metric_data(\n    Namespace='MyApp/Performance',\n    MetricData=[\n        {\n            'MetricName': 'RequestLatency',\n            'Value': 123.45,\n            'Unit': 'Milliseconds'\n        }\n    ]\n)",
+        "description": "Uses a custom namespace prefix that clearly identifies the application without conflicting with AWS reserved namespaces."
+      },
+      {
+        "code": "# Good: Using organization-specific prefix\nnamespace = 'AcmeCorp/Database'\n# ... metric publishing code would use this namespace",
+        "description": "Follows best practice by using an organization-specific prefix that won't conflict with AWS service metrics."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\n\ncloudwatch = boto3.client('cloudwatch')\n\n# Bad: Namespace starts with reserved 'AWS/' prefix\ncloudwatch.put_metric_data(\n    Namespace='AWS/MyCustomMetrics',\n    MetricData=[\n        {\n            'MetricName': 'CustomMetric',\n            'Value': 42,\n            'Unit': 'Count'\n        }\n    ]\n)",
+        "description": "Violates the rule by using the reserved 'AWS/' prefix which should only be used by AWS services."
+      },
+      {
+        "code": "# Bad: Hardcoded reserved namespace\nnamespace = 'AWS/ApplicationMetrics'\n# ... metric publishing code would use this namespace",
+        "description": "Incorrectly uses the AWS-reserved namespace prefix for custom metrics."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stage": "development"
+  },
+  "why_is_this_an_issue": "AWS reserves all namespaces beginning with 'AWS/' for its own service metrics. When custom metrics use this reserved namespace: 1) They can be overwritten by actual AWS service metrics, losing valuable monitoring data 2) They can cause confusion in monitoring systems where AWS service metrics and custom metrics appear mixed 3) Future AWS service updates might start using the same metric names, causing conflicts 4) It violates AWS's published best practices for custom metrics, which recommend using unique, application-specific namespaces. This can lead to maintenance issues and potential monitoring failures in production environments.",
+  "how_to_fix": {
+    "description": "To fix this issue, change the metrics namespace to use a custom prefix that identifies your application or organization instead of the reserved 'AWS/' prefix.",
+    "steps": [
+      "Identify all places in your code where CloudWatch metrics are published with namespaces beginning with 'AWS/'",
+      "Replace the 'AWS/' prefix with a custom prefix (e.g., 'MyApp/', 'MyCompany/', or your organization's name)",
+      "Ensure the new namespace is consistent across all your custom metrics",
+      "Update any monitoring dashboards or alarms that reference the old namespace",
+      "Test that your metrics are still being published correctly with the new namespace",
+      "Consider documenting your namespace convention for future reference"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "aws_well_architected": [
+      {
+        "pillar": "Operational Excellence",
+        "question": "OPER-3: How do you monitor resources?",
+        "best_practice": "Use custom metrics with appropriate namespaces to avoid conflicts with AWS service metrics"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "function_call",
+            "function": "put_metric_data",
+            "module": "boto3.client('cloudwatch')"
+          },
+          {
+            "check_type": "function_call",
+            "function": "put_metric_data",
+            "module": "botocore.client('cloudwatch')"
+          },
+          {
+            "check_type": "variable_assignment",
+            "variable_name_pattern": ".*namespace.*",
+            "case_sensitive": false
+          }
+        ]
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": [
+          "kwargs",
+          "Namespace"
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "string_value_matches",
+            "property_path": [
+              "kwargs",
+              "Namespace",
+              "value"
+            ],
+            "pattern": "^AWS/",
+            "case_sensitive": true
+          },
+          {
+            "check_type": "string_value_matches",
+            "property_path": [
+              "value"
+            ],
+            "pattern": "^AWS/",
+            "case_sensitive": true,
+            "context": "variable_assignment"
+          }
+        ]
+      }
+    ]
+  }
+}

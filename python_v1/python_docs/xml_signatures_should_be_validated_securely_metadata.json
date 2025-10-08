@@ -1,0 +1,125 @@
+{
+  "rule_id": "xml_signatures_should_be_validated_securely",
+  "title": "XML signatures should be validated securely",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "XML signature validation is a critical security process that verifies the authenticity and integrity of XML documents. However, improper validation can lead to security vulnerabilities such as XML signature wrapping attacks, reference URI manipulation, and bypass of security controls. When validating XML signatures, it's essential to ensure that the validation process follows secure practices, including proper canonicalization, secure reference handling, and protection against known attack vectors.",
+  "message": "Make sure to validate this XML signature securely to prevent signature bypass attacks.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "security",
+    "xml",
+    "cryptography",
+    "signature-validation",
+    "vulnerability"
+  ],
+  "impact": "Insecure XML signature validation can allow attackers to bypass authentication and integrity checks, potentially leading to unauthorized access, data tampering, or privilege escalation. Attackers can exploit weaknesses in validation logic to forge signatures, manipulate signed content, or perform signature wrapping attacks.",
+  "recommendation": "Use secure XML signature validation libraries and ensure proper configuration. Validate all references, use secure canonicalization methods, implement strict parsing, and protect against known attack vectors such as XML signature wrapping, reference URI manipulation, and XPath injection.",
+  "references": [
+    {
+      "title": "OWASP XML Security Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html"
+    },
+    {
+      "title": "W3C XML Signature Syntax and Processing",
+      "url": "https://www.w3.org/TR/xmldsig-core/"
+    },
+    {
+      "title": "SonarSource - Python Rules - S6377",
+      "url": "https://rules.sonarsource.com/python/RSPEC-6377/"
+    },
+    {
+      "title": "CWE-347: Improper Verification of Cryptographic Signature",
+      "url": "https://cwe.mitre.org/data/definitions/347.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import xml.etree.ElementTree as ET\nfrom cryptography.hazmat.primitives import hashes\nfrom cryptography.hazmat.primitives.asymmetric import rsa, padding\n\n# Insecure: Basic XML parsing without proper signature validation\ndef validate_xml_signature_insecure(xml_data):\n    root = ET.fromstring(xml_data)\n    signature_elem = root.find('.//Signature')\n    \n    # Insecure: No proper validation of signature\n    if signature_elem is not None:\n        return True\n    return False\n\n# Insecure: Using xmlsec without proper configuration\nimport xmlsec\n\ndef insecure_validation(xml_doc, key_file):\n    # Insecure: No protection against signature wrapping\n    ctx = xmlsec.SignatureContext()\n    key = xmlsec.Key.from_file(key_file, xmlsec.constants.KeyDataFormatPem)\n    ctx.key = key\n    \n    # Missing security checks\n    return ctx.verify(xml_doc)",
+        "description": "Basic XML signature validation without proper security controls, vulnerable to signature wrapping attacks and other XML signature vulnerabilities."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import xmlsec\nimport lxml.etree as etree\nfrom lxml import etree as ET\n\ndef secure_xml_signature_validation(xml_data, public_key_file):\n    \"\"\"\n    Securely validate XML signature with proper security controls\n    \"\"\"\n    try:\n        # Parse XML with security settings\n        parser = ET.XMLParser(\n            resolve_entities=False,  # Prevent XXE\n            no_network=True,        # Disable network access\n            huge_tree=False         # Prevent memory exhaustion\n        )\n        doc = etree.fromstring(xml_data.encode(), parser)\n        \n        # Find signature node\n        signature_nodes = doc.xpath('//ds:Signature', namespaces={'ds': 'http://www.w3.org/2000/09/xmldsig#'})\n        \n        if not signature_nodes:\n            return False, \"No signature found\"\n        \n        if len(signature_nodes) > 1:\n            return False, \"Multiple signatures not allowed\"\n        \n        signature_node = signature_nodes[0]\n        \n        # Initialize xmlsec library\n        xmlsec.init()\n        \n        try:\n            # Create signature context with security settings\n            ctx = xmlsec.SignatureContext()\n            \n            # Load public key\n            key = xmlsec.Key.from_file(public_key_file, xmlsec.constants.KeyDataFormatPem)\n            ctx.key = key\n            \n            # Validate signature references\n            signed_info = signature_node.find('.//{http://www.w3.org/2000/09/xmldsig#}SignedInfo')\n            references = signed_info.findall('.//{http://www.w3.org/2000/09/xmldsig#}Reference')\n            \n            # Security check: Ensure references are valid and not manipulated\n            for ref in references:\n                uri = ref.get('URI', '')\n                if uri.startswith('http://') or uri.startswith('https://'):\n                    return False, \"External references not allowed\"\n                if '../' in uri or uri.startswith('/'):\n                    return False, \"Path traversal in reference URI\"\n            \n            # Perform signature validation\n            result = ctx.verify(signature_node)\n            \n            if result:\n                return True, \"Signature valid\"\n            else:\n                return False, \"Signature validation failed\"\n                \n        finally:\n            xmlsec.shutdown()\n            \n    except Exception as e:\n        return False, f\"Validation error: {str(e)}\"\n\n# Example usage with additional security measures\ndef validate_signed_xml_document(xml_path, key_path):\n    # Read with size limit to prevent DoS\n    max_size = 10 * 1024 * 1024  # 10MB limit\n    \n    with open(xml_path, 'rb') as f:\n        xml_data = f.read(max_size)\n        if len(xml_data) == max_size:\n            raise ValueError(\"XML file too large\")\n    \n    return secure_xml_signature_validation(xml_data.decode(), key_path)",
+        "description": "Secure XML signature validation with proper security controls, protection against signature wrapping, reference validation, and XXE prevention."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Security",
+    "security": "High - Prevents XML signature bypass and cryptographic attacks",
+    "automation": "Medium - Requires understanding of XML signature validation context",
+    "compliance": "High - Addresses OWASP Top 10 and CWE security requirements"
+  },
+  "why_is_this_an_issue": "XML signature validation vulnerabilities can allow attackers to bypass authentication and integrity checks in XML-based systems. Common attacks include XML signature wrapping (where malicious content is injected while maintaining valid signatures), reference URI manipulation, XPath injection in signature validation, and canonicalization attacks. These vulnerabilities can lead to unauthorized access, data tampering, and security control bypass in systems that rely on XML signatures for authentication or integrity verification.",
+  "how_to_fix": "1. Use established XML signature validation libraries like xmlsec with proper configuration. 2. Implement strict XML parsing with entity resolution disabled to prevent XXE attacks. 3. Validate all signature references and reject external or suspicious URIs. 4. Protect against signature wrapping by ensuring signatures cover the intended content. 5. Use secure canonicalization methods and validate the entire signature structure. 6. Implement proper error handling and logging for signature validation failures. 7. Regularly update cryptographic libraries and validate against known attack vectors.",
+  "security_mappings": {
+    "CWE": "CWE-347: Improper Verification of Cryptographic Signature",
+    "CERT": "",
+    "OWASP": "A02:2021 - Cryptographic Failures"
+  },
+  "logic": {
+    "comment": "// TODO: Complex logic needed to detect insecure XML signature validation patterns. Current logic detects basic XML and cryptographic function calls but cannot analyze security context.",
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "regex",
+                "property_path": ["func", "attr"],
+                "regex": "^(verify|validate|check_signature)$"
+              },
+              {
+                "check_type": "regex",
+                "property_path": ["func", "id"],
+                "regex": "^(xmlsec|xml_verify|signature_validate)$"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Import"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["names", "*", "name"],
+            "regex": "^(xmlsec|cryptography|xml\\.etree|lxml)$"
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "ImportFrom"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["module"],
+            "regex": "^(xmlsec|cryptography|xml\\.etree|lxml)$"
+          }
+        ]
+      }
+    ]
+  }
+}

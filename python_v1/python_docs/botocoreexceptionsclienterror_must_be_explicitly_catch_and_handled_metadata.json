@@ -1,0 +1,125 @@
+{
+  "rule_id": "botocoreexceptionsclienterror_must_be_explicitly_catch_and_handled",
+  "title": "Botocore ClientError exceptions must be explicitly caught and handled",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule enforces that AWS SDK (botocore) ClientError exceptions must be explicitly caught and handled rather than using generic exception handling. Generic exception handling can mask important AWS-specific errors and make debugging more difficult. Proper handling of ClientError allows for better error recovery and more precise error reporting in AWS operations.",
+  "message": "Catch and handle 'botocore.exceptions.ClientError' explicitly instead of using generic exception handling. Current implementation may mask AWS-specific errors.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "examples": {
+    "compliant": [
+      {
+        "code": "import boto3\nfrom botocore.exceptions import ClientError\n\ns3 = boto3.client('s3')\n\ntry:\n    response = s3.get_object(Bucket='my-bucket', Key='my-key')\nexcept ClientError as e:\n    if e.response['Error']['Code'] == 'NoSuchKey':\n        print('The object does not exist.')\n    else:\n        print(f'AWS Error: {e.response[\"Error\"][\"Code\"]}')\n    # Handle the error appropriately",
+        "description": "Good: Explicitly catches ClientError and handles AWS-specific error codes."
+      },
+      {
+        "code": "import boto3\nfrom botocore.exceptions import ClientError\n\ndef upload_to_s3(bucket, key, data):\n    s3 = boto3.client('s3')\n    try:\n        s3.put_object(Bucket=bucket, Key=key, Body=data)\n    except ClientError as e:\n        if e.response['Error']['Code'] == 'AccessDenied':\n            raise PermissionError(\"Insufficient permissions for S3 operation\")\n        raise\n    return True",
+        "description": "Good: Catches ClientError and re-raises with more specific exceptions when appropriate."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\n\ns3 = boto3.client('s3')\n\ntry:\n    response = s3.get_object(Bucket='my-bucket', Key='my-key')\nexcept Exception as e:\n    print(f'Error occurred: {str(e)}')",
+        "description": "Bad: Uses generic Exception catch which masks AWS-specific errors."
+      },
+      {
+        "code": "import boto3\n\ndef list_buckets():\n    s3 = boto3.client('s3')\n    try:\n        return s3.list_buckets()\n    except:\n        return []",
+        "description": "Bad: Bare except clause catches all exceptions including ClientError without proper handling."
+      },
+      {
+        "code": "import boto3\nfrom botocore.exceptions import BotoCoreError\n\ns3 = boto3.client('s3')\n\ntry:\n    s3.download_file('my-bucket', 'my-key', '/tmp/my-file')\nexcept BotoCoreError as e:\n    print(f'Boto error: {e}')",
+        "description": "Bad: Catches the parent BotoCoreError instead of the more specific ClientError."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "remediation": {
+      "func": "Constant/Issue",
+      "constantCost": "10min"
+    },
+    "examples": {
+      "compliant": [
+        {
+          "code": "import boto3\nfrom botocore.exceptions import ClientError\n\ns3 = boto3.client('s3')\n\ntry:\n    response = s3.get_object(Bucket='my-bucket', Key='my-key')\nexcept ClientError as e:\n    if e.response['Error']['Code'] == 'NoSuchKey':\n        print('The object does not exist.')\n    else:\n        print(f'AWS Error: {e.response[\"Error\"][\"Code\"]}')\n    # Handle the error appropriately",
+          "description": "Good: Explicitly catches ClientError and handles AWS-specific error codes."
+        },
+        {
+          "code": "import boto3\nfrom botocore.exceptions import ClientError\n\ndef upload_to_s3(bucket, key, data):\n    s3 = boto3.client('s3')\n    try:\n        s3.put_object(Bucket=bucket, Key=key, Body=data)\n    except ClientError as e:\n        if e.response['Error']['Code'] == 'AccessDenied':\n            raise PermissionError(\"Insufficient permissions for S3 operation\")\n        raise\n    return True",
+          "description": "Good: Catches ClientError and re-raises with more specific exceptions when appropriate."
+        }
+      ],
+      "noncompliant": [
+        {
+          "code": "import boto3\n\ns3 = boto3.client('s3')\n\ntry:\n    response = s3.get_object(Bucket='my-bucket', Key='my-key')\nexcept Exception as e:\n    print(f'Error occurred: {str(e)}')",
+          "description": "Bad: Uses generic Exception catch which masks AWS-specific errors."
+        },
+        {
+          "code": "import boto3\n\ndef list_buckets():\n    s3 = boto3.client('s3')\n    try:\n        return s3.list_buckets()\n    except:\n        return []",
+          "description": "Bad: Bare except clause catches all exceptions including ClientError without proper handling."
+        },
+        {
+          "code": "import boto3\nfrom botocore.exceptions import BotoCoreError\n\ns3 = boto3.client('s3')\n\ntry:\n    s3.download_file('my-bucket', 'my-key', '/tmp/my-file')\nexcept BotoCoreError as e:\n    print(f'Boto error: {e}')",
+          "description": "Bad: Catches the parent BotoCoreError instead of the more specific ClientError."
+        }
+      ]
+    },
+    "property_path": ["handlers"],
+    "forbidden_values": [
+      {
+        "node_type": "Name",
+        "id": "Exception"
+      },
+      {
+        "node_type": "Name",
+        "id": "BotoCoreError"
+      },
+      {
+        "node_type": "Name",
+        "id": "BaseException"
+      },
+      {
+        "node_type": "Tuple",
+        "elts": [
+          {
+            "node_type": "Name",
+            "id": "Exception"
+          }
+        ]
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ExceptHandler"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_equals",
+            "property_path": ["type", "id"],
+            "value": "Exception"
+          },
+          {
+            "check_type": "property_equals",
+            "property_path": ["type", "id"],
+            "value": "BotoCoreError"
+          },
+          {
+            "check_type": "property_equals",
+            "property_path": ["type", "id"],
+            "value": "BaseException"
+          }
+        ]
+      }
+    ]
+  }
+}

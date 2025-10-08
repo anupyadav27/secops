@@ -1,0 +1,122 @@
+{
+  "rule_id": "assignments_of_lambdas_to_variables_should_be_replaced_by_function_definitions",
+  "title": "Lambda expressions assigned to variables should be replaced by function definitions",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects when lambda expressions are assigned to variables, which is considered poor practice. Lambdas are designed for simple, one-off operations and should not be assigned to variables as it reduces code readability and maintainability. Instead, a regular function definition (`def`) should be used, which allows for better documentation, debugging, and reusability.",
+  "message": "Replace this lambda assignment with a regular function definition using 'def'.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "readability",
+    "best-practice",
+    "python",
+    "maintainability"
+  ],
+  "impact": "Assigning lambdas to variables reduces code clarity, makes debugging harder, and violates Python's style guidelines. While the code may function correctly, it becomes less maintainable and harder to understand for other developers. This practice also prevents the use of docstrings and proper function naming, which are essential for good documentation.",
+  "recommendation": "Always use `def` to define named functions instead of assigning lambda expressions to variables. This improves code readability, allows for proper documentation, and follows Python's best practices.",
+  "references": [
+    {
+      "title": "PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "Python Documentation: Lambda Expressions",
+      "url": "https://docs.python.org/3/reference/expressions.html#lambda"
+    },
+    {
+      "title": "SonarSource: Why lambda assignments are bad",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1301"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def square(x):\n    return x ** 2\n\nresult = square(5)",
+        "description": "Using a named function with `def` is clearer and follows Python best practices."
+      },
+      {
+        "code": "def multiply(a, b):\n    \"\"\"Returns the product of two numbers.\"\"\"\n    return a * b\n\nproduct = multiply(3, 4)",
+        "description": "Named functions allow for docstrings and better debugging."
+      },
+      {
+        "code": "# Proper use of lambda - inline usage\nresult = list(map(lambda x: x * 2, [1, 2, 3]))",
+        "description": "Lambda used inline as intended, not assigned to a variable."
+      },
+      {
+        "code": "# Proper use of lambda - as argument\nsorted_list = sorted([('a', 3), ('b', 1)], key=lambda x: x[1])",
+        "description": "Lambda used as an argument to a higher-order function."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "square = lambda x: x ** 2\nresult = square(5)",
+        "description": "Assigning a lambda to a variable reduces readability and maintainability."
+      },
+      {
+        "code": "multiply = lambda a, b: a * b\nproduct = multiply(3, 4)",
+        "description": "Lambdas assigned to variables lack docstrings and proper function naming."
+      },
+      {
+        "code": "is_even = lambda num: num % 2 == 0\nfiltered = filter(is_even, [1, 2, 3, 4])",
+        "description": "Lambda assigned to variable instead of using named function."
+      },
+      {
+        "code": "adder = lambda x, y=10: x + y\nresult = adder(5)",
+        "description": "Lambda with default arguments assigned to variable."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linter": true
+    }
+  },
+  "why_is_this_an_issue": "Lambda expressions are intended for short, anonymous functions that are used once, typically as arguments to higher-order functions like `map()`, `filter()`, or `sorted()`. When a lambda is assigned to a variable, it defeats the purpose of its anonymity and introduces several problems:\n\n1. **Reduced Readability**: The intent of the function is less clear compared to a named `def` function.\n2. **No Docstrings**: Lambdas cannot include docstrings, making documentation impossible.\n3. **Debugging Difficulties**: Stack traces will refer to `<lambda>` instead of a meaningful function name.\n4. **Maintainability Issues**: Refactoring or extending the function later becomes harder.\n5. **Style Violation**: This practice goes against Python's style guidelines (PEP 8) and community conventions.\n\nWhile the code may work, it is considered poor practice and should be avoided in production code.",
+  "how_to_fix": {
+    "description": "Replace the lambda assignment with a proper function definition using `def`. This is a straightforward refactor that improves code quality.",
+    "steps": [
+      "Identify all lambda expressions assigned to variables in your code.",
+      "Replace each lambda assignment with a `def` statement. For example, change `square = lambda x: x ** 2` to:\n\n```python\ndef square(x):\n    return x ** 2\n```",
+      "If the lambda is used in multiple places, ensure the new function is defined in an appropriate scope (e.g., at the module level or inside a class).",
+      "Add a docstring to the new function if its purpose is not immediately obvious.",
+      "Update all calls to the lambda to use the new function name instead."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Assign"
+      },
+      {
+        "check_type": "node_type", 
+        "property_path": ["value"],
+        "value": "Lambda"
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": ["targets", 0],
+            "value": "Call"
+          }
+        ]
+      }
+    ]
+  }
+}

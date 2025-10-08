@@ -1,0 +1,76 @@
+{
+  "rule_id": "a_reason_should_be_provided_when_skipping_a_test",
+  "title": "A reason should be provided when skipping a test",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "ruleSpecification": "RSPEC-1607",
+  "description": "When skipping a test using decorators like @pytest.mark.skip or @unittest.skip, a reason should always be provided. This helps other developers understand why the test is disabled and under what circumstances it should be re-enabled. Without a reason, it becomes difficult to maintain the test suite and track technical debt.",
+  "message": "Provide a reason when skipping this test.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "2min"
+  },
+  "tags": [
+    "bad-practice",
+    "confusing", 
+    "tests"
+  ],
+  "impact": "Test maintenance becomes difficult when skipped tests lack explanations. Developers cannot determine if tests should be re-enabled or remain disabled, leading to technical debt accumulation and potential gaps in test coverage.",
+  "recommendation": "Always provide a meaningful reason when skipping tests. Use @pytest.mark.skip(reason='...') or @unittest.skip('...') with a clear explanation of why the test is skipped and when it might be re-enabled.",
+  "references": [
+    {
+      "title": "SonarSource - A reason should be provided when skipping a test",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1607/"
+    },
+    {
+      "title": "Pytest - Skip and xfail",
+      "url": "https://docs.pytest.org/en/stable/how.html#skip-and-xfail-handling-tests-that-cannot-succeed"
+    },
+    {
+      "title": "Unittest - Skipping tests and expected failures", 
+      "url": "https://docs.python.org/3/library/unittest.html#skipping-tests-and-expected-failures"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "@pytest.mark.skip\ndef test_feature():\n    assert True\n\n@pytest.mark.skip()\ndef test_another():\n    pass\n\n@unittest.skip\ndef test_method(self):\n    pass",
+        "description": "Tests are skipped without providing reasons, making maintenance difficult."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "@pytest.mark.skip(reason=\"Feature not implemented yet\")\ndef test_feature():\n    assert True\n\n@unittest.skip(\"Requires database connection\")\ndef test_method(self):\n    pass",
+        "description": "Tests provide clear reasons for why they are skipped."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Maintainability", 
+    "security": "None",
+    "automation": "High - Can be automatically detected through AST analysis",
+    "compliance": "Low - Coding standards and best practices"
+  },
+  "why_is_this_an_issue": "Skipping tests without providing a reason makes it difficult for developers to understand why the test was disabled. This can lead to confusion about whether the test should be re-enabled, fixed, or permanently removed, ultimately affecting code maintainability and test suite health.",
+  "how_to_fix": "Add a descriptive reason parameter to skip decorators. For pytest: use @pytest.mark.skip(reason='explanation'). For unittest: use @unittest.skip('explanation'). The reason should explain why the test is skipped and ideally when it should be addressed.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "", 
+    "OWASP": ""
+  },
+  "logic": {
+    "operator": "and", 
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "FunctionDef"
+      },
+      {
+        "check_type": "contains",
+        "property_path": ["decorator_list", "*"],
+        "forbidden_values": ["skip"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "rule_id": "async_functions_should_not_contain_synchronous_http_client_calls",
+  "title": "Async functions should not contain synchronous HTTP client calls",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asynchronous functions (those defined with `async def`) contain synchronous HTTP client calls (like `requests.get()`, `urllib.request.urlopen()`, etc.). Mixing synchronous I/O operations in async functions can block the event loop, negating the performance benefits of async/await and potentially causing application hangs or timeouts. Async functions should use async-compatible HTTP clients like `aiohttp` or `httpx` instead.",
+  "message": "Replace this synchronous HTTP call with an async alternative (e.g., 'aiohttp' or 'httpx') to avoid blocking the event loop.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "async",
+    "performance",
+    "best-practice",
+    "concurrency",
+    "python",
+    "blocking-call",
+    "http"
+  ],
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "check_type": "regex",
+        "regex": "requests\\.(get|post|put|delete|head|patch|request)\\(",
+        "property_path": ["body_source"]
+      }
+    ]
+  }
+}

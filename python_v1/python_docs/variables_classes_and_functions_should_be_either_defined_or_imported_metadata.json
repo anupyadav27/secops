@@ -1,0 +1,146 @@
+{
+  "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+  "title": "Variables, classes and functions should be either defined or imported",
+  "type": "BUG",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "BLOCKER"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Blocker",
+  "description": "Using variables, classes, or functions that are not defined in the current scope or imported will result in a NameError at runtime. This rule detects references to identifiers that cannot be resolved within the current Python module's namespace, helping prevent runtime errors that would cause the program to crash when the undefined reference is accessed.",
+  "message": "Define or import '{{identifier}}' before using it.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "suspicious",
+    "bug-prone",
+    "reliability"
+  ],
+  "impact": {
+    "reliability": "Critical impact as undefined references cause NameError exceptions that crash the program at runtime",
+    "maintainability": "High impact as undefined references make code difficult to understand and maintain"
+  },
+  "recommendation": "Either define the variable, class, or function in the current scope, or import it from the appropriate module before using it.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Variables, classes and functions should be either defined or imported",
+      "url": "https://rules.sonarsource.com/python/RSPEC-5953"
+    },
+    {
+      "title": "Python Built-in Exceptions - NameError",
+      "url": "https://docs.python.org/3/library/exceptions.html#NameError"
+    },
+    {
+      "title": "Python Import System",
+      "url": "https://docs.python.org/3/reference/import.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Using undefined variable",
+        "code": "def calculate():\n    result = undefined_variable * 2  # NameError: undefined_variable not defined\n    return result"
+      },
+      {
+        "description": "Using undefined function",
+        "code": "def main():\n    data = get_data()  # NameError: get_data not defined\n    print(data)"
+      },
+      {
+        "description": "Using undefined class",
+        "code": "def create_object():\n    obj = MyClass()  # NameError: MyClass not defined\n    return obj"
+      },
+      {
+        "description": "Using library function without import",
+        "code": "def process_data():\n    numbers = [1, 2, 3, 4, 5]\n    return numpy.array(numbers)  # NameError: numpy not defined"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Using defined variable",
+        "code": "def calculate():\n    defined_variable = 10\n    result = defined_variable * 2  # Variable is defined\n    return result"
+      },
+      {
+        "description": "Using defined function",
+        "code": "def get_data():\n    return [1, 2, 3]\n\ndef main():\n    data = get_data()  # Function is defined above\n    print(data)"
+      },
+      {
+        "description": "Using defined class",
+        "code": "class MyClass:\n    pass\n\ndef create_object():\n    obj = MyClass()  # Class is defined above\n    return obj"
+      },
+      {
+        "description": "Using imported library function",
+        "code": "import numpy\n\ndef process_data():\n    numbers = [1, 2, 3, 4, 5]\n    return numpy.array(numbers)  # numpy is imported"
+      },
+      {
+        "description": "Using imported function with from-import",
+        "code": "from math import sqrt\n\ndef calculate_distance(x, y):\n    return sqrt(x*x + y*y)  # sqrt is imported"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "None",
+    "automation": "High - Can be automatically detected through static analysis and symbol resolution",
+    "compliance": "High - Prevents runtime errors and improves code reliability"
+  },
+  "why_is_this_an_issue": "Using undefined variables, classes, or functions leads to NameError exceptions at runtime, which crash the program and create poor user experience. This typically happens due to typos in identifier names, missing import statements, incorrect scoping, or incomplete code implementation. Such errors are preventable through proper static analysis and make the code unreliable and difficult to maintain.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify the undefined identifier causing the issue"
+    },
+    {
+      "step": 2,
+      "description": "Check if it's a typo - verify the correct spelling of the intended identifier"
+    },
+    {
+      "step": 3,
+      "description": "If it's a built-in or standard library function, add the appropriate import statement"
+    },
+    {
+      "step": 4,
+      "description": "If it's from a third-party library, ensure the library is installed and imported"
+    },
+    {
+      "step": 5,
+      "description": "If it should be a local variable or function, define it in the appropriate scope"
+    },
+    {
+      "step": 6,
+      "description": "Check that the definition or import occurs before the usage in code execution order"
+    },
+    {
+      "step": 7,
+      "description": "Test the code to ensure the fix resolves the NameError"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-5953",
+  "scope": "Main",
+  "securityStandards": {},
+  "quickfix": "unknown",
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Check for undefined Name nodes (variables, functions, classes)",
+        "check_type": "node_type",
+        "value": "Name"
+      },
+      {
+        "comment": "Check for undefined attribute access on undefined base",
+        "check_type": "node_type", 
+        "value": "Attribute"
+      }
+    ]
+  }
+}

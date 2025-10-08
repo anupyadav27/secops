@@ -1,0 +1,120 @@
+{
+  "rule_id": "checkpoints_should_be_used_instead_of_sleep0",
+  "title": "Checkpoints should be used instead of time.sleep(0) for synchronization",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects the use of `time.sleep(0)` which is often used as a busy-wait synchronization mechanism. This is inefficient as it wastes CPU cycles while waiting. Instead, proper synchronization primitives like checkpoints, events, or condition variables should be used to achieve the same effect more efficiently.",
+  "message": "Replace this 'time.sleep(0)' with proper synchronization primitives like threading.Event or multiprocessing.Barrier.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "performance",
+    "concurrency",
+    "best-practice",
+    "python",
+    "threading",
+    "multiprocessing"
+  ],
+  "impact": "Using `time.sleep(0)` for synchronization creates unnecessary CPU load and can lead to poor performance in concurrent applications. It doesn't properly yield control to the scheduler and may cause race conditions if not used carefully. Proper synchronization primitives are more reliable and efficient.",
+  "recommendation": "Replace all instances of `time.sleep(0)` used for synchronization with appropriate synchronization primitives from the `threading` or `multiprocessing` modules, such as `Event`, `Condition`, `Barrier`, or `Semaphore` depending on your specific use case.",
+  "references": [
+    {
+      "title": "Python threading documentation",
+      "url": "https://docs.python.org/3/library/threading.html"
+    },
+    {
+      "title": "Python multiprocessing documentation",
+      "url": "https://docs.python.org/3/library/multiprocessing.html"
+    },
+    {
+      "title": "Busy-wait vs proper synchronization",
+      "url": "https://realpython.com/python-concurrency/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import threading\n\n# Using Event for synchronization\nevent = threading.Event()\n\n# In producer thread\nevent.set()  # Signal that condition is met\n\n# In consumer thread\nevent.wait()  # Efficiently wait for the signal",
+        "description": "Uses threading.Event for proper synchronization without busy-waiting"
+      },
+      {
+        "code": "import multiprocessing\n\n# Using Barrier for synchronization\nbarrier = multiprocessing.Barrier(2)\n\n# In both processes\nbarrier.wait()  # Efficiently wait for all parties to reach this point",
+        "description": "Uses multiprocessing.Barrier for proper synchronization between processes"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import time\n\n# Busy-wait synchronization (anti-pattern)\nwhile not condition_met:\n    time.sleep(0)  # Inefficient busy-wait",
+        "description": "Uses time.sleep(0) in a loop which wastes CPU cycles"
+      },
+      {
+        "code": "import time\n\n# Using sleep(0) for thread yielding\ndef worker():\n    while True:\n        do_work()\n        time.sleep(0)  # Ineffective yielding",
+        "description": "Attempts to yield control with sleep(0) which is not reliable"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "performance-optimization",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": "The `time.sleep(0)` call is often used as a way to yield control to other threads or processes, but it's an inefficient and unreliable synchronization mechanism. On most systems, `sleep(0)` doesn't actually sleep but immediately returns, causing the thread to continue executing and potentially starving other threads. This creates a busy-wait loop that consumes CPU resources without providing proper synchronization guarantees. Proper synchronization primitives are designed specifically for these use cases and are more efficient, reliable, and maintainable.",
+  "how_to_fix": {
+    "description": "Replace `time.sleep(0)` with appropriate synchronization primitives based on your specific needs:",
+    "steps": [
+      "1. Identify the purpose of the sleep(0) call (yielding, waiting for condition, etc.)",
+      "2. Choose the appropriate synchronization primitive:\n   - For simple signaling: threading.Event or multiprocessing.Event\n   - For waiting on conditions: threading.Condition\n   - For coordinating multiple threads: threading.Barrier\n   - For limiting concurrent access: threading.Semaphore",
+      "3. Replace the sleep(0) call with the proper wait/notify mechanism from the chosen primitive",
+      "4. Ensure all participating threads/processes properly use the synchronization primitive",
+      "5. Test the modified code to verify correct synchronization behavior"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-400",
+        "name": "Uncontrolled Resource Consumption ('Resource Exhaustion')",
+        "description": "Busy-wait loops can lead to unnecessary resource consumption"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CON36-C",
+        "name": "Avoid busy wait",
+        "description": "Do not use busy wait loops for synchronization"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["func", "attr"],
+        "value": "sleep"
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["func", "value", "id"],
+        "value": "time"
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["args", 0, "value"],
+        "value": 0
+      }
+    ]
+  }
+}

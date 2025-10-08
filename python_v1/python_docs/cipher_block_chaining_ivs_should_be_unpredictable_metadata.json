@@ -1,0 +1,214 @@
+{
+  "rule_id": "cipher_block_chaining_ivs_should_be_unpredictable",
+  "title": "Cipher Block Chaining (CBC) Initialization Vectors (IVs) Should Be Unpredictable",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "This rule detects when Cipher Block Chaining (CBC) mode encryption uses predictable Initialization Vectors (IVs), which can lead to serious security vulnerabilities. Predictable IVs in CBC mode can allow attackers to decrypt messages or forge encrypted content through chosen-plaintext attacks. The IV should be cryptographically random and unique for each encryption operation to ensure security.",
+  "message": "Make this IV unpredictable; it should be generated using a cryptographically secure random number generator.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "security",
+    "cryptography",
+    "cbc",
+    "iv",
+    "encryption",
+    "vulnerability",
+    "owasp-top-10"
+  ],
+  "impact": "Using predictable IVs in CBC mode weakens the encryption scheme, potentially allowing attackers to decrypt sensitive data, perform replay attacks, or manipulate encrypted content. This can lead to data breaches, loss of confidentiality, and compromise of system integrity.",
+  "recommendation": "Always generate IVs using cryptographically secure random number generators (like `os.urandom` or `secrets` module in Python). The IV should be unique for each encryption operation and never reused with the same key.",
+  "references": [
+    {
+      "title": "OWASP Cryptographic Storage Cheat Sheet - IV Generation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#initialization-vectors"
+    },
+    {
+      "title": "NIST Special Publication 800-38A - Recommendation for Block Cipher Modes of Operation",
+      "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf"
+    },
+    {
+      "title": "Python Cryptography Best Practices",
+      "url": "https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from Crypto.Cipher import AES\nfrom Crypto.Random import get_random_bytes\n\nkey = get_random_bytes(16)\ncipher = AES.new(key, AES.MODE_CBC)\ndata = b'Secret data to encrypt'\n# Good: IV is cryptographically random\niv = get_random_bytes(16)\nciphertext = cipher.encrypt(data)",
+        "description": "Uses `get_random_bytes` to generate a cryptographically secure, unpredictable IV for each encryption operation."
+      },
+      {
+        "code": "import os\nfrom cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes\nfrom cryptography.hazmat.backends import default_backend\n\nkey = os.urandom(32)\niv = os.urandom(16)  # Good: Uses os.urandom\ncipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())",
+        "description": "Uses `os.urandom` which is cryptographically secure for generating IVs."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from Crypto.Cipher import AES\n\nkey = b'16bytekey12345678'\niv = b'16byteiv1234567'  # Bad: Hardcoded IV\ncipher = AES.new(key, AES.MODE_CBC, iv=iv)\ndata = b'Secret data'\nciphertext = cipher.encrypt(data)",
+        "description": "Uses a hardcoded, predictable IV which completely breaks CBC mode security."
+      },
+      {
+        "code": "from Crypto.Cipher import AES\nimport time\n\nkey = b'16bytekey12345678'\niv = str(time.time()).encode()  # Bad: Time-based IV is predictable\ncipher = AES.new(key, AES.MODE_CBC, iv=iv)",
+        "description": "Uses time-based IV which is predictable and can be guessed by attackers."
+      },
+      {
+        "code": "from Crypto.Cipher import AES\nimport random\n\nkey = b'16bytekey12345678'\niv = bytes([random.randint(0, 255) for _ in range(16)])  # Bad: random.randint is not cryptographically secure\ncipher = AES.new(key, AES.MODE_CBC, iv=iv)",
+        "description": "Uses Python's `random` module which is not cryptographically secure for generating IVs."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "application-security",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": true
+    },
+    "standards": [
+      "OWASP Top 10 - A3:2021-Sensitive Data Exposure",
+      "OWASP Top 10 - A9:2021-Security Logging and Monitoring Failures",
+      "CWE-329",
+      "PCI DSS 3.2.1"
+    ]
+  },
+  "why_is_this_an_issue": "In Cipher Block Chaining (CBC) mode, each plaintext block is XORed with the previous ciphertext block before encryption. The first block uses the IV for this XOR operation. If the IV is predictable, an attacker can:\n\n1. **Decrypt messages** by analyzing patterns when the same plaintext is encrypted multiple times\n2. **Perform chosen-plaintext attacks** to recover the encryption key\n3. **Manipulate ciphertext** in predictable ways to alter the decrypted plaintext\n4. **Replay old messages** if IVs are reused\n\nPredictable IVs effectively reduce the security of CBC mode to ECB mode in many attack scenarios, completely breaking the confidentiality guarantees of the encryption scheme. This is particularly dangerous when encrypting sensitive data like passwords, personal information, or financial transactions.",
+  "how_to_fix": {
+    "description": "To fix this issue, replace any predictable IV generation with cryptographically secure random number generation. Here's how to properly implement it:",
+    "steps": [
+      "1. **Identify all CBC mode encryption operations** in your codebase that might use predictable IVs",
+      "2. **Replace hardcoded IVs** with dynamically generated ones using cryptographically secure methods",
+      "3. **Use proper random number generators**: \n   - `os.urandom(size)` (built-in Python)\n   - `secrets.token_bytes(size)` (Python 3.6+)\n   - `Crypto.Random.get_random_bytes(size)` (from PyCryptodome)",
+      "4. **Ensure IVs are the correct size** for your cipher (typically 16 bytes for AES)",
+      "5. **Never reuse IVs** with the same key - generate a new IV for each encryption operation",
+      "6. **Store/transmit the IV** along with the ciphertext (IVs don't need to be secret, just unpredictable)",
+      "7. **Test your changes** to ensure encryption/decryption still works correctly"
+    ],
+    "code_example": "from Crypto.Cipher import AES\nfrom Crypto.Random import get_random_bytes\n\n# Good implementation\ndef encrypt_data(key, plaintext):\n    # Generate secure random IV for each encryption\n    iv = get_random_bytes(16)\n    cipher = AES.new(key, AES.MODE_CBC, iv=iv)\n    ciphertext = cipher.encrypt(plaintext)\n    # Return IV + ciphertext (IV needs to be stored/transmitted with ciphertext)\n    return iv + ciphertext"
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "329",
+        "name": "Not Using a Random IV with CBC Mode",
+        "description": "The product uses CBC Mode but does not properly initialize the Initialization Vector (IV) with a source of entropy that is unpredictable, which significantly reduces the security of the algorithm."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC61-CPP",
+        "name": "Do not use insecure cryptographic functions",
+        "description": "This rule is relevant as it covers proper usage of cryptographic primitives including IV generation."
+      }
+    ],
+    "owasp": [
+      {
+        "category": "A3:2021",
+        "name": "Sensitive Data Exposure",
+        "description": "Predictable IVs can lead to exposure of sensitive data through cryptographic weaknesses."
+      },
+      {
+        "category": "A9:2021",
+        "name": "Security Logging and Monitoring Failures",
+        "description": "While primarily about logging, weak cryptography can prevent proper detection of security incidents."
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": ["func", "value"]
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": ["func", "attr"]
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["func", "attr"],
+        "value": "new"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "regex",
+            "property_path": ["func", "value", "id"],
+            "regex": "^AES$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["func", "value", "id"],
+            "regex": "^Cipher$",
+            "flags": "i"
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": ["args", 1]
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "regex",
+                "property_path": ["args", 1, "attr"],
+                "regex": "^MODE_CBC$",
+                "flags": "i"
+              },
+              {
+                "check_type": "regex",
+                "property_path": ["args", 1, "func", "id"],
+                "regex": "^CBC$",
+                "flags": "i"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": ["keywords", 0, "value", "func", "attr"],
+            "value": "time"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["keywords", 0, "value", "func", "id"],
+            "regex": "^(str|bytes)$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["keywords", 0, "value", "func", "value", "attr"],
+            "regex": "^(randint|random|randbytes)$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["keywords", 0, "value"],
+            "regex": "^(b'[^']+|b\"[^\"]+)$",
+            "flags": "i"
+          }
+        ]
+      }
+    ]
+  }
+}

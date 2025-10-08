@@ -1,0 +1,143 @@
+{
+  "rule_id": "async_functions_should_use_async_features",
+  "title": "Async functions should use async features",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects async functions that don't actually use any async features (like `await`, `async with`, or `async for`). Such functions should be regular functions instead, as marking them as async without using async features adds unnecessary overhead and can be misleading to readers of the code. The async/await syntax exists to handle asynchronous operations, and functions marked with `async` should actually perform asynchronous operations to justify the overhead of coroutine creation and execution.",
+  "message": "Remove the 'async' keyword from this function as it doesn't use any async features.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "best-practice",
+    "python",
+    "async",
+    "performance",
+    "readability"
+  ],
+  "impact": "Async functions that don't use async features create unnecessary coroutine objects, adding memory and performance overhead. They also mislead developers into thinking the function performs asynchronous operations when it doesn't, potentially leading to incorrect usage patterns or architectural decisions. This can make the code harder to maintain and understand.",
+  "recommendation": "Convert the async function to a regular function by removing the 'async' keyword, or add proper async operations (like await expressions) if asynchronous behavior is actually needed.",
+  "references": [
+    {
+      "title": "Python Documentation: Asyncio and async/await",
+      "url": "https://docs.python.org/3/library/asyncio.html"
+    },
+    {
+      "title": "PEP 492 -- Coroutines with async and await syntax",
+      "url": "https://peps.python.org/pep-0492/"
+    },
+    {
+      "title": "Real Python: Async IO in Python",
+      "url": "https://realpython.com/async-io-python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "async def fetch_data():\n    response = await http_client.get('https://api.example.com')\n    return response.json()",
+        "description": "This function is correctly marked as async because it uses 'await' to perform an asynchronous operation."
+      },
+      {
+        "code": "def process_data(data):\n    return data.upper()",
+        "description": "This is a regular function that doesn't need async features, so it's correctly not marked as async."
+      },
+      {
+        "code": "async def process_stream():\n    async with aiofiles.open('file.txt') as f:\n        contents = await f.read()\n    return contents",
+        "description": "This function properly uses both 'async with' and 'await' expressions."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def calculate_sum(a, b):\n    return a + b",
+        "description": "This function is marked as async but doesn't use any async features, which is unnecessary and misleading."
+      },
+      {
+        "code": "async def get_config():\n    return {'timeout': 30, 'retries': 3}",
+        "description": "Simple dictionary return doesn't require async functionality."
+      },
+      {
+        "code": "async def validate_input(data):\n    if not data:\n        raise ValueError('Data cannot be empty')\n    return True",
+        "description": "Basic validation logic doesn't need to be async."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    }
+  },
+  "why_is_this_an_issue": {
+    "performance": "Async functions create coroutine objects even when not needed, adding memory overhead. The Python event loop has to handle these coroutines, which adds unnecessary scheduling overhead.",
+    "readability": "Developers seeing an async function expect it to perform asynchronous operations. When it doesn't, this violates the principle of least surprise and can lead to confusion.",
+    "maintainability": "Mixing sync and async code improperly can lead to harder-to-debug issues, especially when the async nature of a function is assumed but not actually present in its implementation.",
+    "correctness": "In some cases, incorrectly marked async functions might be awaited when they shouldn't be, or not awaited when they should be (if later modified to actually be async), leading to potential bugs."
+  },
+  "how_to_fix": {
+    "description": "Evaluate whether the function truly needs to be asynchronous. If not, remove the async keyword. If it should be asynchronous, add proper async operations.",
+    "steps": [
+      "1. Review the function's implementation to determine if it actually needs to perform asynchronous operations",
+      "2. If no async operations are needed:",
+      "   a. Remove the 'async' keyword from the function definition",
+      "   b. Remove any unnecessary 'await' calls that might have been added to other calls to this function",
+      "3. If async operations are needed:",
+      "   a. Add proper 'await' expressions for asynchronous calls",
+      "   b. Consider using 'async with' for asynchronous context managers",
+      "   c. Consider using 'async for' for asynchronous iterators",
+      "4. Update all call sites to either remove 'await' (if converted to sync) or add 'await' (if properly made async)",
+      "5. Test the function to ensure it works correctly in both synchronous and asynchronous contexts as appropriate"
+    ],
+    "considerations": [
+      "Be careful when changing function signatures as this might affect all call sites",
+      "Consider whether the function might need to be async in the future - if so, it might be better to properly implement async features now",
+      "Check if the function is part of a public API - changing its signature might break compatibility"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Await"
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "AsyncWith"
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "AsyncFor"
+          }
+        ]
+      }
+    ]
+  }
+}
