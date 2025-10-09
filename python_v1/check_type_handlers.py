@@ -486,3 +486,26 @@ def get_handler(check_type):
 def list_available_handlers():
     """Return list of all available check_type handlers"""
     return list(handlers.keys())
+
+def custom_check_aws_cloudwatch_metrics_namespace_should_not_begin_with_aws(node):
+    """
+    Custom check for AWS CloudWatch metrics namespace not starting with 'aws.'
+    """
+    findings = []
+    if node.get("node_type") == "Call":
+        func = node.get("func", {})
+        if func.get("attr") == "put_metric_data":
+            for kw in node.get("keywords", []):
+                if kw.get("arg") == "Namespace":
+                    value = kw.get("value", {})
+                    if value.get("node_type") == "Constant" and str(value.get("value", "")).startswith("aws."):
+                        findings.append({
+                            "rule_id": "aws_cloudwatch_metrics_namespace_should_not_begin_with_aws",
+                            "message": "Metrics namespace should not start with 'aws'.",
+                            "line": node.get("lineno"),
+                            "status": "violation"
+                        })
+    return findings
+
+# Register custom function in handlers (if needed)
+handlers["custom_check_aws_cloudwatch_metrics_namespace_should_not_begin_with_aws"] = custom_check_aws_cloudwatch_metrics_namespace_should_not_begin_with_aws
