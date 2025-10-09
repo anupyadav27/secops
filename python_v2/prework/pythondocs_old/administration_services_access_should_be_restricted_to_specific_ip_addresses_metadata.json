@@ -1,0 +1,57 @@
+{
+  "rule_id": "administration_services_access_should_be_restricted_to_specific_ip_addresses",
+  "title": "Administration services access should be restricted to specific IP addresses",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "Administration interfaces should only be accessible from trusted IP addresses. Exposing these services to the public internet increases the risk of unauthorized access and potential compromise.",
+  "message": "Restrict access to administration services to specific IP addresses only.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "cwe",
+    "aws"
+  ],
+  "impact": "If administration services are accessible from any IP, attackers can attempt to gain unauthorized access, increasing the risk of data breaches and system compromise.",
+  "recommendation": "Configure network rules or firewall settings to allow access to administration services only from trusted IP addresses.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "resource \"aws_security_group\" \"admin_sg\" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n",
+        "description": "The administration service (e.g., SSH) is open to all IP addresses."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "resource \"aws_security_group\" \"admin_sg\" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"203.0.113.0/24\"]\n  }\n}\n",
+        "description": "The administration service is restricted to a specific trusted IP range."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Network Security",
+    "security": "High",
+    "automation": "None",
+    "compliance": "Relevant for compliance frameworks requiring restricted access to sensitive services."
+  },
+  "why_is_this_an_issue": "Unrestricted access to administration services exposes the system to brute-force attacks and unauthorized access attempts.",
+  "how_to_fix": "Restrict access to administration interfaces by configuring firewall rules or security groups to allow only trusted IP addresses.",
+  "security_mappings": {
+    "CWE": "CWE-284: Improper Access Control",
+    "CERT": "",
+    "OWASP": "A5:2017 - Broken Access Control"
+  },
+  "logic": {
+    "node_type": [
+      "Assign",
+      "Call"
+    ],
+    "check_type": "custom",
+    "function": "check_admin_services_access_restricted_to_specific_ip_addresses",
+    "priority": "high",
+    "quality": "corrected"
+  }
+}

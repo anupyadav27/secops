@@ -1,0 +1,60 @@
+{
+  "rule_id": "a_reason_should_be_provided_when_skipping_a_test",
+  "title": "A reason should be provided when skipping a test",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "When skipping a test, it is important to provide a reason. This helps maintainers and other developers understand why the test was skipped, whether it is due to a known bug, an external dependency, or another valid reason. Omitting a reason can make it difficult to track issues and can lead to confusion or overlooked problems.",
+  "message": "Provide a reason when skipping this test so others understand why it is not being executed.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "tests",
+    "bad-practice",
+    "confusing"
+  ],
+  "impact": "Lack of a reason for skipping tests reduces transparency and can hinder debugging, maintenance, and collaboration.",
+  "recommendation": "Always provide a clear and descriptive reason when skipping a test, using the appropriate test framework's features (e.g., pytest.mark.skip(reason='...')).",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "@pytest.mark.skip\ndef test_feature():\n    ...",
+        "description": "The test is skipped without providing a reason, making it unclear why it is not executed."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "@pytest.mark.skip(reason='Blocked by issue #123')\ndef test_feature():\n    ...",
+        "description": "A clear reason is provided for skipping the test, improving transparency."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Maintainability",
+    "security": "None",
+    "automation": "Improves automated test reporting and tracking.",
+    "compliance": "Not directly related to compliance standards."
+  },
+  "why_is_this_an_issue": "Without a reason, skipped tests can be overlooked or misunderstood, making it harder to maintain and debug the codebase.",
+  "how_to_fix": "Use your test framework's features to provide a reason when skipping tests. For example, in pytest: @pytest.mark.skip(reason='...').",
+  "security_mappings": {
+    "CWE": "CWE-710: Improper Adherence to Coding Standards",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "node_type": [
+      "FunctionDef"
+    ],
+    "property_path": [
+      "name"
+    ],
+    "check_type": "custom",
+    "custom_function": "check_test_skip_without_reason",
+    "priority": "high",
+    "quality": "accurate"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "rule_id": "variables_should_not_be_selfassigned",
+  "new_check_type": "property_comparison",
+  "description": "Checks if the given property's value is not equal to 'None' and compares the property's value with the 'annotation' property of the same node."
+}

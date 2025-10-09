@@ -1,0 +1,5 @@
+{
+  "rule_id": "having_a_permissive_crossorigin_resource_sharing_policy_is_securitysensitive",
+  "new_check_type": "property_comparison",
+  "description": "RecursionDepthLimitCheck: Checks if a GraphQL query has a recursive selection with a depth greater than a given limit."
+}

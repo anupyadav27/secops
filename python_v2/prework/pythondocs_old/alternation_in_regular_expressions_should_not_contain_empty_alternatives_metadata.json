@@ -1,0 +1,58 @@
+{
+  "rule_id": "alternation_in_regular_expressions_should_not_contain_empty_alternatives",
+  "title": "Alternation in regular expressions should not contain empty alternatives",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "An empty alternative in a regular expression alternation (e.g., 'a||b') matches the empty string, which is almost always a mistake. This can lead to unexpected matches and bugs in the code using the regular expression.",
+  "message": "This regular expression alternation contains an empty alternative, which matches the empty string.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "regex"
+  ],
+  "impact": "Empty alternatives in regular expressions can cause unexpected matches, leading to bugs and security issues.",
+  "recommendation": "Remove empty alternatives from regular expression alternations to ensure only intended patterns are matched.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import re\npattern = re.compile(r'a||b')\nresult = pattern.match('')\n",
+        "description": "The pattern 'a||b' contains an empty alternative, so it matches the empty string, which is likely not intended."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import re\npattern = re.compile(r'a|b')\nresult = pattern.match('a')\n",
+        "description": "The pattern 'a|b' does not contain any empty alternatives, so it only matches 'a' or 'b'."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "Medium",
+    "automation": "Low",
+    "compliance": "None"
+  },
+  "why_is_this_an_issue": "Empty alternatives in regular expressions are almost always a mistake and can cause the pattern to match the empty string, leading to bugs.",
+  "how_to_fix": "Review the regular expression and remove any empty alternatives from alternations.",
+  "security_mappings": {
+    "CWE": "CWE-625: Permissive Regular Expression",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "node_type": [
+      "Call"
+    ],
+    "property_path": [
+      "args"
+    ],
+    "check_type": "custom",
+    "custom_function": "check_regex_empty_alternatives",
+    "priority": "medium",
+    "quality": "accurate"
+  }
+}

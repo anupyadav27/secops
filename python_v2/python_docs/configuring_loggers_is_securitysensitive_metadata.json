@@ -1,0 +1,67 @@
+{
+  "rule_id": "configuring_loggers_is_securitysensitive",
+  "title": "Configuring loggers is sensitive",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Logging sensitive information can expose confidential data.",
+  "message": "A logger is configured with sensitive information.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "logging",
+    "security"
+  ],
+  "impact": "High",
+  "recommendation": "Avoid logging sensitive information.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "logger.error(\"User password: {password}\")",
+        "description": "Logging a user's password"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "logger.error(\"Unauthorized access attempt\")",
+        "description": "Logging a generic security event"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Logging sensitive information can expose confidential data and create security risks.",
+  "how_to_fix": "Avoid logging sensitive information or encrypt it before logging.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "node",
+      "name",
+      "value"
+    ],
+    "forbidden_values": [
+      "password",
+      "API key",
+      "SSH key"
+    ]
+  },
+  "metadata": {
+    "filename": "configuring_loggers_is_securitysensitive.json",
+    "rule_id": "configuring_loggers_is_securitysensitive",
+    "title": "Configuring loggers is sensitive",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "rule_id": "assertions_should_not_be_made_at_the_end_of_blocks_expecting_an_exception",
+  "title": "Assertions should not be made at the end of blocks expecting an exception",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "<DETAILED_RULE_DESCRIPTION>",
+  "message": "<ISSUE_MESSAGE>",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "tests",
+    "unused",
+    "pitfall"
+  ],
+  "impact": "<IMPACT_OF_ISSUE>",
+  "recommendation": "<RECOMMENDATION_TO_FIX>",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "<NONCOMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_NONCOMPLIANT>"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "<COMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_COMPLIANT>"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "<CATEGORY>",
+    "security": "<SECURITY_IMPACT>",
+    "automation": "<AUTOMATION_IMPACT>",
+    "compliance": "<COMPLIANCE_IMPACT>"
+  },
+  "why_is_this_an_issue": "<WHY_IS_THIS_AN_ISSUE>",
+  "how_to_fix": "<HOW_TO_FIX_THIS_ISSUE>",
+  "security_mappings": {
+    "CWE": "<CWE_ID_OR_DESCRIPTION>",
+    "CERT": "<CERT_GUIDANCE_REFERENCE>",
+    "OWASP": "<OWASP_CATEGORY_OR_REFERENCE>"
+  },
+  "logic": {
+    "node_type": [
+      "Try"
+    ],
+    "property_path": [
+      "body.*.node_type"
+    ],
+    "check_type": "regex",
+    "regex": "^Assert$",
+    "priority": "medium",
+    "quality": "corrected"
+  }
+}

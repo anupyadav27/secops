@@ -1,0 +1,69 @@
+{
+  "rule_id": "using_unencrypted_rds_db_resources_is_securitysensitive",
+  "title": "Using unencrypted RDS DB resources is sensitive",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "Checks if AWS RDS resources are not encrypted",
+  "message": "Unencrypted RDS resource found",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "aws",
+    "rds",
+    "security"
+  ],
+  "impact": "High",
+  "recommendation": "Encrypt RDS resources",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import boto3\nclient = boto3.client('rds')\nresponse = client.describe_db_instances()",
+        "description": "Response contains unencrypted DB instances"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import boto3\nclient = boto3.client('rds')\nresponse = client.describe_db_instances()\nfor instance in response['DBInstances']:\n    if instance['Encrypted'] == True:\n        pass",
+        "description": "Response contains only encrypted DB instances"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "aws_rds",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Unencrypted RDS resources can expose sensitive data",
+  "how_to_fix": "Encrypt RDS resources using AWS KMS",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "pattern",
+    "property_path": [
+      "body",
+      "expression_statements",
+      "index",
+      "value"
+    ],
+    "forbidden_values": [
+      "boto3.client('rds').describe_db_instances()"
+    ],
+    "new_check_type_doc": "Checks if the provided code uses AWS RDS client to describe DB instances and checks if any of the returned instances are unencrypted"
+  },
+  "function_code": "def check_unencrypted_rds_instances(node):\n    import ast\n    if isinstance(node, ast.Expression)\n        if isinstance(node.value, ast.Call)\n            func = node.value.func.id\n            args = [arg.s for arg in node.value.args]\n            if func == 'describe_db_instances'\n                for db in ast.literal_eval(node.value.kwargs['kwargs']['DBInstances']):\n                    if 'Encrypted' not in db or db['Encrypted'] is False:\n                        return True\n    return False",
+  "metadata": {
+    "filename": "using_unencrypted_rds_db_resources_is_securitysensitive.json",
+    "rule_id": "using_unencrypted_rds_db_resources_is_securitysensitive",
+    "title": "Using unencrypted RDS DB resources is sensitive",
+    "status": "ready",
+    "defaultSeverity": "Critical"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "rule_id": "dtype_parameter_should_be_provided_when_using_pandasreadcsv_or_pandasreadtable",
+  "title": "Data type parameter should be provided when using pandas.read_csv or pandas.read_table",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule checks for the use of pandas.read_csv or pandas.read_table without a specified data type parameter.",
+  "message": "Data type parameter should be provided when using pandas.read_csv or pandas.read_table",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "pandas",
+    "data",
+    "type",
+    "csv",
+    "table"
+  ],
+  "impact": "Potential data type inconsistencies in the resulting DataFrame",
+  "recommendation": "Always specify the data type parameter when using pandas.read_csv or pandas.read_table",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "df = pd.read_csv('file.csv')",
+        "description": "No data type parameter provided"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "df = pd.read_csv('file.csv', dtype={'column1': str, 'column2': int})",
+        "description": "Data type parameter provided"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Using implicit data types can lead to data inconsistencies and errors in the resulting DataFrame.",
+  "how_to_fix": "Always specify the data type parameter when using pandas.read_csv or pandas.read_table",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "ast.Call",
+      "func.name",
+      "value"
+    ],
+    "forbidden_values": [
+      "pandas.read_csv",
+      "pandas.read_table"
+    ],
+    "forbidden_empty": true
+  },
+  "function_code": "def custom_check(node):\n    call_nodes = node.findall(lambda n: isinstance(n, ast.Call))\n    for call_node in call_nodes:\n        if call_node.func.name in ['pandas.read_csv', 'pandas.read_table'] and not call_node.func.args:\n            return True\n    return False",
+  "metadata": {
+    "filename": "dtype_parameter_should_be_provided_when_using_pandasreadcsv_or_pandasreadtable.json",
+    "rule_id": "dtype_parameter_should_be_provided_when_using_pandasreadcsv_or_pandasreadtable",
+    "title": "Data type parameter should be provided when using pandas.read_csv or pandas.read_table",
+    "status": "ready",
+    "defaultSeverity": "Minor"
+  }
+}

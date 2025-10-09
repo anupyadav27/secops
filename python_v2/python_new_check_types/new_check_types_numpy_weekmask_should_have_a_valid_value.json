@@ -1,0 +1,5 @@
+{
+  "rule_id": "numpy_weekmask_should_have_a_valid_value",
+  "new_check_type": "pattern",
+  "description": "Checks for the use of the 'like' operator with nonexistent operator."
+}

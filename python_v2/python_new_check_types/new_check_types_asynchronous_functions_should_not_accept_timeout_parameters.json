@@ -1,0 +1,5 @@
+{
+  "rule_id": "asynchronous_functions_should_not_accept_timeout_parameters",
+  "new_check_type": "property_comparison",
+  "description": "Checks if the function is decorated with 'async' but does not use 'await' or 'async with'. This check type is specific to async functions."
+}

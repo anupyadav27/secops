@@ -1,0 +1,67 @@
+{
+  "rule_id": "equality_checks_should_not_be_made_against_numpynan",
+  "title": "Equality checks should not be made against numpy.nan",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "Avoid comparing values with numpy.nan. Comparing with numpy.nan will always return False, which could lead to unexpected behavior.",
+  "message": "Avoid comparing variables to numpy.nan",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "numpy",
+    "comparison",
+    "nan"
+  ],
+  "impact": "Code logic may be incorrect due to unexpected comparison results.",
+  "recommendation": "Use the numpy.isnan() function to check for napym.nan.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import numpy as np\n\nvalue = np.nan\nif value == 0:\n    print('Equal')",
+        "description": "Comparison with numpy.nan will always return False"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import numpy as np\n\nvalue = np.nan\nif np.isnan(value):\n    print('Nan')",
+        "description": "Use numpy.isnan() to check for numpy.nan"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Comparing with numpy.nan will always return False, which could lead to unexpected behavior.",
+  "how_to_fix": "Use the numpy.isnan() function to check for napym.nan.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "expression",
+      "left",
+      "value"
+    ],
+    "forbidden_values": [
+      "numpy.nan"
+    ],
+    "new_check_type_doc": "Check if the left value of a comparison is numpy.nan"
+  },
+  "metadata": {
+    "filename": "equality_checks_should_not_be_made_against_numpynan.json",
+    "rule_id": "equality_checks_should_not_be_made_against_numpynan",
+    "title": "Equality checks should not be made against numpy.nan",
+    "status": "ready",
+    "defaultSeverity": "Minor"
+  }
+}

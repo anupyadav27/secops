@@ -1,0 +1,5 @@
+{
+  "rule_id": "regular_expressions_should_not_be_too_complicated",
+  "new_check_type": "pattern",
+  "description": "This check type matches regular expressions containing contradictory lookahead assertions."
+}

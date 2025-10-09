@@ -1,0 +1,55 @@
+{
+    "rule_id":  "jump_statements_should_not_be_redundant",
+    "title":  "Jump statements should not be redundant",
+    "type":  "CODE_SMELL",
+    "status":  "ready",
+    "defaultSeverity":  "Minor",
+    "description":  "\u003cDETAILED_RULE_DESCRIPTION\u003e",
+    "message":  "\u003cISSUE_MESSAGE\u003e",
+    "remediation":  {
+                        "func":  "Constant/Issue",
+                        "constantCost":  "5min"
+                    },
+    "tags":  [
+                 "redundant",
+                 "clumsy"
+             ],
+    "impact":  "\u003cIMPACT_OF_ISSUE\u003e",
+    "recommendation":  "\u003cRECOMMENDATION_TO_FIX\u003e",
+    "references":  [
+
+                   ],
+    "examples":  {
+                     "noncompliant":  [
+                                          {
+                                              "code":  "\u003cNONCOMPLIANT_CODE_EXAMPLE\u003e",
+                                              "description":  "\u003cWHY_THIS_IS_NONCOMPLIANT\u003e"
+                                          }
+                                      ],
+                     "compliant":  [
+                                       {
+                                           "code":  "\u003cCOMPLIANT_CODE_EXAMPLE\u003e",
+                                           "description":  "\u003cWHY_THIS_IS_COMPLIANT\u003e"
+                                       }
+                                   ]
+                 },
+    "devsecops":  {
+                      "category":  "\u003cCATEGORY\u003e",
+                      "security":  "\u003cSECURITY_IMPACT\u003e",
+                      "automation":  "\u003cAUTOMATION_IMPACT\u003e",
+                      "compliance":  "\u003cCOMPLIANCE_IMPACT\u003e"
+                  },
+    "why_is_this_an_issue":  "\u003cWHY_IS_THIS_AN_ISSUE\u003e",
+    "how_to_fix":  "\u003cHOW_TO_FIX_THIS_ISSUE\u003e",
+    "security_mappings":  {
+                              "CWE":  "\u003cCWE_ID_OR_DESCRIPTION\u003e",
+                              "CERT":  "\u003cCERT_GUIDANCE_REFERENCE\u003e",
+                              "OWASP":  "\u003cOWASP_CATEGORY_OR_REFERENCE\u003e"
+                          },
+    "logic":  {
+                  "priority":  "medium",
+                  "check_type":  "function_call",
+                  "quality":  "broken",
+                  "function_name":  "check_general_rule"
+              }
+}

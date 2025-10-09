@@ -1,0 +1,58 @@
+{
+  "rule_id": "functions_and_methods_should_not_be_empty",
+  "title": "Functions and methods should not be empty",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "<DETAILED_RULE_DESCRIPTION>",
+  "message": "<ISSUE_MESSAGE>",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "suspicious"
+  ],
+  "impact": "<IMPACT_OF_ISSUE>",
+  "recommendation": "<RECOMMENDATION_TO_FIX>",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "<NONCOMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_NONCOMPLIANT>"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "<COMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_COMPLIANT>"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "<CATEGORY>",
+    "security": "<SECURITY_IMPACT>",
+    "automation": "<AUTOMATION_IMPACT>",
+    "compliance": "<COMPLIANCE_IMPACT>"
+  },
+  "why_is_this_an_issue": "<WHY_IS_THIS_AN_ISSUE>",
+  "how_to_fix": "<HOW_TO_FIX_THIS_ISSUE>",
+  "security_mappings": {
+    "CWE": "<CWE_ID_OR_DESCRIPTION>",
+    "CERT": "<CERT_GUIDANCE_REFERENCE>",
+    "OWASP": "<OWASP_CATEGORY_OR_REFERENCE>"
+  },
+  "logic": {
+    "node_type": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ],
+    "property_path": [
+      "body"
+    ],
+    "check_type": "custom",
+    "custom_function": "check_empty_function",
+    "quality": "corrected"
+  }
+}

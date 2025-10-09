@@ -1,0 +1,5 @@
+{
+  "rule_id": "using_publicly_writable_directories_is_securitysensitive",
+  "new_check_type": "property_comparison",
+  "description": "Checks if a string is equal to a specific publicly writable directory."
+}

@@ -1,0 +1,57 @@
+{
+  "rule_id": "cancellation_exceptions_should_be_reraised_after_cleanup",
+  "title": "Cancellation exceptions should be re-raised after cleanup",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks if a context manager raises a cancellation exception without re-raising it after cleanup.",
+  "message": "Raise the cancellation exception again after the cleanup.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "concurrency",
+    "exception-handling"
+  ],
+  "impact": "A cancelled task might continue to run due to failed exception handling, resulting in unintended results.",
+  "recommendation": "Always re-raise cancellation exceptions after cleanup.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "with some_context_manager as cm:\n    try:\n        do_something()\n    finally:\n        cm.cleanup()\n        raise CancelledError()"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "with some_context_manager as cm:\n    try:\n        do_something()\n    finally:\n        cm.cleanup()\n        raise\n        from CancelledError"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "A cancelled task might continue to run due to failed exception handling, resulting in unintended results.",
+  "how_to_fix": "Always re-raise cancellation exceptions after cleanup.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "custom",
+    "custom_function": "custom_check_cancellation_exceptions_should_be_reraised_after_cleanup"
+  },
+  "function_code": "def custom_check_cancellation_exceptions_should_be_reraised_after_cleanup(node):\n    if not isinstance(node, ast.WithStatement) or not isinstance(node.context_manager, ast.WithItem) or not isinstance(node.context_manager.context_expr, ast.TryExcept):\n        return False\n    for target in node.context_manager.targets:\n        if isinstance(target, ast.Name) and target.id == 'cm':\n            for body in node.body:\n                if isinstance(body, ast.Raise) and isinstance(body.exc, ast.Name) and body.exc.id == 'CancelledError':\n                    if not any((isinstance(stmt, ast.Try) and isinstance(stmt.body, ast.RaiseFrom) and isinstance(stmt.body.from_expr, ast.Name) and stmt.body.from_expr.id == 'CancelledError') for stmt in node.body[::-1]):\n                        return True\n    return False",
+  "metadata": {
+    "filename": "cancellation_exceptions_should_be_reraised_after_cleanup.json",
+    "rule_id": "cancellation_exceptions_should_be_reraised_after_cleanup",
+    "title": "Cancellation exceptions should be re-raised after cleanup",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "rule_id": "regex_lookahead_assertions_should_not_be_contradictory",
+  "title": "Regex lookahead assertions should not be contradictory",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Lookahead assertions in regular expressions should not contradict each other.",
+  "message": "Regex lookahead assertions seem contradictory.",
+  "remediation": {
+    "func": "Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "regex",
+    "lookahead"
+  ],
+  "impact": "Maintainability",
+  "recommendation": "Avoid contradictory lookahead assertions.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import re\npattern1 = re.compile(r'(?=(x)|(y))(?!(x))z')",
+        "description": "Lookahead assertions (?=(x)|(y)) and (?!(x)) are contradictory."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import re\npattern1 = re.compile(r'(?=(x))(?!y)z')",
+        "description": "Lookahead assertions are not contradictory."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Contradictory lookahead assertions can result in unexpected matches or missed matches, leading to issues in your code.",
+  "how_to_fix": "Review and refactor regular expressions with contradictory lookahead assertions to ensure they are not contradictory.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "pattern",
+    "pattern": "^(?=.*(?=\\(?=(?:\\((?=[^()]+\\))|[^()]+|(?<=\\))\\))(?!\\2))(?:[^()]*\\((?=[^()]+\\))|[^()]+|(?<=\\))\\))*$",
+    "new_check_type_doc": "This check type matches regular expressions containing contradictory lookahead assertions."
+  },
+  "metadata": {
+    "filename": "regex_lookahead_assertions_should_not_be_contradictory.json",
+    "rule_id": "regex_lookahead_assertions_should_not_be_contradictory",
+    "title": "Regex lookahead assertions should not be contradictory",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

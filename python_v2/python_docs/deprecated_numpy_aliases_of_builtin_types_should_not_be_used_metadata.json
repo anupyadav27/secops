@@ -1,0 +1,77 @@
+{
+  "rule_id": "deprecated_numpy_aliases_of_builtin_types_should_not_be_used",
+  "title": "Deprecated numpy aliases of builtin types should not be used",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Using numpy aliases for built-in types can lead to unexpected behavior, especially when the numpy version is updated.",
+  "message": "Using numpy alias for built-in type: {{ type }}",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "numpy",
+    "alias",
+    "built-in-type"
+  ],
+  "impact": "Functional",
+  "recommendation": "Use built-in types instead of numpy aliases",
+  "references": [
+    "https://numpy.org/doc/stable/user/basics.rec.html#numpy-arrays-are-not-python-lists",
+    "https://numpy.org/doc/stable/user/basics.types.html"
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import numpy as np\narr = np.array([1, 2, 3], dtype='int8')",
+        "description": "Using np.array with built-in type int8."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import numpy as np\narr = [1, 2, 3]",
+        "description": "Using regular list."
+      },
+      {
+        "code": "import numpy as np\narr = np.array([1, 2, 3], dtype=np.int32)",
+        "description": "Using np.array with explicit dtype."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Using numpy aliases for built-in types can lead to unexpected behavior, especially when the numpy version is updated.",
+  "how_to_fix": "Use built-in types instead of numpy aliases",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "node",
+      "type"
+    ],
+    "forbidden_values": [
+      "builtins.",
+      "int",
+      "float",
+      "str",
+      "bool",
+      "complex"
+    ]
+  },
+  "metadata": {
+    "filename": "deprecated_numpy_aliases_of_builtin_types_should_not_be_used.json",
+    "rule_id": "deprecated_numpy_aliases_of_builtin_types_should_not_be_used",
+    "title": "Deprecated numpy aliases of builtin types should not be used",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

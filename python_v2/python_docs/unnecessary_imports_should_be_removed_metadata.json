@@ -1,0 +1,58 @@
+{
+  "rule_id": "unnecessary_imports_should_be_removed",
+  "title": "Unnecessary imports should be removed",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "Unused imports may increase the size of the code and potentially obscure the actual imports.",
+  "message": "Removing unused import: {{ import_name }}",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "imports"
+  ],
+  "impact": "Code size increase, potential obscurity",
+  "recommendation": "Remove unused imports",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import os\nimport sys\nsys.path.append('/path/to/somewhere')\ndef my_function():\n    pass",
+        "description": "Unnecessary import of sys and os modules"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import os\nimport sys\nimport math\ndef my_function():\n    pass",
+        "description": "Necessary imports of os, sys, and math modules"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Unused imports may increase the size of the code and potentially obscure the actual imports.",
+  "how_to_fix": "Remove unused imports",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "custom",
+    "custom_function": "is_unused_import",
+    "function_code": "def is_unused_import(node):\n    if not isinstance(node, ast.Import):\n        return False\n    for alias in node.names:\n        if not has_import_usage(alias.name):\n            return True\n    return False\n\ndef has_import_usage(import_name):\n    # Implement a function to check if the import_name is used somewhere in the code."
+  },
+  "metadata": {
+    "filename": "unnecessary_imports_should_be_removed.json",
+    "rule_id": "unnecessary_imports_should_be_removed",
+    "title": "Unnecessary imports should be removed",
+    "status": "ready",
+    "defaultSeverity": "Minor"
+  }
+}

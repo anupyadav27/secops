@@ -1,0 +1,5 @@
+{
+  "rule_id": "asyncio_tasks_should_be_saved_to_prevent_premature_garbage_collection",
+  "new_check_type": "property_comparison",
+  "description": "Checks if the function is decorated with 'async' but does not use 'await' or 'async with'. This check type is specific to async functions."
+}

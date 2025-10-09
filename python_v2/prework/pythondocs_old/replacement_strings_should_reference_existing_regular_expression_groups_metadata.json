@@ -1,0 +1,64 @@
+{
+  "rule_id": "replacement_strings_should_reference_existing_regular_expression_groups",
+  "title": "Replacement strings should reference existing regular expression groups",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "<DETAILED_RULE_DESCRIPTION>",
+  "message": "<ISSUE_MESSAGE>",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "regex"
+  ],
+  "impact": "<IMPACT_OF_ISSUE>",
+  "recommendation": "<RECOMMENDATION_TO_FIX>",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "<NONCOMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_NONCOMPLIANT>"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "<COMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_COMPLIANT>"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "<CATEGORY>",
+    "security": "<SECURITY_IMPACT>",
+    "automation": "<AUTOMATION_IMPACT>",
+    "compliance": "<COMPLIANCE_IMPACT>"
+  },
+  "why_is_this_an_issue": "<WHY_IS_THIS_AN_ISSUE>",
+  "how_to_fix": "<HOW_TO_FIX_THIS_ISSUE>",
+  "security_mappings": {
+    "CWE": "<CWE_ID_OR_DESCRIPTION>",
+    "CERT": "<CERT_GUIDANCE_REFERENCE>",
+    "OWASP": "<OWASP_CATEGORY_OR_REFERENCE>"
+  },
+  "logic": {
+    "node_type": [
+      "FunctionDef",
+      "AsyncFunctionDef",
+      "AnnAssign"
+    ],
+    "property_path": [
+      "args.args.*.annotation.id",
+      "returns.id",
+      "annotation.id"
+    ],
+    "check_type": "contains",
+    "forbidden_values": [
+      "Union"
+    ],
+    "priority": "medium",
+    "quality": "generated"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "file_scanned": "d:\\scanner\\python_v2\\test\\test_xml_parsers_should_not_be_vulnerable_to_xxe_attacks.py",
+  "vulnerabilities_found": 2,
+  "findings": [
+    {
+      "rule_id": "xml_parsers_should_not_be_vulnerable_to_xxe_attacks",
+      "message": "XML parsers should not be vulnerable to XXE attacks",
+      "line": 4,
+      "status": "violation"
+    },
+    {
+      "rule_id": "xml_parsers_should_not_be_vulnerable_to_xxe_attacks",
+      "message": "XML parsers should not be vulnerable to XXE attacks",
+      "line": 8,
+      "status": "violation"
+    }
+  ]
+}

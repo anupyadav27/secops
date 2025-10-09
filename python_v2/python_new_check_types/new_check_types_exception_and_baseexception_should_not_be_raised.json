@@ -1,0 +1,5 @@
+{
+  "rule_id": "exception_and_baseexception_should_not_be_raised",
+  "new_check_type": "property_comparison",
+  "description": "Check if the left value of a comparison is numpy.nan"
+}

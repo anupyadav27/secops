@@ -1,0 +1,58 @@
+{
+  "rule_id": "break_continue_and_return_statements_should_not_occur_in_finally_blocks",
+  "title": "Break, continue and return statements should not occur in \"finally\" blocks",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "<DETAILED_RULE_DESCRIPTION>",
+  "message": "<ISSUE_MESSAGE>",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "cwe",
+    "error-handling",
+    "pitfall"
+  ],
+  "impact": "<IMPACT_OF_ISSUE>",
+  "recommendation": "<RECOMMENDATION_TO_FIX>",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "<NONCOMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_NONCOMPLIANT>"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "<COMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_COMPLIANT>"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "<CATEGORY>",
+    "security": "<SECURITY_IMPACT>",
+    "automation": "<AUTOMATION_IMPACT>",
+    "compliance": "<COMPLIANCE_IMPACT>"
+  },
+  "why_is_this_an_issue": "<WHY_IS_THIS_AN_ISSUE>",
+  "how_to_fix": "<HOW_TO_FIX_THIS_ISSUE>",
+  "security_mappings": {
+    "CWE": "<CWE_ID_OR_DESCRIPTION>",
+    "CERT": "<CERT_GUIDANCE_REFERENCE>",
+    "OWASP": "<OWASP_CATEGORY_OR_REFERENCE>"
+  },
+  "logic": {
+    "node_type": [
+      "Try"
+    ],
+    "property_path": [],
+    "check_type": "custom",
+    "function": "check_break_continue_return_in_finally",
+    "priority": "medium",
+    "quality": "corrected"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "rule_id": "collection_sizes_and_array_length_comparisons_should_make_sense",
+  "title": "Collection sizes and array length comparisons should make sense",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "<DETAILED_RULE_DESCRIPTION>",
+  "message": "<ISSUE_MESSAGE>",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "confusing"
+  ],
+  "impact": "<IMPACT_OF_ISSUE>",
+  "recommendation": "<RECOMMENDATION_TO_FIX>",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "<NONCOMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_NONCOMPLIANT>"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "<COMPLIANT_CODE_EXAMPLE>",
+        "description": "<WHY_THIS_IS_COMPLIANT>"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "<CATEGORY>",
+    "security": "<SECURITY_IMPACT>",
+    "automation": "<AUTOMATION_IMPACT>",
+    "compliance": "<COMPLIANCE_IMPACT>"
+  },
+  "why_is_this_an_issue": "<WHY_IS_THIS_AN_ISSUE>",
+  "how_to_fix": "<HOW_TO_FIX_THIS_ISSUE>",
+  "security_mappings": {
+    "CWE": "<CWE_ID_OR_DESCRIPTION>",
+    "CERT": "<CERT_GUIDANCE_REFERENCE>",
+    "OWASP": "<OWASP_CATEGORY_OR_REFERENCE>"
+  },
+  "logic": {
+    "node_type": [
+      "*"
+    ],
+    "property_path": [
+      "value"
+    ],
+    "check_type": "equals",
+    "priority": "medium",
+    "quality": "disabled_too_complex",
+    "required_values": [
+      "__NEVER_MATCH__"
+    ]
+  }
+}

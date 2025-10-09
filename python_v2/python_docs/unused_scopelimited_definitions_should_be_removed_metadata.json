@@ -1,0 +1,77 @@
+{
+  "rule_id": "unused_scopelimited_definitions_should_be_removed",
+  "title": "Unused scope-limited definitions should be removed",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule checks for unused scope-limited definitions that could lead to unnecessary complexity and potential errors.",
+  "message": "Unused scope-limited definition found.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "unused",
+    "definition",
+    "scope",
+    "limitation"
+  ],
+  "impact": "Maintainability",
+  "recommendation": "Remove unused scope-limited definitions.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "def foo():\n    BAR = 42\n    # never used\n    pass",
+        "description": "A function defining a constant inside its scope that is never used"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "BAR = 42",
+        "description": "A global constant definition"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Unused scope-limited definitions can lead to unnecessary complexity, maintainability issues, and potential errors.",
+  "how_to_fix": "Either remove the unused scope-limited definition or make it used.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "node",
+      "name"
+    ],
+    "forbidden_values": [
+      "*"
+    ],
+    "required_present": [
+      "assigned_to"
+    ],
+    "required_present_path": [
+      "node",
+      "body",
+      "expression_statement",
+      "assign"
+    ],
+    "new_check_type_doc": "Checks for assignments within the function body that are not used."
+  },
+  "function_code": "def check_unused_assignments(node):\n    assigned_to = node.find_children(lambda n: n.name == 'target')\n    if len(assigned_to) == 0:\n        return True\n    for statement in node.find_descendants(lambda n: n.name == 'expression_statement'):\n        if statement.find_descendants(lambda n: n.name == 'assign' and n.target not in assigned_to):\n            return True\n    return False",
+  "metadata": {
+    "filename": "unused_scopelimited_definitions_should_be_removed.json",
+    "rule_id": "unused_scopelimited_definitions_should_be_removed",
+    "title": "Unused scope-limited definitions should be removed",
+    "status": "ready",
+    "defaultSeverity": "Minor"
+  }
+}

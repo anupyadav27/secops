@@ -1,0 +1,78 @@
+You are an expert in Python static analysis and Sonar-style rule authoring.
+
+Task:
+Produce a single JSON object (no extra commentary) that is the metadata for the Sonar rule identified by:
+- rule_id: "function_arguments_should_be_passed_only_once"
+- Sonar page (source): https://rules.sonarsource.com/python/function_arguments_should_be_passed_only_once
+
+Requirements (MANDATORY):
+1) Follow exactly this top-level JSON structure (fill fields):
+    {
+        "rule_id": "<string>",
+        "title": "<string>",
+        "type": "CODE_SMELL|BUG|VULNERABILITY",
+        "status": "ready",
+        "defaultSeverity": "<Major|Minor|Critical|Blocker>",
+        "description": "<detailed>",
+        "message": "<short message>",
+        "remediation": { "func": "Constant/Issue", "constantCost": "<e.g. 5min>" },
+        "tags": [ ... ],
+        "impact": "<string>",
+        "recommendation": "<string>",
+        "references": [ ... ],
+        "examples": {
+            "noncompliant": [{ "code": "<code>", "description": "<desc>" }],
+            "compliant": [{ "code": "<code>", "description": "<desc>" }]
+        },
+        "devsecops": { "category":"", "security":"", "automation":"", "compliance":"" },
+        "why_is_this_an_issue": "<string>",
+        "how_to_fix": "<string>",
+        "security_mappings": { "CWE":"", "CERT":"", "OWASP":"" },
+        "logic": { /* see below */ }
+        
+    }
+
+Logic section rules (CRITICAL):
+- Always try to express the rule purely in the "logic" section (node types, property_path(s), check_type, forbidden_values/required_values/regex etc).
+- ONLY when it is impossible to define logic that *reliably triggers exactly when vulnerability exists* (critical/complex cases), produce a custom function.
+- If you decide to produce a custom function, set:
+        "logic": {
+            "check_type": "custom",
+            "custom_function": "<function_name>"
+        }
+    AND ALSO include a field "function_code" in the same JSON whose value is the full Python function source code (a single function definition) that accepts one AST-node-dict argument `node` and returns True when vulnerability is present.
+
+Additional logic rules:
+- Use only the following check types supported by our PythonGenericRule engine:
+     - "custom"
+     - "equals"
+     - "not_contains"
+     - "in"
+     - "contains"
+     - "min_value"
+     - "required_present"
+     - "regex"
+     - "pattern"
+     - "forbidden_empty"
+     - "property_comparison"
+     - (add others from the engine if needed)
+- Only introduce a new check type if the rule cannot be reliably expressed with the above. If you create a new check type:
+     - Clearly document the new check type in the JSON (field: "logic.new_check_type_doc": "<description>")
+     - Output a separate JSON file named `new_check_types_function_arguments_should_be_passed_only_once.json` in the folder `python_new_check_types` containing:
+         {
+             "rule_id": "function_arguments_should_be_passed_only_once",
+             "new_check_type": "<name>",
+             "description": "<detailed description of logic and intended usage>"
+         }
+
+Strict output rules:
+- Output must be *only* the JSON object (no explanatory text).
+- If a custom function is required, include "function_code" (the python code) in the JSON so the caller can save it directly.
+- property_path values must use the AST-dict keys your scanner uses (node_type, name, value, args, body, etc).
+- Examples must be runnable Python snippets (short, 1-8 lines).
+
+Sonar source:
+- Use the Sonar rule page to extract the most accurate title, severity, description, examples and remediation.
+- If the Sonar page has an official rule-id, include it in rule_id.
+
+Important: prefer a logic section. Create a custom function only if you cannot create logic that will only trigger on real vulnerabilities. If you create a custom function, make it minimal, well-documented, and safe.

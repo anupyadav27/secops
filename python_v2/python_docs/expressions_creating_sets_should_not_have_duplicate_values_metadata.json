@@ -1,0 +1,67 @@
+{
+  "rule_id": "expressions_creating_sets_should_not_have_duplicate_values",
+  "title": "Expressions creating sets should not have duplicate values",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Sets should not contain duplicate values.",
+  "message": "Duplicate values found in set.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "sets",
+    "duplicates"
+  ],
+  "impact": "Performance",
+  "recommendation": "Use a unique set.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "s = {1, 1, 2, 3}",
+        "description": "Set with duplicate values"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "s = {1, 2, 3}",
+        "description": "Set without duplicate values"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Duplicate values in sets can lead to inefficient data structures and unexpected behavior.",
+  "how_to_fix": "Ensure that sets do not contain duplicate values.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "property_comparison",
+    "property_path": [
+      "node",
+      "type",
+      "value"
+    ],
+    "forbidden_values": [
+      "set"
+    ],
+    "new_check_type_doc": "Checks if the node's value represents a set with duplicate values."
+  },
+  "function_code": "def check_set_with_duplicates(node):\n    if node['type'] == 'Set' and len(node['elts']) > len(set(node['elts'])):\n        return True\n    return False",
+  "metadata": {
+    "filename": "expressions_creating_sets_should_not_have_duplicate_values.json",
+    "rule_id": "expressions_creating_sets_should_not_have_duplicate_values",
+    "title": "Expressions creating sets should not have duplicate values",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

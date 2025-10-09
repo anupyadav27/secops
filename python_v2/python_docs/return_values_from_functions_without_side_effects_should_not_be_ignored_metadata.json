@@ -1,0 +1,62 @@
+{
+  "rule_id": "return_values_from_functions_without_side_effects_should_not_be_ignored",
+  "title": "Return values from functions without side effects should not be ignored",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Functions that do not have side effects should return a value, otherwise the returned value is ignored.",
+  "message": "Function does not return a value.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "functions",
+    "return",
+    "value",
+    "side-effect"
+  ],
+  "impact": "Code readability and maintainability",
+  "recommendation": "Always return a value from a function.",
+  "references": [],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "def f(): print(\"Hello\");",
+        "description": "Function does not return a value."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "def f(): return \"Hello\";",
+        "description": "Function returns a value."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "",
+    "security": "",
+    "automation": "",
+    "compliance": ""
+  },
+  "why_is_this_an_issue": "Ignoring the return value of a function can lead to unexpected behavior and make the code harder to understand and maintain.",
+  "how_to_fix": "Always return a value from a function.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "check_type": "forbidden_empty",
+    "property_path": [
+      "node.body.statements[0].expression.value"
+    ]
+  },
+  "metadata": {
+    "filename": "return_values_from_functions_without_side_effects_should_not_be_ignored.json",
+    "rule_id": "return_values_from_functions_without_side_effects_should_not_be_ignored",
+    "title": "Return values from functions without side effects should not be ignored",
+    "status": "ready",
+    "defaultSeverity": "Major"
+  }
+}

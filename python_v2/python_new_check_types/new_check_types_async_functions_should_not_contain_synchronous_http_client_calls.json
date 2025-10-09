@@ -1,0 +1,5 @@
+{
+  "rule_id": "async_functions_should_not_contain_synchronous_http_client_calls",
+  "new_check_type": "property_comparison",
+  "description": "Checks if an assert statement does not have a condition."
+}
