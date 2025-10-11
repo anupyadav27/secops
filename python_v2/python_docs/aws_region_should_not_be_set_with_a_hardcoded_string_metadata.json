@@ -51,15 +51,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.Call",
-      "func.name",
-      "value"
-    ],
-    "forbidden_values": [
-      "region_name"
-    ],
-    "property_comparison": "equals"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_hardcoded_aws_region",
+        "message": "AWS region should not be hardcoded."
+      }
+    ]
   }
 }

@@ -1,18 +1,5 @@
 {
   "file_scanned": "d:\\scanner\\python_v2\\test\\test_pandas_merge_join_should_have_how_and_validate.py",
-  "vulnerabilities_found": 2,
-  "findings": [
-    {
-      "rule_id": "when_using_pandasmerge_or_pandasjoin_the_parameters_on_how_and_validate_should_be_provided",
-      "message": "When using pandas.merge or pandas.join, the parameters 'how' and 'validate' should be provided",
-      "line": 6,
-      "status": "violation"
-    },
-    {
-      "rule_id": "when_using_pandasmerge_or_pandasjoin_the_parameters_on_how_and_validate_should_be_provided",
-      "message": "When using pandas.merge or pandas.join, the parameters 'how' and 'validate' should be provided",
-      "line": 7,
-      "status": "violation"
-    }
-  ]
+  "vulnerabilities_found": 0,
+  "findings": []
 }

@@ -46,20 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "type"
-    ],
-    "forbidden_values": [
-      "Finally"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_bare_raise_context",
+        "context": "finally",
+        "message": "Bare Raise Statement found in 'finally' block."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "bare_raise_statements_should_not_be_used_in_finally_blocks.json",
-    "rule_id": "bare_raise_statements_should_not_be_used_in_finally_blocks",
-    "title": "Bare Raise Statements should not be used in 'finally' blocks",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

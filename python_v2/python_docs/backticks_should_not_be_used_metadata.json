@@ -56,20 +56,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "n",
-      "name"
-    ],
-    "forbidden_values": [
-      "`.*`"
+  "node_types": ["Constant"],
+    "checks": [
+      {
+        "type": "regex",
+        "property": "value",
+        "pattern": "`.*`",
+        "message": "Avoid using backticks in variable assignments"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "backticks_should_not_be_used.json",
-    "rule_id": "backticks_should_not_be_used",
-    "title": "Avoid using backticks for variable names",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

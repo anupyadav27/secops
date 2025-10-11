@@ -1,3 +1,48 @@
+# Shared custom function for bare raise statement context detection
+def check_bare_raise_context(node, context=None):
+    """
+    Returns True if a bare raise statement is found in the specified context ('finally' or 'except').
+    """
+    # Only process Raise nodes
+    if not isinstance(node, dict) or node.get('node_type') != 'Raise':
+        return False
+    # Check if it's a bare raise (no exception specified)
+    if node.get('exc') is not None:
+        return False
+    # Traverse parent chain to find context
+    parent = node.get('__parent__', None)
+    while parent:
+        if context == 'finally' and parent.get('node_type') == 'Finally':
+            return True
+        if context == 'except' and parent.get('node_type') == 'ExceptHandler':
+            return True
+        parent = parent.get('__parent__', None)
+    # For 'except' context, bare raise outside except block is a violation
+    if context == 'except':
+        return False
+    return False
+# Custom function for detecting hardcoded AWS region in boto3 client calls
+def check_hardcoded_aws_region(node):
+    """
+    Returns True if a boto3.client call contains a hardcoded AWS region value.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    # Check for boto3.client call
+    if func.get('node_type') == 'Attribute' and func.get('attr') == 'client':
+        value = func.get('value', {})
+        if value.get('node_type') == 'Name' and value.get('id') == 'boto3':
+            # Check for region_name keyword argument
+            for kw in node.get('keywords', []):
+                if kw.get('arg') == 'region_name':
+                    region_value = kw.get('value', {})
+                    if region_value.get('node_type') == 'Constant':
+                        region = str(region_value.get('value', ''))
+                        # Match AWS region pattern
+                        if re.match(r'^(us|eu|ap|sa|ca|me|af)-(north|south|east|west|central|northeast|southeast|southwest|northwest|central)-[0-9]+$', region):
+                            return True
+    return False
 # Custom function for unnecessary equality checks
 def is_unnecessary_equality_check(node):
     """

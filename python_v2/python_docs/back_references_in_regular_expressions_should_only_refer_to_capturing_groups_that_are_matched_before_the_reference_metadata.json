@@ -49,21 +49,20 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "regex",
-    "property_path": [
-      "expression",
-      "body",
-      "expression"
-    ],
-    "forbidden_values": [
-      "(?P<[a-z]+>[^\\k<]+)\\k<[a-z]+>"
+    "node_types": ["Constant"],
+    "checks": [
+      {
+        "type": "regex",
+        "property": "value",
+        "pattern": "\\\\[1-9][0-9]*",
+        "message": "Backreference refers to unmatched capturing group (numbered)"
+      },
+      {
+        "type": "regex",
+        "property": "value",
+        "pattern": "\\(\\?P=[a-zA-Z_][a-zA-Z0-9_]*\\)",
+        "message": "Backreference refers to unmatched capturing group (named)"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "back_references_in_regular_expressions_should_only_refer_to_capturing_groups_that_are_matched_before_the_reference.json",
-    "rule_id": "back_references_in_regular_expressions_should_only_refer_to_capturing_groups_that_are_matched_before_the_reference",
-    "title": "Back references in regular expressions should only refer to capturing groups that are matched before the reference",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

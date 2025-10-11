@@ -1,5 +1,5 @@
 {
-  "file_scanned": "D:\\scanner\\python_v2\\test\\test_trigger_aws_namespace_rule.py",
+  "file_scanned": "d:\\scanner\\python_v2\\test\\test_trigger_aws_namespace_rule.py",
   "vulnerabilities_found": 3,
   "findings": [
     {

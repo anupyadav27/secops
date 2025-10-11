@@ -1,0 +1,52 @@
+{
+  "file_scanned": "d:\\scanner\\python_v2\\test\\new.py",
+  "vulnerabilities_found": 5,
+  "findings": [
+    {
+      "rule_id": "all_except_blocks_should_be_able_to_catch_exceptions",
+      "message": "All except blocks should be able to catch exceptions",
+      "line": 3,
+      "status": "violation"
+    },
+    {
+      "rule_id": "aws_region_should_not_be_set_with_a_hardcoded_string",
+      "message": "AWS region should not be hardcoded.",
+      "property_path": [],
+      "value": "upload_file_to_s3()",
+      "status": "violation",
+      "line": 10,
+      "column": 0,
+      "severity": "Minor"
+    },
+    {
+      "rule_id": "aws_region_should_not_be_set_with_a_hardcoded_string",
+      "message": "AWS region should not be hardcoded.",
+      "property_path": [],
+      "value": "    print(\"File uploaded successfully.\")",
+      "status": "violation",
+      "line": 8,
+      "column": 4,
+      "severity": "Minor"
+    },
+    {
+      "rule_id": "aws_region_should_not_be_set_with_a_hardcoded_string",
+      "message": "AWS region should not be hardcoded.",
+      "property_path": [],
+      "value": "    s3.upload_file('test.txt', 'mybucket', 'test.txt')",
+      "status": "violation",
+      "line": 7,
+      "column": 4,
+      "severity": "Minor"
+    },
+    {
+      "rule_id": "aws_region_should_not_be_set_with_a_hardcoded_string",
+      "message": "AWS region should not be hardcoded.",
+      "property_path": [],
+      "value": "    s3 = boto3.client('s3', region_name='us-west-2')",
+      "status": "violation",
+      "line": 5,
+      "column": 9,
+      "severity": "Minor"
+    }
+  ]
+}

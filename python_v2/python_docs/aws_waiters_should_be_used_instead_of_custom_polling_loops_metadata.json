@@ -47,26 +47,20 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "not_contains",
-    "property_path": [
-      "ast.FunctionDef",
-      "body",
-      "expression",
-      "name",
-      "value"
-    ],
-    "not_contains": [
-      "boto3.client",
-      "poll",
-      "sleep",
-      "wait"
+    "node_types": ["While"],
+    "checks": [
+      {
+        "type": "regex",
+        "property": "test",
+        "pattern": ".*True.*",
+        "message": "Custom polling loop detected. Avoid custom polling loops, use AWS SDK waiters."
+      },
+      {
+        "type": "regex",
+        "property": "body[*].value.func.value",
+        "pattern": ".*boto3.*",
+        "message": "Custom polling loop detected. Avoid custom polling loops, use AWS SDK waiters."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "aws_waiters_should_be_used_instead_of_custom_polling_loops.json",
-    "rule_id": "aws_waiters_should_be_used_instead_of_custom_polling_loops",
-    "title": "AWS waiters should be used instead of custom polling loops",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

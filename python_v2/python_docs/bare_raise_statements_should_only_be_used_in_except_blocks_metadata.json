@@ -45,11 +45,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "not_contains",
-    "property_path": [
-      "node.parents",
-      "property_path",
-      "name"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_bare_raise_context",
+        "context": "except",
+        "message": "Bare raise statement found outside except block."
+      }
     ]
   },
   "metadata": {

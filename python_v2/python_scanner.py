@@ -16,27 +16,28 @@ if not py_files:
     print(f"No .py files found in test folder '{test_folder}'.")
     sys.exit(1)
 print("Available test scripts:")
+
 for idx, fname in enumerate(py_files, 1):
     print(f"  {idx}. {fname}")
-choice = input("Select a test script to scan (number): ").strip()
-try:
-    py_file = os.path.join(test_folder, py_files[int(choice)-1])
-except Exception:
-    print("Invalid selection.")
-    sys.exit(1)
+
+if __name__ == "__main__":
+    choice = input("Select a test script to scan (number): ").strip()
+    try:
+        py_file = os.path.join(test_folder, py_files[int(choice)-1])
+    except Exception:
+        print("Invalid selection.")
+        sys.exit(1)
 
 # Step 2: Parse Python file to AST structure
 def parse_python_file(file_path):
     """Parse Python file into AST and convert to dictionary structure for rule processing"""
     with open(file_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
-    
     try:
         tree = ast.parse(source_code, filename=file_path)
     except SyntaxError as e:
-        print(f"Syntax error in {file_path}: {e}")
+        # print(f"Syntax error in {file_path}: {e}")
         sys.exit(1)
-    
     # Convert AST to a dictionary structure similar to Terraform
     def ast_to_dict(node):
         """Convert AST node to dictionary representation"""
@@ -46,7 +47,6 @@ def parse_python_file(file_path):
             'end_lineno': getattr(node, 'end_lineno', None),
             'col_offset': getattr(node, 'col_offset', None),
         }
-        
         # Add node-specific attributes
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):
@@ -55,9 +55,7 @@ def parse_python_file(file_path):
                 result[field] = ast_to_dict(value)
             else:
                 result[field] = value
-        
         return result
-    
     return {
         'module': ast_to_dict(tree),
         'source_lines': source_code.split('\n'),
@@ -70,7 +68,7 @@ def load_rule_metadata(folder="python_docs"):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder_path = os.path.join(script_dir, folder)
     if not os.path.isdir(folder_path):
-        print(f"Metadata folder '{folder}' not found in {script_dir}.")
+        # print(f"Metadata folder '{folder}' not found in {script_dir}.")
         sys.exit(1)
     rules_meta = {}
     for filename in os.listdir(folder_path):
@@ -81,8 +79,9 @@ def load_rule_metadata(folder="python_docs"):
                     data = json.load(f)
                     rules_meta[data["rule_id"]] = data
             except Exception as e:
-                print(f"[RULE LOAD ERROR] Skipped file: {file_path}\nReason: {e}\n")
+                # print(f"[RULE LOAD ERROR] Skipped file: {file_path}\nReason: {e}\n")
                 # continue loading other files
+                continue
     return rules_meta
 
 # Step 4: Define base rule class
@@ -160,7 +159,7 @@ def scan_file(py_file, rules):
                             if node.get('node_type') not in node_types:
                                 return
                         try:
-                            print(f"[DEBUG][scanner] Checking node: {node.get('node_type')}, line: {node.get('lineno')}")
+                            # print(f"[DEBUG][scanner] Checking node: {node.get('node_type')}, line: {node.get('lineno')}")
                             if custom_function(node):
                                 finding = {
                                     "rule_id": rule.rule_id,
@@ -196,10 +195,10 @@ def scan_file(py_file, rules):
                 # print(f"[DEBUG] Adding {len(findings)} findings for rule {rule.rule_id} to all_findings.")
                 all_findings.extend(findings)
         except Exception as e:
-            print(f"[DEBUG] Error applying rule {rule.metadata.get('rule_id')}: {e}")
+            # print(f"[DEBUG] Error applying rule {rule.metadata.get('rule_id')}: {e}")
             continue
     
-    print(f"Applied {applicable_rules} out of {len(rules)} rules")
+    # print(f"Applied {applicable_rules} out of {len(rules)} rules")
     return all_findings
 
 def clean_for_json(obj, depth=0, max_depth=10):
@@ -222,7 +221,7 @@ def clean_for_json(obj, depth=0, max_depth=10):
 # Step 8: Reporting
 if __name__ == "__main__":
     metadata_map = load_rule_metadata()
-    print(f"\nNumber of rule metadata files loaded: {len(metadata_map)}")
+    # print(f"\nNumber of rule metadata files loaded: {len(metadata_map)}")
     rules = load_rules(metadata_map)
     results = scan_file(py_file, rules)
     
@@ -237,11 +236,11 @@ if __name__ == "__main__":
         cleaned_finding = clean_for_json(finding, max_depth=10)
         cleaned_results.append(cleaned_finding)
     results = cleaned_results
-    
+
     print(f"\nScan Summary for file: {py_file}")
     print(f"Vulnerabilities found: {len(results)}")
     print(json.dumps(results, indent=2))
-    
+
     # Save output to a detailed report file with summary
     base_name = os.path.splitext(os.path.basename(py_file))[0]
     report_file = os.path.join(test_folder, f"{base_name}_report.json")

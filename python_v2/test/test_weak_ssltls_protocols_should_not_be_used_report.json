@@ -1,18 +1,5 @@
 {
   "file_scanned": "d:\\scanner\\python_v2\\test\\test_weak_ssltls_protocols_should_not_be_used.py",
-  "vulnerabilities_found": 2,
-  "findings": [
-    {
-      "rule_id": "weak_ssltls_protocols_should_not_be_used",
-      "message": "Use TLS 1.2 or higher",
-      "line": 3,
-      "status": "violation"
-    },
-    {
-      "rule_id": "weak_ssltls_protocols_should_not_be_used",
-      "message": "Use TLS 1.2 or higher",
-      "line": 4,
-      "status": "violation"
-    }
-  ]
+  "vulnerabilities_found": 0,
+  "findings": []
 }

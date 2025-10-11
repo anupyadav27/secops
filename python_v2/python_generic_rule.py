@@ -118,47 +118,35 @@ class PythonGenericRule:
     def _apply_generic_logic(self, ast_tree, filename, seen_findings):
         """Apply generic logic checks (regex, property_comparison, exists, not_exists, etc.)."""
         findings = []
-        
-        # Handle old-style logic format (single check at root level)
+        # Old-style: single check at root level
         if not isinstance(self.logic.get('checks'), list):
-            findings.extend(self._apply_single_check(ast_tree, filename, self.logic, seen_findings))
+            if self._is_valid_generic_check(self.logic):
+                findings.extend(self._apply_single_check(ast_tree, filename, self.logic, seen_findings, is_root_check=True))
         else:
-            # Handle new-style logic format (multiple checks in array)
+            # New-style: multiple checks in array
             for check in self.logic.get("checks", []):
-                if check.get("type") != "custom_function":  # Skip custom functions in generic logic
-                    findings.extend(self._apply_single_check(ast_tree, filename, check, seen_findings))
-        
+                if self._is_valid_generic_check(check):
+                    findings.extend(self._apply_single_check(ast_tree, filename, check, seen_findings, is_root_check=False))
         return findings
 
-    def _apply_single_check(self, ast_tree, filename, check, seen_findings):
-        """Apply a single generic check (regex, property_comparison, etc.)."""
+    def _apply_single_check(self, ast_tree, filename, check, seen_findings, is_root_check=False):
+        """Apply a single generic check with proper node type resolution and error handling."""
         findings = []
         check_type = check.get("type") or check.get("check_type")
 
-        # Get required node types
-        required_node_types = self.logic.get("node_types", [])
-        if not required_node_types:
-            required_node_types = check.get("node_types", [])
+        # Resolve node_types: check-specific, fallback to root
+        if is_root_check:
+            required_node_types = self.logic.get("node_types", [])
+        else:
+            required_node_types = check.get("node_types", self.logic.get("node_types", []))
 
-        # Find matching nodes
         matching_nodes = self._find_nodes_by_type(ast_tree, required_node_types) if required_node_types else [ast_tree]
         source_lines = ast_tree.get('source_lines') if isinstance(ast_tree, dict) else None
 
-        # Only apply property checks to nodes of the correct type
         for node in matching_nodes:
-            if isinstance(node, dict):
-                node_type = node.get('node_type', 'unknown')
-                node_name = node.get('name', 'unknown')
-            else:
-                node_type = 'root'
-                node_name = 'root'
+            node_type = node.get('node_type', 'unknown') if isinstance(node, dict) else 'root'
+            node_name = node.get('name', 'unknown') if isinstance(node, dict) else 'root'
 
-            # Debug: print before property extraction
-            if check_type in ["property_comparison", "exists", "not_exists", "numeric_bounds", "required_present", "ast_property"]:
-                # print(f"[GENERIC LOGIC] Applying {check_type} to node_type={node_type}, node_name={node_name}, property={check.get('property') or check.get('property_path')}")
-                pass
-
-            # Apply different check types
             if check_type in ["regex", "pattern"]:
                 findings.extend(self._apply_regex_check(check, node, filename, node_type, node_name, source_lines, seen_findings))
             elif check_type == "property_comparison":
@@ -167,10 +155,28 @@ class PythonGenericRule:
                 findings.extend(self._apply_exists_check(check, node, filename, node_type, node_name, seen_findings))
             elif check_type == "not_exists":
                 findings.extend(self._apply_not_exists_check(check, node, filename, node_type, node_name, seen_findings))
-            elif check_type in ["numeric_bounds", "required_present", "ast_property"]:
-                findings.extend(self._apply_other_checks(check, node, filename, node_type, node_name, seen_findings))
-
+            elif check_type == "numeric_bounds":
+                findings.extend(self._apply_numeric_bounds_check(check, node, filename, node_type, node_name, seen_findings))
+            elif check_type == "required_present":
+                findings.extend(self._apply_required_present_check(check, node, filename, node_type, node_name, seen_findings))
+            elif check_type == "ast_property":
+                findings.extend(self._apply_ast_property_check(check, node, filename, node_type, node_name, seen_findings))
+            else:
+                # print(f"[ERROR] Unhandled check type in _apply_single_check: {check_type}")
+                pass
         return findings
+    def _is_valid_generic_check(self, check):
+        """Validate if a check is a generic (non-custom) check that should be processed."""
+        check_type = check.get("type") or check.get("check_type")
+        # Skip custom functions and invalid check types
+        if check_type == "custom_function":
+            return False
+        # Supported check types
+        supported_types = ["regex", "pattern", "property_comparison", "exists", "not_exists", "numeric_bounds", "required_present", "ast_property"]
+        if check_type and check_type not in supported_types:
+            # print(f"[WARNING] Unsupported check type: {check_type}")
+            return False
+        return True
 
     def _apply_regex_check(self, check, node, filename, node_type, node_name, source_lines, seen_findings):
         """Apply regex pattern checks."""
@@ -223,11 +229,11 @@ class PythonGenericRule:
         equals = check.get("equals")
         condition = check.get("condition")
         
-    # print(f"[DEBUG] Property comparison check details:")
-    # print(f"[DEBUG] - Property path: {property_path}")
-    # print(f"[DEBUG] - Starts with: {starts_with}")
-    # print(f"[DEBUG] - Node type: {node_type}")
-    # print(f"[DEBUG] - Node structure: {node if isinstance(node, dict) else type(node)}")
+        # print(f"[DEBUG] Property comparison check details:")
+        # print(f"[DEBUG] - Property path: {property_path}")
+        # print(f"[DEBUG] - Starts with: {starts_with}")
+        # print(f"[DEBUG] - Node type: {node_type}")
+        # print(f"[DEBUG] - Node structure: {node if isinstance(node, dict) else type(node)}")
 
         if not property_path:
             return findings
@@ -247,10 +253,10 @@ class PythonGenericRule:
                     # print(f"[DEBUG] - Checking condition value: {value}")
                     if value == cond_equals:
                         condition_met = True
-                        print(f"[DEBUG] - Condition met!")
+                        # print(f"[DEBUG] - Condition met!")
                         break
                 if not condition_met:
-                    print(f"[DEBUG] - Condition not met, skipping")
+                    # print(f"[DEBUG] - Condition not met, skipping")
                     return findings
 
         # First check condition if present
@@ -258,30 +264,30 @@ class PythonGenericRule:
         if condition:
             cond_property = condition.get('property')
             cond_equals = condition.get('equals')
-            print(f"[DEBUG] Checking condition: property={cond_property} equals={cond_equals}")
+            # print(f"[DEBUG] Checking condition: property={cond_property} equals={cond_equals}")
             
             cond_values = self._get_property_values(node, cond_property)
             condition_met = False
             for _, cond_value in cond_values:
-                print(f"[DEBUG] Checking condition value: {cond_value}")
+                # print(f"[DEBUG] Checking condition value: {cond_value}")
                 if cond_value == cond_equals:
                     condition_met = True
                     break
             
             if not condition_met:
-                print("[DEBUG] Condition not met, skipping value checks")
+                # print("[DEBUG] Condition not met, skipping value checks")
                 return findings
 
         # Get property values to check
         property_values = self._get_property_values(node, property_path)
-        print(f"[DEBUG] Found {len(property_values)} values for path {property_path}")
+        # print(f"[DEBUG] Found {len(property_values)} values for path {property_path}")
         
         for found_path, value in property_values:
-            print(f"[DEBUG] Checking value: {value} at path {found_path}")
+            # print(f"[DEBUG] Checking value: {value} at path {found_path}")
             if starts_with and isinstance(value, str):
-                print(f"[DEBUG] Checking if value '{value}' starts with '{starts_with}'")
+                # print(f"[DEBUG] Checking if value '{value}' starts with '{starts_with}'")
                 if value.startswith(starts_with):
-                    print(f"[DEBUG] Found matching value: {value}")
+                    # print(f"[DEBUG] Found matching value: {value}")
                     finding = self._make_finding(
                         filename, node_type, node_name, found_path, value,
                         check.get('message', self.message), node
@@ -338,78 +344,82 @@ class PythonGenericRule:
 
         return findings
 
-    def _apply_other_checks(self, check, node, filename, node_type, node_name, seen_findings):
-        """Apply other check types (numeric_bounds, required_present, ast_property)."""
+    def _apply_numeric_bounds_check(self, check, node, filename, node_type, node_name, seen_findings):
+        """Apply numeric_bounds check."""
         findings = []
-        check_type = check.get("type") or check.get("check_type")
         property_path = check.get("property") or check.get("property_path")
-        
         property_values = self._get_property_values(node, property_path)
-        
         for found_path, value in property_values:
-            finding = None
-            
-            if check_type == "numeric_bounds":
-                if not isinstance(value, (int, float)):
-                    finding = self._make_finding(
-                        filename, node_type, node_name, found_path, value, 
-                        "Value not numeric", node
-                    )
-            elif check_type == "required_present" and (value is None or value == ""):
+            if not isinstance(value, (int, float)):
                 finding = self._make_finding(
-                    filename, node_type, node_name, found_path, value, 
+                    filename, node_type, node_name, found_path, value,
+                    "Value not numeric", node
+                )
+                unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                if unique_key not in seen_findings:
+                    seen_findings.add(unique_key)
+                    findings.append(finding)
+        return findings
+
+    def _apply_required_present_check(self, check, node, filename, node_type, node_name, seen_findings):
+        """Apply required_present check."""
+        findings = []
+        property_path = check.get("property") or check.get("property_path")
+        property_values = self._get_property_values(node, property_path)
+        for found_path, value in property_values:
+            if value is None or value == "":
+                finding = self._make_finding(
+                    filename, node_type, node_name, found_path, value,
                     "Required property missing", node
                 )
-            elif check_type == "ast_property":
-                # Handle AST property checks safely and directly (avoid deep traversal)
-                prop_name = check.get("property_name")
-                expected_value = check.get("expected_value")
+                unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                if unique_key not in seen_findings:
+                    seen_findings.add(unique_key)
+                    findings.append(finding)
+        return findings
 
-                if isinstance(node, dict) and node.get('node_type') == 'Call' and prop_name:
-                    # Safe direct iteration over keywords
-                    keywords = node.get('keywords', []) or []
-                    for kw in keywords:
-                        # kw is expected to be dict like {'arg': 'timeout', 'value': {...}}
-                        if not isinstance(kw, dict):
-                            continue
-                        if kw.get('arg') == prop_name:
-                            value_node = kw.get('value', {})
-                            # only treat simple constant matches as a finding
-                            if isinstance(value_node, dict) and value_node.get('node_type') == 'Constant':
-                                if str(value_node.get('value')) == str(expected_value):
-                                    finding = self._make_finding(
-                                        filename, node_type, node_name, found_path,
-                                        f"{prop_name}={expected_value}",
-                                        check.get('message', 'Property match'), node
-                                    )
-                                    break
-                            # If the value_node is a simple primitive already (unlikely), compare directly
-                            elif not isinstance(value_node, dict) and str(value_node) == str(expected_value):
+    def _apply_ast_property_check(self, check, node, filename, node_type, node_name, seen_findings):
+        """Apply ast_property check."""
+        findings = []
+        prop_name = check.get("property_name")
+        expected_value = check.get("expected_value")
+        property_path = check.get("property") or check.get("property_path")
+        property_values = self._get_property_values(node, property_path)
+        for found_path, value in property_values:
+            finding = None
+            if isinstance(node, dict) and node.get('node_type') == 'Call' and prop_name:
+                keywords = node.get('keywords', []) or []
+                for kw in keywords:
+                    if not isinstance(kw, dict):
+                        continue
+                    if kw.get('arg') == prop_name:
+                        value_node = kw.get('value', {})
+                        if isinstance(value_node, dict) and value_node.get('node_type') == 'Constant':
+                            if str(value_node.get('value')) == str(expected_value):
                                 finding = self._make_finding(
                                     filename, node_type, node_name, found_path,
                                     f"{prop_name}={expected_value}",
                                     check.get('message', 'Property match'), node
                                 )
                                 break
-
+                        elif not isinstance(value_node, dict) and str(value_node) == str(expected_value):
+                            finding = self._make_finding(
+                                filename, node_type, node_name, found_path,
+                                f"{prop_name}={expected_value}",
+                                check.get('message', 'Property match'), node
+                            )
+                            break
             if finding:
                 unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
                 if unique_key not in seen_findings:
                     seen_findings.add(unique_key)
                     findings.append(finding)
-
         return findings
 
     def _get_property_values(self, node, property_path, visited=None, depth=0, max_depth=20):
-        """
-        COMPLETELY SAFE property value extraction - non-recursive approach
-        """
-        print(f"[DEBUG] Getting property values for path: {property_path}")
-        print(f"[DEBUG] Node type: {type(node)}")
-        if isinstance(node, dict):
-            print(f"[DEBUG] Node keys: {list(node.keys())}")
         if not isinstance(node, dict) or not property_path:
-            print("[DEBUG] Early return: node is not dict or no property path")
+            # print("[DEBUG] Early return: node is not dict or no property path")
+
             return []
 
         # Convert path to list if it's a string with dot notation
@@ -460,38 +470,43 @@ class PythonGenericRule:
             current_key = current_path[0]
             remaining_path = current_path[1:] if len(current_path) > 1 else []
             # Handle wildcard (*) and array index notation - match all keys or specific index
-            if current_key == '*' or (current_key.startswith('[') and current_key.endswith(']')):
-                if current_key == '*':
-                    # For wildcard, iterate all items
-                    items = current_node.items() if isinstance(current_node, dict) else enumerate(current_node)
-                else:
-                    # For array index, get specific item
-                    idx = int(current_key[1:-1])
-                    if isinstance(current_node, list) and 0 <= idx < len(current_node):
-                        items = [(idx, current_node[idx])]
-                    else:
-                        items = []
-                
+            if current_key == '*':
+                # For wildcard, iterate all items in dict
+                items = current_node.items() if isinstance(current_node, dict) else enumerate(current_node)
                 for key, value in items:
-                    # Skip internal/metadata fields that cause cycles
                     if isinstance(current_node, dict) and key in ['lineno', 'col_offset', 'end_lineno', 'node_type', '__parent__', 'ctx', 'parent']:
                         continue
-                    
                     key_str = str(key) if isinstance(current_node, dict) else f"[{key}]"
                     new_full_path = full_path + [key_str]
-                    
                     if not remaining_path:
-                        # End of path - add to results
                         results.append((new_full_path, value))
                     else:
-                        # Continue traversal
                         if isinstance(value, dict):
                             stack.append((value, remaining_path, new_full_path))
                         elif isinstance(value, list):
-                            # Only push to stack if next path component is a wildcard or array index
-                            next_key = remaining_path[0] if remaining_path else None
-                            if next_key == '*' or (next_key and next_key.startswith('[') and next_key.endswith(']')):
-                                stack.append((value, remaining_path, new_full_path))
+                            stack.append((value, remaining_path, new_full_path))
+            elif current_key == '[*]':
+                # Wildcard for lists: iterate all items
+                if isinstance(current_node, list):
+                    for idx, item in enumerate(current_node):
+                        new_full_path = full_path + [f"[{idx}]"]
+                        if not remaining_path:
+                            results.append((new_full_path, item))
+                        else:
+                            stack.append((item, remaining_path, new_full_path))
+            elif current_key.startswith('[') and current_key.endswith(']'):
+                # For array index, get specific item
+                try:
+                    idx = int(current_key[1:-1])
+                except ValueError:
+                    idx = None
+                if idx is not None and isinstance(current_node, list) and 0 <= idx < len(current_node):
+                    item = current_node[idx]
+                    new_full_path = full_path + [current_key]
+                    if not remaining_path:
+                        results.append((new_full_path, item))
+                    else:
+                        stack.append((item, remaining_path, new_full_path))
             # Handle specific key
             elif current_key in current_node:
                 value = current_node[current_key]
@@ -518,7 +533,7 @@ class PythonGenericRule:
         import logic_implementations
         custom_fn = getattr(logic_implementations, function_name, None)
         if not custom_fn:
-            print(f"[DEBUG] Custom function {function_name} not found or not callable")
+            # print(f"[DEBUG] Custom function {function_name} not found or not callable")
             return findings
         # Traverse AST and apply custom function to each node
         def visit_node(node):
@@ -551,18 +566,21 @@ class PythonGenericRule:
             if hasattr(logic_implementations, function_name):
                 func = getattr(logic_implementations, function_name)
                 if callable(func):
-                    print(f"[DEBUG] Successfully loaded custom function: {function_name}")
+                    # print(f"[DEBUG] Successfully loaded custom function: {function_name}")
                     return func
                 else:
-                    print(f"[DEBUG] {function_name} exists but is not callable")
+                    # print(f"[DEBUG] {function_name} exists but is not callable")
+                    return None
             else:
-                print(f"[DEBUG] Custom function {function_name} not found in logic_implementations")
+                # print(f"[DEBUG] Custom function {function_name} not found in logic_implementations")
+                return None
         except ImportError as e:
-            print(f"[ERROR] Cannot import logic_implementations: {e}")
+            # print(f"[ERROR] Cannot import logic_implementations: {e}")
+            pass
         except Exception as e:
-            print(f"[ERROR] Error loading custom function {function_name}: {e}")
-        return None
-        return None
+            # print(f"[ERROR] Error loading custom function {function_name}: {e}")
+            return None
+        
 
     def _find_nodes_by_type(self, ast_tree, node_types):
         """
@@ -604,12 +622,12 @@ class PythonGenericRule:
 
         obj_id = id(obj)
         if obj_id in visited:
-            print(f"[SAFE EXIT] Already visited object at depth {depth}, avoiding recursion.")
+            # print(f"[SAFE EXIT] Already visited object at depth {depth}, avoiding recursion.")
             return []
         visited.add(obj_id)
 
         if depth > max_depth:
-            print(f"[RECURSION WARNING] Max recursion depth ({max_depth}) reached at path: {prop_path}")
+            # print(f"[RECURSION WARNING] Max recursion depth ({max_depth}) reached at path: {prop_path}")
             return []
 
         if not isinstance(obj, (dict, list)):
