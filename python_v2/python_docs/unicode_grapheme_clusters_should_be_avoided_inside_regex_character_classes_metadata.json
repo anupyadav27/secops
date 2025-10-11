@@ -46,21 +46,11 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "regex",
-    "property_path": [
-      "ASTExpression",
-      "value",
-      "regex"
-    ],
-    "forbidden_values": [
-      ".*\\[\\u0300-\\u036F]+.*"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_unicode_grapheme_clusters_in_regex"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "unicode_grapheme_clusters_should_be_avoided_inside_regex_character_classes.json",
-    "rule_id": "unicode_grapheme_clusters_should_be_avoided_inside_regex_character_classes",
-    "title": "Avoid Unicode grapheme clusters inside regex character classes",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

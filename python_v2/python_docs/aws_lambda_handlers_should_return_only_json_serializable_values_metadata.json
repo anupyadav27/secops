@@ -47,24 +47,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "function_definitions",
-      "name",
-      "returns"
-    ],
-    "forbidden_values": [
-      "str",
-      "list",
-      "tuple",
-      "set"
+    "node_types": ["FunctionDef", "AsyncFunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "lambda_handler_compliance_check"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "aws_lambda_handlers_should_return_only_json_serializable_values.json",
-    "rule_id": "aws_lambda_handlers_should_return_only_json_serializable_values",
-    "title": "AWS Lambda handlers should return only JSON serializable values",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

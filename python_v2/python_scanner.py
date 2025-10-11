@@ -114,12 +114,12 @@ def load_rules(metadata_map):
 
 # Step 7: Scanner engine
 def scan_file(py_file, rules):
-    print(f"\n[DEBUG] Scanning file {py_file}")
+    # print(f"\n[DEBUG] Scanning file {py_file}")
     ast_tree = parse_python_file(py_file)
     # DEBUG: Print AST structure for troubleshooting
     import pprint
-    print("[DEBUG] AST structure for file:")
-    pprint.pprint(ast_tree['module'], width=120, compact=True)
+    # print("[DEBUG] AST structure for file:")
+    # pprint.pprint(ast_tree['module'], width=120, compact=True)
     all_findings = []
     applicable_rules = 0
     
@@ -136,7 +136,7 @@ def scan_file(py_file, rules):
                 # print(f"Rule {rule.metadata.get('rule_id')} not applicable")
                 pass
         except Exception as e:
-            print(f"Error checking applicability for rule {rule.metadata.get('rule_id')}: {e}")
+            # print(f"Error checking applicability for rule {rule.metadata.get('rule_id')}: {e}")
             continue
     
     # Second pass - apply applicable rules
@@ -160,6 +160,7 @@ def scan_file(py_file, rules):
                             if node.get('node_type') not in node_types:
                                 return
                         try:
+                            print(f"[DEBUG][scanner] Checking node: {node.get('node_type')}, line: {node.get('lineno')}")
                             if custom_function(node):
                                 finding = {
                                     "rule_id": rule.rule_id,
@@ -170,7 +171,7 @@ def scan_file(py_file, rules):
                                 }
                                 findings.append(finding)
                         except Exception as e:
-                            print(f"[DEBUG] Error in custom function for {rule.rule_id} on node: {e}")
+                            # print(f"[DEBUG] Error in custom function for {rule.rule_id} on node: {e}")
                             pass
                 visit_ast_nodes(ast_tree.get('module', {}), check_node, findings, py_file)
             else:
@@ -179,19 +180,20 @@ def scan_file(py_file, rules):
                 else:
                     try:
                         findings_from_check = rule.check(ast_tree, py_file)
-                        print(f"[DEBUG] Rule {rule.rule_id} check() returned {len(findings_from_check)} findings.")
+                        # print(f"[DEBUG] Rule {rule.rule_id} check() returned {len(findings_from_check)} findings.")
                         if rule.rule_id == "assertions_should_not_fail_or_succeed_unconditionally":
-                            print(f"[DEBUG] Assertions rule findings: {json.dumps(findings_from_check, indent=2)}")
+                            # print(f"[DEBUG] Assertions rule findings: {json.dumps(findings_from_check, indent=2)}")
+                            pass
                         findings.extend(findings_from_check)
                     except RecursionError as re:
-                        print(f"[RECURSION ERROR] Rule {rule.rule_id} raised RecursionError: {re}")
+                        # print(f"[RECURSION ERROR] Rule {rule.rule_id} raised RecursionError: {re}")
                         # Optionally print a small snippet of the AST or property_path here
                         continue
                     except Exception as e:
-                        print(f"[ERROR] Rule {rule.rule_id} raised exception: {e}")
+                        # print(f"[ERROR] Rule {rule.rule_id} raised exception: {e}")
                         continue
             if findings:
-                print(f"[DEBUG] Adding {len(findings)} findings for rule {rule.rule_id} to all_findings.")
+                # print(f"[DEBUG] Adding {len(findings)} findings for rule {rule.rule_id} to all_findings.")
                 all_findings.extend(findings)
         except Exception as e:
             print(f"[DEBUG] Error applying rule {rule.metadata.get('rule_id')}: {e}")
@@ -200,12 +202,16 @@ def scan_file(py_file, rules):
     print(f"Applied {applicable_rules} out of {len(rules)} rules")
     return all_findings
 
-def clean_for_json(obj):
-    """Recursively clean an object to make it JSON serializable"""
+def clean_for_json(obj, depth=0, max_depth=10):
+    """Recursively clean an object to make it JSON serializable, with depth limit"""
+    if depth > max_depth:
+        return f"<Max depth {max_depth} reached>"
     if isinstance(obj, dict):
-        return {key: clean_for_json(value) for key, value in obj.items()}
+        # Remove __parent__ if present
+        obj = {k: v for k, v in obj.items() if k != '__parent__'}
+        return {key: clean_for_json(value, depth+1, max_depth) for key, value in obj.items()}
     elif isinstance(obj, list):
-        return [clean_for_json(item) for item in obj]
+        return [clean_for_json(item, depth+1, max_depth) for item in obj]
     elif isinstance(obj, bytes):
         return obj.decode('utf-8', errors='replace')
     elif hasattr(obj, '__dict__') and not isinstance(obj, (str, int, float, bool, type(None))):
@@ -224,11 +230,12 @@ if __name__ == "__main__":
     cleaned_results = []
     for finding in results:
         if isinstance(finding, dict):
-            if 'file' in finding:
-                del finding['file']
-        cleaned_finding = clean_for_json(finding)
+            # Remove fields that may contain cyclic references
+            for key in ['file', 'node', '__parent__']:
+                if key in finding:
+                    del finding[key]
+        cleaned_finding = clean_for_json(finding, max_depth=10)
         cleaned_results.append(cleaned_finding)
-    
     results = cleaned_results
     
     print(f"\nScan Summary for file: {py_file}")

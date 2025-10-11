@@ -1,3 +1,81 @@
+# Custom function for unnecessary equality checks
+def is_unnecessary_equality_check(node):
+    """
+    Detects chained equality comparisons like: x == 1 or x == 2 or x == 3
+    Returns True if such a pattern is found.
+    """
+    if not isinstance(node, dict):
+        return False
+    # Check for BoolOp (or) with multiple Compare nodes
+    if node.get('node_type') == 'BoolOp' and node.get('op', {}).get('node_type') == 'Or':
+        left_names = set()
+        values = node.get('values', [])
+        for value in values:
+            if isinstance(value, dict) and value.get('node_type') == 'Compare':
+                ops = value.get('ops', [])
+                if ops and ops[0].get('node_type') == 'Eq':
+                    left = value.get('left', {})
+                    if left.get('node_type') == 'Name':
+                        left_names.add(left.get('id'))
+        if len(left_names) == 1 and len(values) > 1:
+            print('[DEBUG][is_unnecessary_equality_check] Triggered on node:', node)
+            return True
+    return False
+# Custom function: Detect Unicode grapheme clusters inside regex character classes
+def check_unicode_grapheme_clusters_in_regex(node):
+    """
+    Returns True if a regex string contains a character class with Unicode grapheme cluster range (U+0300–U+036F).
+    Example: pattern = r'[̀-ͯ]+'
+    """
+    # Only check assignment nodes
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    value_node = node.get('value', {})
+    if not isinstance(value_node, dict):
+        return False
+    # Look for Constant node with a string value
+    if value_node.get('node_type') == 'Constant':
+        pattern = value_node.get('value', '')
+        # Match character class with Unicode grapheme cluster range
+        # U+0300 = \u0300, U+036F = \u036F
+        import re
+        if isinstance(pattern, str) and re.search(r'\[.*?\u0300-\u036F.*?\]', pattern):
+            return True
+        # Also match literal combining marks: [̀-ͯ]
+        if isinstance(pattern, str) and re.search(r'\[[̀-ͯ]+\]', pattern):
+            return True
+    return False
+def check_unencrypted_rds_usage(node):
+    """
+    Custom logic for rule: using_unencrypted_rds_db_resources_is_securitysensitive
+    Flags calls to boto3.client('rds').describe_db_instances()
+    """
+    # print('[DEBUG] Called check_unencrypted_rds_usage')
+    # print('[DEBUG] Node type:', node.get('node_type'))
+    # print('[DEBUG] Node structure:', node)
+    if node.get('node_type') == 'Call':
+        func = node.get('func', {})
+    # print('[DEBUG] func:', func)
+        # Check for describe_db_instances call
+        if func.get('node_type') == 'Attribute' and func.get('attr') == 'describe_db_instances':
+            value = func.get('value', {})
+            # print('[DEBUG] value:', value)
+            # Check for boto3.client('rds')
+            if value.get('node_type') == 'Call':
+                inner_func = value.get('func', {})
+                # print('[DEBUG] inner_func:', inner_func)
+                if inner_func.get('node_type') == 'Attribute' and inner_func.get('attr') == 'client':
+                    args = value.get('args', [])
+                    # print('[DEBUG] args:', args)
+                    for arg in args:
+                        # print('[DEBUG] arg:', arg)
+                        if arg.get('node_type') == 'Constant' and arg.get('value') == 'rds':
+                            # print('[DEBUG] MATCH FOUND!')
+                            return {
+                                'message': 'Unencrypted RDS resource found',
+                                'line': node.get('lineno', 1)
+                            }
+    return False
 def async_functions_should_use_async_features(node):
     # Only process async functions
     if node.get("node_type") != "AsyncFunctionDef":
@@ -125,6 +203,36 @@ def is_weak_password(password):
     """Check if a password is considered weak"""
     if not isinstance(password, str) or len(password) < 3:
         return False
+
+def check_union_type_expressions_preferred(node):
+    """
+    Custom logic for rule: union_type_expressions_should_be_preferred_over_typingunion_in_type_hints
+    Flags usage of typing.Union in type hints, recommends using X | Y syntax.
+    """
+    findings = []
+    # Check function arguments
+    if node.get('node_type') in ['FunctionDef', 'AsyncFunctionDef']:
+        args = node.get('args', {}).get('args', [])
+        for arg in args:
+            annotation = arg.get('annotation', {})
+            if annotation.get('node_type') == 'Subscript':
+                value = annotation.get('value', {})
+                if value.get('node_type') == 'Name' and value.get('id') == 'Union':
+                    findings.append({
+                        'message': "Use 'X | Y' union type expressions instead of 'typing.Union[X, Y]' in type hints.",
+                        'line': arg.get('lineno', node.get('lineno', 1))
+                    })
+    # Check variable annotations
+    if node.get('node_type') == 'AnnAssign':
+        annotation = node.get('annotation', {})
+        if annotation.get('node_type') == 'Subscript':
+            value = annotation.get('value', {})
+            if value.get('node_type') == 'Name' and value.get('id') == 'Union':
+                findings.append({
+                    'message': "Use 'X | Y' union type expressions instead of 'typing.Union[X, Y]' in type hints.",
+                    'line': node.get('lineno', 1)
+                })
+    return findings if findings else False
     password_lower = password.lower()
     weak_passwords = [
         '123456', 'password', 'admin', 'root', 'user', 'guest', 'test',
@@ -763,7 +871,7 @@ def check_public_access_parameters(node):
             # Check for public access value
             if value.get('node_type') == 'Constant' and \
                value.get('value') == 'Public_Read':
-                print("[DEBUG] Found public access configuration:", value.get('value'))
+                # print("[DEBUG] Found public access configuration:", value.get('value'))
                 return True
     
     return False
@@ -927,6 +1035,32 @@ def recursion_check(node):
     return False
 
 
+def check_cloudwatch_namespace(node):
+    """
+    Custom logic for rule: aws_cloudwatch_metrics_namespace_should_not_begin_with_aws
+    Checks if CloudWatch metric namespace starts with 'aws'
+    """
+    if node.get('node_type') != 'Call':
+        return False
+
+    # Check if this is a put_metric_data call
+    func = node.get('func', {})
+    if func.get('node_type') == 'Attribute' and func.get('attr') == 'put_metric_data':
+        # Look for the Namespace parameter in keywords
+        keywords = node.get('keywords', [])
+        for kw in keywords:
+            if kw.get('arg') == 'Namespace':
+                value = kw.get('value', {})
+                if value.get('node_type') == 'Constant':
+                    namespace = value.get('value', '')
+                    if isinstance(namespace, str) and namespace.startswith('aws'):
+                        return {
+                            'message': f"CloudWatch metric namespace '{namespace}' should not start with 'aws'",
+                            'line': value.get('lineno', 1)
+                        }
+    return False
+
+
 # Auto-generated function for metadata creation
 def custom_check_repeated_empty_regex(node):
     """Auto-generated STUB for repeated_patterns_in_regular_expressions_should_not_match_the_empty_string. Implement detection logic here."""
@@ -1036,81 +1170,103 @@ def weak_hashing_algorithm_check(node):
         return False
     return walk(node)
 
-def unencrypted_sqs_queue_check(node):
-    def walk(n):
-        if isinstance(n, dict):
-            if n.get('node_type') == 'Call':
-                func = n.get('func', {})
-                if func.get('node_type') == 'Attribute' and func.get('attr') == 'create_queue':
-                    for kw in n.get('keywords', []):
-                        if kw.get('arg') == 'Attributes':
-                            attrs = kw.get('value', {}).get('keys', [])
-                            values = kw.get('value', {}).get('values', [])
-                            for k, v in zip(attrs, values):
-                                if k.get('node_type') == 'Constant' and k.get('value') == 'EncryptionType':
-                                    if v.get('node_type') == 'Constant' and v.get('value') == 'NONE':
-                                        return True
-            for v in n.values():
-                if isinstance(v, (dict, list)):
-                    if walk(v):
-                        return True
-        elif isinstance(n, list):
-            for item in n:
-                if walk(item):
-                    return True
+def check_iam_policy_least_privilege(node):
+    """
+    Custom logic for rule: aws_iam_policies_should_limit_the_scope_of_permissions_given
+    Detects IAM policies with excessive permissions (wildcards in Action or Resource).
+    """
+    def is_excessive(actions, resources):
+        if isinstance(actions, str):
+            actions = [actions]
+        if isinstance(resources, str):
+            resources = [resources]
+        for act in actions:
+            if act == '*' or act.endswith(':*'):
+                return True
+        for res in resources:
+            if res == '*' or res.endswith(':*') or res == 'arn:aws:s3:::*':
+                return True
         return False
-    return walk(node)
 
-def unencrypted_sns_topic_check(node):
-    def walk(n):
-        if isinstance(n, dict):
-            if n.get('node_type') == 'Call':
-                func = n.get('func', {})
-                if func.get('node_type') == 'Attribute' and func.get('attr') == 'create_topic':
-                    has_kms = False
-                    for kw in n.get('keywords', []):
-                        if kw.get('arg') == 'KmsMasterKeyId':
-                            has_kms = True
-                    if not has_kms:
-                        return True
-            for v in n.values():
-                if isinstance(v, (dict, list)):
-                    if walk(v):
-                        return True
-        elif isinstance(n, list):
-            for item in n:
-                if walk(item):
-                    return True
-        return False
-    return walk(node)
+    # Look for dicts with 'Statement' key
+    if node.get('node_type') == 'Dict' and 'keys' in node and 'values' in node:
+        keys = node['keys']
+        values = node['values']
+        for k, v in zip(keys, values):
+            if k.get('node_type') == 'Constant' and k.get('value') == 'Statement':
+                # Statement value should be a list of dicts
+                if v.get('node_type') == 'List':
+                    for stmt in v.get('elts', []):
+                        if stmt.get('node_type') == 'Dict' and 'keys' in stmt and 'values' in stmt:
+                            stmt_keys = stmt['keys']
+                            stmt_values = stmt['values']
+                            action = None
+                            resource = None
+                            for sk, sv in zip(stmt_keys, stmt_values):
+                                if sk.get('node_type') == 'Constant' and sk.get('value') == 'Action':
+                                    if sv.get('node_type') == 'List':
+                                        action = [elt.get('value') for elt in sv.get('elts', []) if elt.get('node_type') == 'Constant']
+                                    elif sv.get('node_type') == 'Constant':
+                                        action = [sv.get('value')]
+                                if sk.get('node_type') == 'Constant' and sk.get('value') == 'Resource':
+                                    if sv.get('node_type') == 'List':
+                                        resource = [elt.get('value') for elt in sv.get('elts', []) if elt.get('node_type') == 'Constant']
+                                    elif sv.get('node_type') == 'Constant':
+                                        resource = [sv.get('value')]
+                            if action and resource and is_excessive(action, resource):
+                                return {
+                                    'message': 'IAM policy has excessive permissions.',
+                                    'line': node.get('lineno', 1)
+                                }
+    return False
 
-def unencrypted_sagemaker_notebook_check(node):
-    def walk(n):
-        if isinstance(n, dict):
-            if n.get('node_type') == 'Call':
-                func = n.get('func', {})
-                if func.get('node_type') == 'Attribute' and func.get('attr') == 'create_notebook_instance':
-                    for kw in n.get('keywords', []):
-                        if kw.get('arg') == 'EncryptionOptions':
-                            enc_opts = kw.get('value', {})
-                            if isinstance(enc_opts, dict):
-                                at_rest_keys = enc_opts.get('keys', [])
-                                at_rest_vals = enc_opts.get('values', [])
-                                for k, v in zip(at_rest_keys, at_rest_vals):
-                                    if k.get('node_type') == 'Constant' and k.get('value') == 'EncryptionAtRest':
-                                        enabled_keys = v.get('keys', [])
-                                        enabled_vals = v.get('values', [])
-                                        for ek, ev in zip(enabled_keys, enabled_vals):
-                                            if ek.get('node_type') == 'Constant' and ek.get('value') == 'Enabled':
-                                                if ev.get('node_type') == 'Constant' and ev.get('value') is False:
-                                                    return True
-            for v in n.values():
-                if isinstance(v, (dict, list)):
-                    if walk(v):
-                        return True
-        elif isinstance(n, list):
-            for item in n:
-                if walk(item):
-                    return True
-        return False
-    return walk(node)
+def lambda_handler_compliance_check(node):
+    """
+    Checks AWS Lambda handler compliance for:
+    1. Not being async
+    2. Cleaning up temporary files
+    3. Returning only JSON serializable values
+    """
+    findings = []
+    # 1. Check for async Lambda handler
+    if node.get('node_type') == 'AsyncFunctionDef' and node.get('name', '').startswith('lambda_handler'):
+        findings.append({
+            'message': 'Lambda handler should not be an async function.',
+            'line': node.get('lineno', 1)
+        })
+    # 2. Check for cleanup of temporary files
+    if node.get('node_type') in ['FunctionDef', 'AsyncFunctionDef'] and node.get('name', '').startswith('lambda_handler'):
+        body = node.get('body', [])
+        for stmt in body:
+            # Look for creation of temp files without delete=True
+            if stmt.get('node_type') == 'Assign':
+                value = stmt.get('value', {})
+                if value.get('node_type') == 'Call' and value.get('func', {}).get('attr', '') == 'NamedTemporaryFile':
+                    keywords = value.get('keywords', [])
+                    for kw in keywords:
+                        if kw.get('arg') == 'delete' and kw.get('value', {}).get('node_type') == 'Constant' and kw.get('value', {}).get('value') is False:
+                            findings.append({
+                                'message': 'Lambda function does not clean up temporary files in the tmp directory',
+                                'line': stmt.get('lineno', 1)
+                            })
+            # Look for os.system("rm ... tmp*")
+            if stmt.get('node_type') == 'Expr':
+                value = stmt.get('value', {})
+                if value.get('node_type') == 'Call' and value.get('func', {}).get('attr', '') == 'system':
+                    args = value.get('args', [])
+                    for arg in args:
+                        if arg.get('node_type') == 'Constant' and 'rm' in str(arg.get('value', '')) and 'tmp' in str(arg.get('value', '')):
+                            findings.append({
+                                'message': 'Lambda function does not clean up temporary files in the tmp directory',
+                                'line': stmt.get('lineno', 1)
+                            })
+    # 3. Check for JSON serializable return values
+    if node.get('node_type') in ['FunctionDef', 'AsyncFunctionDef'] and node.get('name', '').startswith('lambda_handler'):
+        returns = node.get('returns', None)
+        if returns and returns.get('node_type') == 'Name':
+            if returns.get('id') in ['list', 'tuple', 'set']:
+                findings.append({
+                    'message': 'The handler should return JSON serializable values.',
+                    'line': node.get('lineno', 1)
+                })
+    return findings if findings else False

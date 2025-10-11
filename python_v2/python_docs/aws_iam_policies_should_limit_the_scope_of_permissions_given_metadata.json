@@ -49,20 +49,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ruleKey",
-      "actions"
-    ],
-    "forbidden_values": [
-      "*:*"
-    ]
-  },
-  "metadata": {
-    "filename": "aws_iam_policies_should_limit_the_scope_of_permissions_given.json",
-    "rule_id": "aws_iam_policies_should_limit_the_scope_of_permissions_given",
-    "title": "AWS IAM policies should limit the scope of permissions given",
-    "status": "ready",
-    "defaultSeverity": "Major"
+      "node_types": ["Dict"],
+      "checks": [
+        {
+          "type": "custom_function",
+          "function": "check_iam_policy_least_privilege"
+        }
+      ]
   }
 }

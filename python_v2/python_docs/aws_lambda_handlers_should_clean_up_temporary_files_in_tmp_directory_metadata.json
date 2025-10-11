@@ -48,23 +48,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "body",
-      "expressions",
-      "<find appropriate AST node for the Lambda function body>"
-    ],
-    "forbidden_patterns": [
-      "import tempfile\n\\s*tmp_file = tempfile.NamedTemporaryFile\\(\\s*delete=False\\)\\s*",
-      "os.system\\(\"\\w*\\s+rm\\s*-f\\s*\\w*\\s*tmp\\*\\s*\\\"\\)"
-    ],
-    "new_check_type_doc": "Checks for specific patterns in the Lambda function body"
-  },
-  "metadata": {
-    "filename": "aws_lambda_handlers_should_clean_up_temporary_files_in_tmp_directory.json",
-    "rule_id": "aws_lambda_handlers_should_clean_up_temporary_files_in_tmp_directory",
-    "title": "AWS Lambda handlers should clean up temporary files in tmp directory",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_types": ["FunctionDef", "AsyncFunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "lambda_handler_compliance_check"
+      }
+    ]
   }
 }

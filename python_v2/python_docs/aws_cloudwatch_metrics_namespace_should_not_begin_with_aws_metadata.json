@@ -44,7 +44,13 @@
     "CERT": "",
     "OWASP": ""
   },
-  "logic": {
-    "custom_function": "check_aws_cloudwatch_metrics_namespace_should_not_begin_with_aws"
-  }
+    "logic": {
+      "node_types": ["Call"],
+      "checks": [
+        {
+          "type": "custom_function",
+          "function": "check_cloudwatch_namespace"
+        }
+      ]
+    }
 }

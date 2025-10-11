@@ -71,29 +71,37 @@ class PythonGenericRule:
         return len(matching_nodes) > 0 or custom_function is not None
         
     def check(self, ast_tree, filename):
-        """
-        Enhanced check method that applies generic logic first, then custom functions as fallback.
-        
-        Process:
-        1. Apply generic logic (regex, property_comparison, exists/not_exists)
-        2. If no findings from generic logic AND custom_function exists, call custom function
-        3. Return all findings from both approaches
-        """
-        findings = []
-        seen_findings = set()  # For deduplication
-        
-        # Step 1: Apply generic logic first
-        generic_findings = self._apply_generic_logic(ast_tree, filename, seen_findings)
-        findings.extend(generic_findings)
-        
-        # Step 2: If no findings from generic logic AND custom function exists, use custom function
-        custom_function_name = self._get_custom_function_name()
-        if len(findings) == 0 and custom_function_name:
-            custom_findings = self._apply_custom_function(ast_tree, filename, custom_function_name, seen_findings)
-            findings.extend(custom_findings)
-        
-        print(f"[DEBUG] Found {len(findings)} violations in {filename} (Generic: {len(generic_findings)}, Custom: {len(findings) - len(generic_findings)})")
-        return findings
+        try:
+            # print(f"[DEBUG] Starting check for rule: {self.rule_id}")
+            findings = []
+            seen_findings = set()
+            # ALWAYS apply generic logic
+            generic_findings = self._apply_generic_logic(ast_tree, filename, seen_findings)
+            # print(f"[DEBUG] Generic logic found {len(generic_findings)} findings")
+            findings.extend(generic_findings)
+            # THEN apply custom function if it exists
+            custom_function_name = self._get_custom_function_name()
+            if custom_function_name:
+                # print(f"[DEBUG] Attempting to apply custom function: {custom_function_name}")
+                custom_function = self._get_custom_function(custom_function_name)
+                if custom_function:
+                    custom_findings = self._apply_custom_function(ast_tree, filename, custom_function_name, seen_findings)
+                    # print(f"[DEBUG] Custom function found {len(custom_findings)} findings")
+                    findings.extend(custom_findings)
+                else:
+                    # print(f"[DEBUG] Custom function {custom_function_name} could not be loaded")
+                    pass
+            # print(f"[DEBUG] Rule {self.rule_id} returning {len(findings)} total findings")
+            pass
+            return findings
+        except RecursionError as e:
+            # print(f"[RECURSION ERROR] Rule {self.rule_id}: {e}")
+            return []
+        except Exception as e:
+            # print(f"[ERROR] Rule {self.rule_id} failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
 
     def _get_custom_function_name(self):
         """Extract custom function name from logic checks or root logic dict."""
@@ -147,7 +155,8 @@ class PythonGenericRule:
 
             # Debug: print before property extraction
             if check_type in ["property_comparison", "exists", "not_exists", "numeric_bounds", "required_present", "ast_property"]:
-                print(f"[GENERIC LOGIC] Applying {check_type} to node_type={node_type}, node_name={node_name}, property={check.get('property') or check.get('property_path')}")
+                # print(f"[GENERIC LOGIC] Applying {check_type} to node_type={node_type}, node_name={node_name}, property={check.get('property') or check.get('property_path')}")
+                pass
 
             # Apply different check types
             if check_type in ["regex", "pattern"]:
@@ -178,7 +187,7 @@ class PythonGenericRule:
             end_lineno = node.get('end_lineno', lineno)
             if lineno and end_lineno and lineno <= end_lineno:
                 code_block = '\n'.join(source_lines[lineno-1:end_lineno])
-                print(f"[DEBUG] Checking regex pattern '{regex_pattern}' against code block: {code_block}")
+                # print(f"[DEBUG] Checking regex pattern '{regex_pattern}' against code block: {code_block}")
                 if re.search(regex_pattern, code_block):
                     finding = self._make_finding(
                         filename, node_type, node_name, [], code_block,
@@ -186,7 +195,7 @@ class PythonGenericRule:
                     )
                     unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
                     if unique_key not in seen_findings:
-                        print(f"[DEBUG] Found regex match at line {finding.get('line', 0)}")
+                        # print(f"[DEBUG] Found regex match at line {finding.get('line', 0)}")
                         seen_findings.add(unique_key)
                         findings.append(finding)
 
@@ -211,29 +220,76 @@ class PythonGenericRule:
         findings = []
         property_path = check.get("property") or check.get("property_path")
         starts_with = check.get("starts_with")
-        match_keyword = check.get("match_keyword")
+        equals = check.get("equals")
+        condition = check.get("condition")
+        
+    # print(f"[DEBUG] Property comparison check details:")
+    # print(f"[DEBUG] - Property path: {property_path}")
+    # print(f"[DEBUG] - Starts with: {starts_with}")
+    # print(f"[DEBUG] - Node type: {node_type}")
+    # print(f"[DEBUG] - Node structure: {node if isinstance(node, dict) else type(node)}")
 
-        expected_types = self.logic.get("node_types", [])
-        if expected_types and node_type not in expected_types:
+        if not property_path:
             return findings
 
-        # Special handling for Call.keywords Namespace
-        if node_type == "Call" and property_path == ["keywords", "arg", "value"] and starts_with and match_keyword:
-            for kw in node.get("keywords", []):
-                if kw.get("arg") == match_keyword:
-                    val = kw.get("value")
-                    # Handle string value node
-                    if isinstance(val, dict) and val.get("node_type") in ["Str", "Constant"]:
-                        strval = val.get("s") if "s" in val else val.get("value")
-                        if isinstance(strval, str) and strval.startswith(starts_with):
-                            finding = self._make_finding(
-                                filename, node_type, node_name, property_path, strval,
-                                check.get('message', self.message), node
-                            )
-                            unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
-                            if unique_key not in seen_findings:
-                                seen_findings.add(unique_key)
-                                findings.append(finding)
+        # First check if condition is met (if any)
+        if condition:
+            cond_path = condition.get("property") or condition.get("path")
+            cond_equals = condition.get("equals")
+            # print(f"[DEBUG] Checking condition:")
+            # print(f"[DEBUG] - Condition path: {cond_path}")
+            # print(f"[DEBUG] - Condition equals: {cond_equals}")
+            if cond_path and cond_equals:
+                cond_values = self._get_property_values(node, cond_path)
+                # print(f"[DEBUG] - Condition values found: {cond_values}")
+                condition_met = False
+                for found_path, value in cond_values:
+                    # print(f"[DEBUG] - Checking condition value: {value}")
+                    if value == cond_equals:
+                        condition_met = True
+                        print(f"[DEBUG] - Condition met!")
+                        break
+                if not condition_met:
+                    print(f"[DEBUG] - Condition not met, skipping")
+                    return findings
+
+        # First check condition if present
+        condition_met = True
+        if condition:
+            cond_property = condition.get('property')
+            cond_equals = condition.get('equals')
+            print(f"[DEBUG] Checking condition: property={cond_property} equals={cond_equals}")
+            
+            cond_values = self._get_property_values(node, cond_property)
+            condition_met = False
+            for _, cond_value in cond_values:
+                print(f"[DEBUG] Checking condition value: {cond_value}")
+                if cond_value == cond_equals:
+                    condition_met = True
+                    break
+            
+            if not condition_met:
+                print("[DEBUG] Condition not met, skipping value checks")
+                return findings
+
+        # Get property values to check
+        property_values = self._get_property_values(node, property_path)
+        print(f"[DEBUG] Found {len(property_values)} values for path {property_path}")
+        
+        for found_path, value in property_values:
+            print(f"[DEBUG] Checking value: {value} at path {found_path}")
+            if starts_with and isinstance(value, str):
+                print(f"[DEBUG] Checking if value '{value}' starts with '{starts_with}'")
+                if value.startswith(starts_with):
+                    print(f"[DEBUG] Found matching value: {value}")
+                    finding = self._make_finding(
+                        filename, node_type, node_name, found_path, value,
+                        check.get('message', self.message), node
+                    )
+                    unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                    if unique_key not in seen_findings:
+                        seen_findings.add(unique_key)
+                        findings.append(finding)
         return findings
 
     def _apply_exists_check(self, check, node, filename, node_type, node_name, seen_findings):
@@ -344,95 +400,113 @@ class PythonGenericRule:
 
         return findings
 
-    def _get_property_values(self, node, property_path, visited=None, depth=0, max_depth=60):
-        if depth <= 2:
-            node_type = node.get('node_type') if isinstance(node, dict) else type(node)
-            print(f"[DEBUG] _get_property_values called: property_path={property_path}, node_type={node_type}, depth={depth}")
+    def _get_property_values(self, node, property_path, visited=None, depth=0, max_depth=20):
         """
-        Get property values from node, handling both new and old path formats.
-        This is recursion-safe (uses visited set and depth guard), and short-circuits
-        for common patterns like Call -> keywords where deep traversal is unnecessary.
-        Returns list of tuples: (property_path_tuple_or_list, value)
+        COMPLETELY SAFE property value extraction - non-recursive approach
         """
-        if visited is None:
-            visited = set()
-
-        # Depth & recursion guard
-        if depth > max_depth:
-            print(f"[SAFE EXIT] Max depth reached while extracting property {property_path}")
+        print(f"[DEBUG] Getting property values for path: {property_path}")
+        print(f"[DEBUG] Node type: {type(node)}")
+        if isinstance(node, dict):
+            print(f"[DEBUG] Node keys: {list(node.keys())}")
+        if not isinstance(node, dict) or not property_path:
+            print("[DEBUG] Early return: node is not dict or no property path")
             return []
 
-        # Normalize property_path
-        if not property_path:
-            return [([], node)]
+        # Convert path to list if it's a string with dot notation
         if isinstance(property_path, str):
-            property_path = property_path.split('.')
-
-        # Ensure node is dict-like
-        if not isinstance(node, dict):
-            return []
-
-        # Cycle detection
-        try:
-            obj_id = id(node)
-        except Exception:
-            obj_id = None
-        if obj_id is not None:
-            if obj_id in visited:
-                # already visited this object -> avoid cycle
-                return []
-            visited.add(obj_id)
-
-        # Quick short-circuit: handle Call->keywords without deep wildcard traversal
-        # Many rules that inspect Call keywords only need to iterate node['keywords'] directly.
-        if node.get('node_type') == 'Call':
-            # If property_path points to keywords or matches pattern like ['keywords','*','value']
-            if property_path and (property_path[0] == 'keywords' or property_path[0] == 'keywords[*]' or property_path[0] == 'keywords' and len(property_path) == 1):
-                results = []
-                keywords = node.get('keywords', [])
-                if isinstance(keywords, list):
-                    for idx, kw in enumerate(keywords):
-                        # kw is typically a dict with 'arg' and 'value'
-                        # expose both arg and value for rule checks
-                        results.append(([f"keywords[{idx}]", "arg"], kw.get('arg')))
-                        results.append(([f"keywords[{idx}]", "value"], kw.get('value')))
-                return results
-
-        # Default behavior: walk prop_path step by step, but keep visited+depth to avoid explosion
-        first_key = property_path[0]
-        rest = property_path[1:]
-
-        # If first_key not present, nothing to return
-        if first_key not in node:
-            return []
-
-        value = node[first_key]
-
-        # If we've exhausted path, return the found value
-        if not rest:
-            return [([first_key], value)]
-
-        results = []
-        # If next value is a list, try each item
-        if isinstance(value, list):
-            for idx, item in enumerate(value):
-                sub_results = []
-                if isinstance(item, dict):
-                    sub_results = self._get_property_values(item, rest, visited, depth + 1, max_depth)
+            # Split by dots but preserve array notation
+            parts = []
+            current = ""
+            in_brackets = False
+            for char in property_path:
+                if char == '[':
+                    in_brackets = True
+                    if current:
+                        parts.append(current)
+                        current = ""
+                    current = char
+                elif char == ']':
+                    in_brackets = False
+                    current += char
+                    parts.append(current)
+                    current = ""
+                elif char == '.' and not in_brackets:
+                    if current:
+                        parts.append(current)
+                        current = ""
                 else:
-                    # primitive inside list
-                    if not rest:
-                        sub_results = [([f"[{idx}]"], item)]
-                for path, val in sub_results:
-                    results.append(([first_key, f"[{idx}]"] + list(path), val))
-        elif isinstance(value, dict):
-            sub_results = self._get_property_values(value, rest, visited, depth + 1, max_depth)
-            for path, val in sub_results:
-                results.append(([first_key] + list(path), val))
-        else:
-            # primitive and more path remaining -> no match
-            return []
+                    current += char
+            if current:
+                parts.append(current)
+            property_path = parts
 
+        # Use iterative approach with stack instead of recursion
+        stack = [(node, property_path, [])]  # (current_node, remaining_path, full_path)
+        results = []
+        visited_nodes = set()  # Track visited nodes by id to prevent cycles
+
+        while stack:
+            current_node, current_path, full_path = stack.pop()
+            # Safety check - skip if not a dict
+            if not isinstance(current_node, dict):
+                continue
+            # Cycle detection
+            node_id = id(current_node)
+            if node_id in visited_nodes:
+                continue
+            visited_nodes.add(node_id)
+            if not current_path:
+                continue
+            current_key = current_path[0]
+            remaining_path = current_path[1:] if len(current_path) > 1 else []
+            # Handle wildcard (*) and array index notation - match all keys or specific index
+            if current_key == '*' or (current_key.startswith('[') and current_key.endswith(']')):
+                if current_key == '*':
+                    # For wildcard, iterate all items
+                    items = current_node.items() if isinstance(current_node, dict) else enumerate(current_node)
+                else:
+                    # For array index, get specific item
+                    idx = int(current_key[1:-1])
+                    if isinstance(current_node, list) and 0 <= idx < len(current_node):
+                        items = [(idx, current_node[idx])]
+                    else:
+                        items = []
+                
+                for key, value in items:
+                    # Skip internal/metadata fields that cause cycles
+                    if isinstance(current_node, dict) and key in ['lineno', 'col_offset', 'end_lineno', 'node_type', '__parent__', 'ctx', 'parent']:
+                        continue
+                    
+                    key_str = str(key) if isinstance(current_node, dict) else f"[{key}]"
+                    new_full_path = full_path + [key_str]
+                    
+                    if not remaining_path:
+                        # End of path - add to results
+                        results.append((new_full_path, value))
+                    else:
+                        # Continue traversal
+                        if isinstance(value, dict):
+                            stack.append((value, remaining_path, new_full_path))
+                        elif isinstance(value, list):
+                            # Only push to stack if next path component is a wildcard or array index
+                            next_key = remaining_path[0] if remaining_path else None
+                            if next_key == '*' or (next_key and next_key.startswith('[') and next_key.endswith(']')):
+                                stack.append((value, remaining_path, new_full_path))
+            # Handle specific key
+            elif current_key in current_node:
+                value = current_node[current_key]
+                new_full_path = full_path + [current_key]
+                if not remaining_path:
+                    # End of path - add to results
+                    results.append((new_full_path, value))
+                else:
+                    # Continue traversal
+                    if isinstance(value, dict):
+                        stack.append((value, remaining_path, new_full_path))
+                    elif isinstance(value, list):
+                        for idx, item in enumerate(value):
+                            if isinstance(item, dict):
+                                stack.append((item, remaining_path, new_full_path + [f"[{idx}]"]))
         return results
 
     def _apply_custom_function(self, ast_tree, filename, function_name, seen_findings):
@@ -470,46 +544,55 @@ class PythonGenericRule:
 
     def _get_custom_function(self, function_name):
         """Get a custom function by name from logic_implementations module."""
-        if function_name is None:
+        if not function_name:
             return None
-        
-        # Clean up the function name - remove _metadata suffix if present
-        if function_name.endswith('_metadata'):
-            function_name = function_name[:-9]
-        
-        import logic_implementations
-        # First check the logic_implementations module
-        if hasattr(logic_implementations, function_name):
-            # print(f"[DEBUG] Found custom function {function_name} in logic_implementations")
-            return getattr(logic_implementations, function_name)
-        
-        # Fallback to check this class (for backward compatibility)
-        if hasattr(self, function_name):
-            # print(f"[DEBUG] Found custom function {function_name} in class")
-            return getattr(self, function_name)
-        
-    # print(f"[DEBUG] No custom function found for {function_name}")
+        try:
+            import logic_implementations
+            if hasattr(logic_implementations, function_name):
+                func = getattr(logic_implementations, function_name)
+                if callable(func):
+                    print(f"[DEBUG] Successfully loaded custom function: {function_name}")
+                    return func
+                else:
+                    print(f"[DEBUG] {function_name} exists but is not callable")
+            else:
+                print(f"[DEBUG] Custom function {function_name} not found in logic_implementations")
+        except ImportError as e:
+            print(f"[ERROR] Cannot import logic_implementations: {e}")
+        except Exception as e:
+            print(f"[ERROR] Error loading custom function {function_name}: {e}")
+        return None
         return None
 
     def _find_nodes_by_type(self, ast_tree, node_types):
         """
-        Find all nodes of specified types in the Python AST.
+        Find all nodes of specified types in the Python AST using a stack-based approach.
         """
         found_nodes = []
-        def traverse(node, path=None):
-            if path is None:
-                path = []
+        stack = [(ast_tree, [])]  # Stack of (node, path) tuples
+        seen = set()  # Track visited object IDs to prevent cycles
+        
+        while stack:
+            node, path = stack.pop()
+            node_id = id(node)
+            
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            
             if isinstance(node, dict):
                 if node.get('node_type') in node_types:
-                    # print(f"[DEBUG] Found node_type {node.get('node_type')} at path: {path}")
                     found_nodes.append(node)
+                    
+                # Add children to stack
                 for key, value in node.items():
                     if key not in ['lineno', 'col_offset', 'node_type']:
-                        traverse(value, path + [key])
+                        stack.append((value, path + [key]))
+                        
             elif isinstance(node, list):
+                # Add list items to stack
                 for idx, item in enumerate(node):
-                    traverse(item, path + [f"[{idx}]"])
-        traverse(ast_tree)
+                    stack.append((item, path + [f"[{idx}]"]))
         return found_nodes
 
     def _get_properties_with_wildcard(self, obj, prop_path, depth=0, max_depth=100):

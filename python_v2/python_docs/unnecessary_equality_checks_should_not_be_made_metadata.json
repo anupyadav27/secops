@@ -46,21 +46,11 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "in",
-    "property_path": [
-      "expression",
-      "left",
-      "name"
-    ],
-    "forbidden_values": [
-      "=="
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unnecessary_equality_check"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "unnecessary_equality_checks_should_not_be_made.json",
-    "rule_id": "unnecessary_equality_checks_should_not_be_made",
-    "title": "Unnecessary Equality Checks Should Not Be Made",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

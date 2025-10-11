@@ -47,20 +47,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
+    "check_type": "regex",
+    "node_type": ["Assign"],
     "property_path": [
-      "expression",
+      "value",
       "value"
     ],
     "forbidden_values": [
       "https://[^:]+opensearch\\.org"
     ]
-  },
-  "metadata": {
-    "filename": "using_unencrypted_opensearch_domains_is_securitysensitive.json",
-    "rule_id": "using_unencrypted_opensearch_domains_is_securitysensitive",
-    "title": "Using unencrypted OpenSearch domains is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Critical"
   }
 }

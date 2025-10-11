@@ -47,15 +47,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "is_async_function"
-  },
-  "function_code": "def is_async_function(node):\n    return node.type == 'FunctionDef' and node.name == 'lambda_handler' and node.body.value.value.async_value",
-  "metadata": {
-    "filename": "aws_lambda_handlers_must_not_be_an_async_function.json",
-    "rule_id": "aws_lambda_handlers_must_not_be_an_async_function",
-    "title": "AWS Lambda handlers must not be async functions",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_types": ["FunctionDef", "AsyncFunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "lambda_handler_compliance_check"
+      }
+    ]
   }
 }

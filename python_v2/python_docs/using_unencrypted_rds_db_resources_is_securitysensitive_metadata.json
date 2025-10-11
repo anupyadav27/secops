@@ -46,24 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "body",
-      "expression_statements",
-      "index",
-      "value"
-    ],
-    "forbidden_values": [
-      "boto3.client('rds').describe_db_instances()"
-    ],
-    "new_check_type_doc": "Checks if the provided code uses AWS RDS client to describe DB instances and checks if any of the returned instances are unencrypted"
-  },
-  "function_code": "def check_unencrypted_rds_instances(node):\n    import ast\n    if isinstance(node, ast.Expression)\n        if isinstance(node.value, ast.Call)\n            func = node.value.func.id\n            args = [arg.s for arg in node.value.args]\n            if func == 'describe_db_instances'\n                for db in ast.literal_eval(node.value.kwargs['kwargs']['DBInstances']):\n                    if 'Encrypted' not in db or db['Encrypted'] is False:\n                        return True\n    return False",
-  "metadata": {
-    "filename": "using_unencrypted_rds_db_resources_is_securitysensitive.json",
-    "rule_id": "using_unencrypted_rds_db_resources_is_securitysensitive",
-    "title": "Using unencrypted RDS DB resources is sensitive",
-    "status": "ready",
-    "defaultSeverity": "Critical"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_unencrypted_rds_usage"
+      }
+    ]
   }
 }
