@@ -44,21 +44,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "nodedef",
-      "name"
-    ],
-    "forbidden_values": [
-      "_",
-      "__"
+    "node_types": ["FunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unused_classprivate_method",
+        "message": "Unused private method found"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "unused_classprivate_methods_should_be_removed.json",
-    "rule_id": "unused_classprivate_methods_should_be_removed",
-    "title": "Unused class private methods should be removed",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

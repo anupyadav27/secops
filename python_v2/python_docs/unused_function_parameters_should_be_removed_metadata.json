@@ -46,22 +46,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.FunctionDef",
-      "args",
-      "args",
-      "args",
-      "arg"
-    ],
-    "check_type_doc": "Checks if the 'arg' property of a FunctionDef's 'args' list is not assigned anywhere in the function's body.",
-    "forbidden_empty": true
-  },
-  "metadata": {
-    "filename": "unused_function_parameters_should_be_removed.json",
-    "rule_id": "unused_function_parameters_should_be_removed",
-    "title": "Unused function parameters should be removed",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_types": ["FunctionDef"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property": "args.args[*].arg",
+        "pattern": "unused",
+        "message": "Function parameter is not used."
+      }
+    ]
   }
 }

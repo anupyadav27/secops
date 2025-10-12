@@ -98,6 +98,10 @@ def visit_ast_nodes(node, visit_fn, findings, filename, parent=None):
     """Visit all nodes in Python AST structure, annotating with parent."""
     if isinstance(node, dict):
         node['__parent__'] = parent
+        # Debug print for parent node_type of Break/Continue/Return
+        if node.get('node_type') in ['Break', 'Continue', 'Return']:
+            parent_type = parent.get('node_type') if parent and isinstance(parent, dict) else None
+            print(f"[DEBUG] Node {node.get('node_type')} at line {node.get('lineno')}, parent node_type: {parent_type}")
         visit_fn(node, findings, filename)
         for key, value in node.items():
             if key not in ['lineno', 'col_offset', 'node_type', '__parent__']:
@@ -159,16 +163,53 @@ def scan_file(py_file, rules):
                             if node.get('node_type') not in node_types:
                                 return
                         try:
-                            # print(f"[DEBUG][scanner] Checking node: {node.get('node_type')}, line: {node.get('lineno')}")
-                            if custom_function(node):
-                                finding = {
-                                    "rule_id": rule.rule_id,
-                                    "message": rule.message,
-                                    "file": filename,
-                                    "line": node.get('lineno', 0),
-                                    "status": "violation"
-                                }
-                                findings.append(finding)
+                            # Pass ast_root to custom functions that accept it
+                            import inspect
+                            params = inspect.signature(custom_function).parameters
+                            if len(params) == 2:
+                                result = custom_function(node, ast_tree.get('module', {}))
+                            else:
+                                result = custom_function(node)
+                            if result:
+                                # If the custom function is for unused imports, create a finding for each unused name
+                                if rule.rule_id == "unnecessary_imports_should_be_removed":
+                                    imported_names = [alias.get('name') for alias in node.get('names', []) if isinstance(alias, dict)]
+                                    used_names = set()
+                                    def collect_used_names(n):
+                                        if isinstance(n, dict):
+                                            if n.get('node_type') == 'Name':
+                                                used_names.add(n.get('id'))
+                                            elif n.get('node_type') == 'Attribute':
+                                                value = n.get('value')
+                                                if isinstance(value, dict) and value.get('node_type') == 'Name':
+                                                    used_names.add(value.get('id'))
+                                            for v in n.values():
+                                                collect_used_names(v)
+                                        elif isinstance(n, list):
+                                            for item in n:
+                                                collect_used_names(item)
+                                    collect_used_names(ast_tree.get('module', {}))
+                                    for name in imported_names:
+                                        if name not in used_names:
+                                            finding = {
+                                                "rule_id": rule.rule_id,
+                                                "message": f"Removing unused import: {name}",
+                                                "file": filename,
+                                                "line": node.get('lineno', 0),
+                                                "status": "violation"
+                                            }
+                                            findings.append(finding)
+                                else:
+                                    finding = {
+                                        "rule_id": rule.rule_id,
+                                        "message": rule.message,
+                                        "file": filename,
+                                        "line": node.get('lineno', 0),
+                                        "status": "violation"
+                                    }
+                                    if rule.rule_id == "unused_local_variables_should_be_removed":
+                                        print(f"[DEBUG][scanner] Appending finding for unused_local_variables_should_be_removed at line {node.get('lineno', 0)}")
+                                    findings.append(finding)
                         except Exception as e:
                             # print(f"[DEBUG] Error in custom function for {rule.rule_id} on node: {e}")
                             pass

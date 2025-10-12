@@ -46,21 +46,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "in",
-    "property_path": [
-      "expression",
-      "children",
-      "<index_of_not_operator>"
-    ],
-    "forbidden_values": [
-      "not"
+    "node_types": ["UnaryOp"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property": "op",
+        "pattern": "^Not$",
+        "message": "Avoid using 'not' in boolean checks."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "boolean_checks_should_not_be_inverted.json",
-    "rule_id": "boolean_checks_should_not_be_inverted",
-    "title": "Boolean checks should not be inverted",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

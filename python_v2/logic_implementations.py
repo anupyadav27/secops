@@ -1,4 +1,269 @@
+# Custom function to detect unused scope-limited definitions
+def is_unused_scopelimited_definition(node, ast_root=None):
+    """
+    Returns True if a variable assigned in a function (Assign node) is never used in that function.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        return False
+    var_name = targets[0].get('id')
+    if not var_name:
+        return False
+    # Find the nearest FunctionDef parent, or use ast_root if provided
+    func_root = None
+    root = node
+    while root.get('__parent__'):
+        if root.get('__parent__', {}).get('node_type') == 'FunctionDef':
+            func_root = root.get('__parent__')
+            break
+        root = root.get('__parent__')
+    if not func_root and ast_root:
+        func_root = ast_root
+    used = False
+    def search_usage(n):
+        nonlocal used
+        if isinstance(n, dict):
+            if n.get('node_type') == 'Name' and n.get('id') == var_name:
+                used = True
+            for v in n.values():
+                search_usage(v)
+        elif isinstance(n, list):
+            for item in n:
+                search_usage(item)
+    if func_root:
+        search_usage(func_root)
+    else:
+        search_usage(node)
+    return not used
+# Custom function to detect unused private nested classes
+def is_unused_private_nested_class(node, ast_root=None):
+    """
+    Returns True if a private nested class (name starts with '_') is never used in the codebase.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'ClassDef':
+        return False
+    class_name = node.get('name')
+    if not class_name or not class_name.startswith('_'):
+        return False
+    # Check if this class is nested (parent is also a ClassDef)
+    parent = node.get('__parent__')
+    if not parent or parent.get('node_type') != 'ClassDef':
+        return False
+    # Search for usage of this nested class in the AST
+    used = False
+    def search_usage(n):
+        nonlocal used
+        if isinstance(n, dict):
+            # Look for instantiation or reference: A._NestedClass or _NestedClass()
+            if n.get('node_type') == 'Attribute' and n.get('attr') == class_name:
+                used = True
+            elif n.get('node_type') == 'Name' and n.get('id') == class_name:
+                used = True
+            for v in n.values():
+                search_usage(v)
+        elif isinstance(n, list):
+            for item in n:
+                search_usage(item)
+    # Use ast_root if provided, else walk up to module root
+    root = ast_root if ast_root else node
+    while root.get('__parent__'):
+        root = root.get('__parent__')
+    search_usage(root)
+    return not used
+# Custom function to detect unused local variables
+def is_unused_local_variable(node, ast_root=None):
+    """
+    Returns True if a local variable assigned in an Assign node is never used in the function body.
+    """
+    print('[DEBUG][is_unused_local_variable] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        print('[DEBUG][is_unused_local_variable] Node is not Assign')
+        return False
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        print('[DEBUG][is_unused_local_variable] No valid targets')
+        return False
+    var_name = targets[0].get('id')
+    print('[DEBUG][is_unused_local_variable] Variable name:', var_name)
+    if not var_name:
+        print('[DEBUG][is_unused_local_variable] No variable name')
+        return False
+    # Find the nearest FunctionDef parent, or use ast_root if provided
+    func_root = None
+    root = node
+    while root.get('__parent__'):
+        if root.get('__parent__', {}).get('node_type') == 'FunctionDef':
+            func_root = root.get('__parent__')
+            break
+        root = root.get('__parent__')
+    if not func_root and ast_root:
+        func_root = ast_root
+    print('[DEBUG][is_unused_local_variable] Function root node_type:', func_root.get('node_type') if func_root else None)
+    used = False
+    def search_usage(n):
+        nonlocal used
+        if isinstance(n, dict):
+            if n.get('node_type') == 'Name' and n.get('id') == var_name:
+                print('[DEBUG][is_unused_local_variable] Usage found for:', var_name, 'at line', n.get('lineno'))
+                used = True
+            for v in n.values():
+                search_usage(v)
+        elif isinstance(n, list):
+            for item in n:
+                search_usage(item)
+    if func_root:
+        search_usage(func_root)
+    else:
+        print('[DEBUG][is_unused_local_variable] No function root found, searching from node')
+        search_usage(node)
+    print('[DEBUG][is_unused_local_variable] Used:', used)
+    return not used
+# Custom function to detect unused imports
+def is_unused_import(node, ast_root=None):
+    """
+    Returns True if an import in an Import node is unused in the AST.
+    """
+    print('[DEBUG][is_unused_import] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    if not isinstance(node, dict) or node.get('node_type') != 'Import':
+        print('[DEBUG][is_unused_import] Node is not Import')
+        return False
+    imported_names = [alias.get('name') for alias in node.get('names', []) if isinstance(alias, dict)]
+    print('[DEBUG][is_unused_import] Imported names:', imported_names)
+    root = ast_root if ast_root is not None else node
+    while root.get('__parent__'):
+        root = root.get('__parent__')
+    used_names = set()
+    def collect_used_names(n):
+        if isinstance(n, dict):
+            if n.get('node_type') == 'Name':
+                used_names.add(n.get('id'))
+            elif n.get('node_type') == 'Attribute':
+                # Add the base name of the attribute (e.g., math in math.sqrt)
+                value = n.get('value')
+                if isinstance(value, dict) and value.get('node_type') == 'Name':
+                    used_names.add(value.get('id'))
+            for v in n.values():
+                collect_used_names(v)
+        elif isinstance(n, list):
+            for item in n:
+                collect_used_names(item)
+    collect_used_names(root)
+    print('[DEBUG][is_unused_import] Used names in AST:', used_names)
+    unused_found = False
+    for name in imported_names:
+        if name not in used_names:
+            print('[DEBUG][is_unused_import] Unused import detected:', name)
+            unused_found = True
+    if unused_found:
+        return True
+    print('[DEBUG][is_unused_import] All imports are used')
+    return False
 # Shared custom function for bare raise statement context detection
+def is_unread_private_attribute(node, ast_root=None):
+    """
+    Returns True if a private attribute (name starts with '_') assigned in a class is never read anywhere in the class.
+    """
+    print('[DEBUG][is_unread_private_attribute] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        print('[DEBUG][is_unread_private_attribute] No valid targets')
+        return False
+    target = targets[0]
+    attr_name = None
+    if target.get('node_type') == 'Attribute':
+        attr_name = target.get('attr')
+    elif target.get('node_type') == 'Name':
+        attr_name = target.get('id')
+    print('[DEBUG][is_unread_private_attribute] Attribute name:', attr_name)
+    if not attr_name or not attr_name.startswith('_') or attr_name.startswith('__'):
+        print('[DEBUG][is_unread_private_attribute] Not a private attribute')
+        return False
+    # Find the nearest ClassDef ancestor by walking up the parent chain
+    current = node
+    class_node = None
+    while current:
+        parent = current.get('__parent__')
+        if parent:
+            print('[DEBUG][is_unread_private_attribute] Traversing parent node_type:', parent.get('node_type'))
+            if parent.get('node_type') == 'ClassDef':
+                class_node = parent
+                break
+        current = parent
+    print('[DEBUG][is_unread_private_attribute] Class node_type:', class_node.get('node_type') if class_node else None)
+    if not class_node:
+        print('[DEBUG][is_unread_private_attribute] No ClassDef ancestor found')
+        return False
+    used = False
+    def search_usage(n):
+        nonlocal used
+        if n is node:
+            print(f'[DEBUG][is_unread_private_attribute] Skipping assignment node itself at line {n.get("lineno")}')
+            return  # Skip the assignment node itself
+        if isinstance(n, dict):
+            if n.get('node_type') == 'Attribute' and n.get('attr') == attr_name:
+                print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
+                used = True
+            elif n.get('node_type') == 'Name' and n.get('id') == attr_name:
+                print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
+                used = True
+            # Also skip nested Assign nodes for the same attribute
+            if n.get('node_type') == 'Assign':
+                targets = n.get('targets', [])
+                target = targets[0] if targets and isinstance(targets[0], dict) else None
+                target_name = None
+                if target:
+                    if target.get('node_type') == 'Attribute':
+                        target_name = target.get('attr')
+                    elif target.get('node_type') == 'Name':
+                        target_name = target.get('id')
+                if target_name == attr_name and n is not node:
+                    print(f'[DEBUG][is_unread_private_attribute] Skipping nested assignment for {attr_name} at line {n.get("lineno")}')
+                    return
+            for v in n.values():
+                search_usage(v)
+        elif isinstance(n, list):
+            for item in n:
+                search_usage(item)
+    search_usage(class_node)
+    print('[DEBUG][is_unread_private_attribute] Used:', used)
+    return not used
+def is_unused_classprivate_method(node, ast_root=None):
+    """
+    Returns True if a private method (name starts with '_') in a class is never called in its class.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
+        return False
+    method_name = node.get('name')
+    if not method_name or not method_name.startswith('_') or method_name.startswith('__'):
+        return False
+    # Find the parent class
+    parent = node.get('__parent__')
+    if not parent or parent.get('node_type') != 'ClassDef':
+        return False
+    # Search for usage of this method in the class
+    used = False
+    def search_usage(n):
+        nonlocal used
+        if isinstance(n, dict):
+            # Look for method call: self._method() or _method()
+            if n.get('node_type') == 'Call':
+                func = n.get('func')
+                if isinstance(func, dict):
+                    # self._method()
+                    if func.get('node_type') == 'Attribute' and func.get('attr') == method_name:
+                        used = True
+                    # _method()
+                    elif func.get('node_type') == 'Name' and func.get('id') == method_name:
+                        used = True
+            for v in n.values():
+                search_usage(v)
+        elif isinstance(n, list):
+            for item in n:
+                search_usage(item)
+    search_usage(parent)
+    return not used
 def check_bare_raise_context(node, context=None):
     """
     Returns True if a bare raise statement is found in the specified context ('finally' or 'except').
@@ -1139,12 +1404,6 @@ def custom_check_type_aliases_without_type_statement(node):
     # TODO: implement detection that returns True when vulnerability exists
     return False
 
-
-# Auto-generated function for metadata creation
-def is_unused_import(node):
-    """Auto-generated STUB for unnecessary_imports_should_be_removed. Implement detection logic here."""
-    # TODO: implement detection that returns True when vulnerability exists
-    return False
 
 
 # Auto-generated function for metadata creation

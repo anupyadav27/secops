@@ -47,22 +47,9 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "value",
-      "type"
-    ],
-    "forbidden_values": [
-      "Break",
-      "Continue"
-    ]
-  },
-  "metadata": {
-    "filename": "break_and_continue_should_not_be_used_outside_a_loop.json",
-    "rule_id": "break_and_continue_should_not_be_used_outside_a_loop",
-    "title": "Break and continue should not be used outside a loop",
-    "status": "ready",
-    "defaultSeverity": "Major"
+  "node_types": ["Break", "Continue"],
+  "check_type": "property_comparison",
+  "property_path": ["node_type"],
+  "forbidden_values": ["Break", "Continue"]
   }
 }

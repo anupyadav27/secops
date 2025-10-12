@@ -44,13 +44,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name"
-    ],
-    "forbidden_values": [
-      "<locally_unique_private_nested_class_prefix>.*"
+    "node_types": ["ClassDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unused_private_nested_class",
+        "message": "Private nested class '{{class_name}}' is not used."
+      }
     ]
   }
 }

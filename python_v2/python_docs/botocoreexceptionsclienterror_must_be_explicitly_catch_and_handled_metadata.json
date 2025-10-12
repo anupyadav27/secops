@@ -45,23 +45,15 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "ast.Try",
-      "body",
-      "ast.Name",
-      "id"
-    ],
+    "node_types": ["Call"],
+    "check_type": "property_comparison",
+    "property_path": ["func", "attr"],
     "forbidden_values": [
-      "botocore",
-      "boto3"
+      "get_object",
+      "put_object",
+      "delete_object",
+      "list_objects",
+      "list_objects_v2"
     ]
-  },
-  "metadata": {
-    "filename": "botocoreexceptionsclienterror_must_be_explicitly_catch_and_handled.json",
-    "rule_id": "botocoreexceptionsclienterror_must_be_explicitly_catch_and_handled",
-    "title": "Botocore exceptions must be explicitly caught and handled",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

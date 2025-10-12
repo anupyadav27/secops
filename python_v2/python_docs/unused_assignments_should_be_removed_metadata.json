@@ -45,22 +45,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "contains",
-    "property_path": [
-      "body",
-      "expr",
-      "value",
-      "names"
-    ],
-    "forbidden_values": [
-      "UnusedAssignment"
+    "node_types": ["Assign"],
+    "checks": [
+      {
+        "type": "not_exists",
+        "property": "targets[0].id",
+        "pattern": "used_later",
+        "message": "Unused assignment detected"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "unused_assignments_should_be_removed.json",
-    "rule_id": "unused_assignments_should_be_removed",
-    "title": "Remove unused assignments",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

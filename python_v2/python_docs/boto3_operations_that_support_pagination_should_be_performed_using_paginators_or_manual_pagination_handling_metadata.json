@@ -46,14 +46,9 @@
     "OWASP": ""
   },
   "logic": {
+    "node_types": ["Call"],
     "check_type": "property_comparison",
-    "property_path": [
-      "ast.Call",
-      "args",
-      0,
-      "attr",
-      "operation"
-    ],
+    "property_path": ["func", "attr"],
     "forbidden_values": [
       "list_buckets",
       "list_objects",
@@ -63,12 +58,5 @@
       "describe_snapshots",
       "describe_images"
     ]
-  },
-  "metadata": {
-    "filename": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling.json",
-    "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
-    "title": "Boto3 operations that support pagination should be performed using paginators or manual pagination handling",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

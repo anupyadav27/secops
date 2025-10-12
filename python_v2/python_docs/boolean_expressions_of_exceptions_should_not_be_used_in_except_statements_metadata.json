@@ -46,19 +46,9 @@
     "OWASP": ""
   },
   "logic": {
+    "node_types": ["ExceptHandler"],
     "check_type": "property_comparison",
-    "property_path": [
-      "exception.type"
-    ],
-    "forbidden_values": [
-      "bool"
-    ]
-  },
-  "metadata": {
-    "filename": "boolean_expressions_of_exceptions_should_not_be_used_in_except_statements.json",
-    "rule_id": "boolean_expressions_of_exceptions_should_not_be_used_in_except_statements",
-    "title": "Boolean expressions of exceptions should not be used in except statements",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "property_path": ["type", "node_type"],
+    "forbidden_values": ["BoolOp"]
   }
 }

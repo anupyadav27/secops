@@ -46,17 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "nest[0].body[0].targets[0].name"
-    ],
-    "forbidden_empty": true
-  },
-  "metadata": {
-    "filename": "unused_local_variables_should_be_removed.json",
-    "rule_id": "unused_local_variables_should_be_removed",
-    "title": "Unused local variables should be removed",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_types": ["Assign"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unused_local_variable",
+        "message": "Unused local variable detected."
+      }
+    ]
   }
 }

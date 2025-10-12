@@ -1,3 +1,19 @@
+def ast_to_dict_with_parent(node, parent=None):
+    import ast
+    if isinstance(node, ast.AST):
+        result = {'node_type': type(node).__name__}
+        for field in node._fields:
+            value = getattr(node, field)
+            result[field] = ast_to_dict_with_parent(value, result)
+        result['__parent__'] = parent
+        for attr in ['lineno', 'col_offset', 'end_lineno', 'end_col_offset']:
+            if hasattr(node, attr):
+                result[attr] = getattr(node, attr)
+        return result
+    elif isinstance(node, list):
+        return [ast_to_dict_with_parent(item, parent) for item in node]
+    else:
+        return node
 #!/usr/bin/env python3
 """
 Python Generic Rule Engine - Enhanced Version
@@ -282,12 +298,24 @@ class PythonGenericRule:
         property_values = self._get_property_values(node, property_path)
         # print(f"[DEBUG] Found {len(property_values)} values for path {property_path}")
         
+        forbidden_values = check.get("forbidden_values", [])
         for found_path, value in property_values:
-            # print(f"[DEBUG] Checking value: {value} at path {found_path}")
+            # Debug print for ExceptHandler node type
+            if node_type == "ExceptHandler" and found_path == ["type", "node_type"]:
+                print(f"[DEBUG] Checking ExceptHandler at line {node.get('lineno')}, type.node_type: {value}")
+            # Check forbidden_values
+            if forbidden_values and value in forbidden_values:
+                finding = self._make_finding(
+                    filename, node_type, node_name, found_path, value,
+                    check.get('message', self.message), node
+                )
+                unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                if unique_key not in seen_findings:
+                    seen_findings.add(unique_key)
+                    findings.append(finding)
+            # Existing starts_with logic
             if starts_with and isinstance(value, str):
-                # print(f"[DEBUG] Checking if value '{value}' starts with '{starts_with}'")
                 if value.startswith(starts_with):
-                    # print(f"[DEBUG] Found matching value: {value}")
                     finding = self._make_finding(
                         filename, node_type, node_name, found_path, value,
                         check.get('message', self.message), node

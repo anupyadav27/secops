@@ -46,52 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name"
-    ],
-    "forbidden_values": [
-      "_",
-      "__"
-    ],
-    "is_private": {
-      "check_type": "property_comparison",
-      "property_path": [
-        "node",
-        "parent",
-        "name"
-      ],
-      "forbidden_values": [
-        "self"
-      ]
-    },
-    "is_read": {
-      "check_type": "pattern",
-      "pattern": "assignment",
-      "property_path": [
-        "node",
-        "body",
-        "body"
-      ]
-    },
-    "is_unread": {
-      "check_type": "not_contains",
-      "property_path": [
-        "node",
-        "body",
-        "body"
-      ],
-      "forbidden_values": [
-        "self._<property_name>"
-      ]
-    }
-  },
-  "metadata": {
-    "filename": "unread_private_attributes_should_be_removed.json",
-    "rule_id": "unread_private_attributes_should_be_removed",
-    "title": "Unread private attributes should be removed",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_types": ["Assign"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unread_private_attribute",
+        "message": "Unread private attribute"
+      }
+    ]
   }
 }

@@ -43,23 +43,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "forbidden_values",
-    "property_path": [
-      "node",
-      "kind",
-      "name"
-    ],
-    "forbidden_values": [
-      "Break",
-      "Continue",
-      "Return"
-    ]
-  },
-  "metadata": {
-    "filename": "break_continue_and_return_statements_should_not_occur_in_finally_blocks.json",
-    "rule_id": "break_continue_and_return_statements_should_not_occur_in_finally_blocks",
-    "title": "Break, continue, and return statements should not occur in finally blocks",
-    "status": "ready",
-    "defaultSeverity": "Major"
+  "node_types": ["Break", "Continue", "Return"],
+  "check_type": "property_comparison",
+  "property_path": ["__parent__", "node_type"],
+  "forbidden_values": ["Try"],
+  "condition": {
+    "property": "__parent_field__",
+    "equals": "finalbody"
+  }
   }
 }
