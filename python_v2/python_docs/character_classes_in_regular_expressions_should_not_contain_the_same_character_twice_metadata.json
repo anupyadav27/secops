@@ -45,19 +45,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "regex",
-    "property_path": [
-      "n.regex"
-    ],
-    "forbidden_values": [
-      "[.*][.*]"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "has_duplicate_character_class",
+        "message": "Duplicate characters in character class."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "character_classes_in_regular_expressions_should_not_contain_the_same_character_twice.json",
-    "rule_id": "character_classes_in_regular_expressions_should_not_contain_the_same_character_twice",
-    "title": "Character classes in regular expressions should not contain the same character twice",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

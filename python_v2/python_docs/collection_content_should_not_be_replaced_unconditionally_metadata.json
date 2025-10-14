@@ -46,22 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "nest",
-      "expression",
-      "left",
-      "value"
-    ],
-    "forbidden_values": [
-      "*"
+    "node_types": ["For"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_unconditional_collection_replacement",
+        "message": "Replacement of collection content without proper conditions may lead to unexpected behavior."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "collection_content_should_not_be_replaced_unconditionally.json",
-    "rule_id": "collection_content_should_not_be_replaced_unconditionally",
-    "title": "Collection content should not be replaced unconditionally",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

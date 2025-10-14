@@ -53,98 +53,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "node",
-      "name",
-      "value",
-      "args",
-      "1",
-      "args",
-      "2"
-    ],
-    "pattern": "datetime|date|time",
-    "forbidden_empty": [
-      "args"
-    ],
-    "property_comparison": [
+    "node_types": ["Call"],
+    "checks": [
       {
-        "left": "args",
-        "operator": "length",
-        "right": "3"
-      },
-      {
-        "left": "args[0].value",
-        "operator": "in",
-        "right": [
-          "year",
-          "month",
-          "day",
-          "microsecond",
-          "second",
-          "minute",
-          "hour",
-          "weekday",
-          "isoweekday",
-          "isocalendar",
-          "timestamp"
-        ]
-      },
-      {
-        "left": "args[1].value",
-        "operator": "in",
-        "right": [
-          "kwargs"
-        ]
-      },
-      {
-        "left": "args[2].value",
-        "operator": "regex",
-        "right": "^\\d{4}$"
-      },
-      {
-        "left": "args[1].args",
-        "operator": "forbidden_empty"
-      },
-      {
-        "left": "args[2].args",
-        "operator": "forbidden_empty"
-      },
-      {
-        "left": "args[1].args[0].value",
-        "operator": "in",
-        "right": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "10",
-          "11",
-          "12"
-        ]
-      },
-      {
-        "left": "args[2].args[0].value",
-        "operator": "min_value",
-        "right": "1"
-      },
-      {
-        "left": "args[2].args[0].value",
-        "operator": "max_value",
-        "right": "12"
+        "type": "custom_function",
+        "function": "is_out_of_range_datetime_constructor"
       }
     ]
-  },
-  "metadata": {
-    "filename": "constructor_attributes_of_date_and_time_objects_should_be_in_the_range_of_possible_values.json",
-    "rule_id": "constructor_attributes_of_date_and_time_objects_should_be_in_the_range_of_possible_values",
-    "title": "Constructor attributes of date and time objects should be in the range of possible values",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

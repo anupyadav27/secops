@@ -46,22 +46,15 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "forbidden_empty",
-    "property_path": [
-      "ast.FunctionDef",
-      "body",
-      "expr",
-      "value",
-      "args",
-      "args_annotation",
-      "arg"
+    "node_types": ["ImportFrom"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_typing_generic_import"
+      }
     ]
   },
-  "metadata": {
-    "filename": "builtin_generic_types_should_be_preferred_over_the_typing_module_in_type_hints.json",
-    "rule_id": "builtin_generic_types_should_be_preferred_over_the_typing_module_in_type_hints",
-    "title": "Prefer built-in generic types over the typing module in type hints",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+  "custom_functions": {
+    "is_typing_generic_import": "def is_typing_generic_import(node):\n    if node.get('node_type') == 'ImportFrom' and node.get('module') == 'typing':\n        forbidden = {'List', 'Dict', 'Set', 'Tuple', 'Union'}\n        for name_obj in node.get('names', []):\n            if isinstance(name_obj, dict) and name_obj.get('name') in forbidden:\n                return True\n    return False"
   }
 }

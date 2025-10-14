@@ -45,21 +45,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "exception_declaration",
-      "exception_type",
-      "name"
-    ],
-    "forbidden_values": [
-      "Exception"
+    "node_types": ["ExceptHandler"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["type", "id"],
+        "forbidden_values": ["Exception"],
+        "message": "Caught exception should derive from BaseException"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "caught_exceptions_must_derive_from_baseexception.json",
-    "rule_id": "caught_exceptions_must_derive_from_baseexception",
-    "title": "Caught exceptions must derive from BaseException",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

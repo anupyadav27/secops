@@ -45,25 +45,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "type"
-    ],
-    "forbidden_values": [
-      "If",
-      "For",
-      "While",
-      "Try",
-      "With"
+    "node_types": ["If", "For", "While", "Try", "With"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_deeply_nested_control_flow"
+      }
     ]
-  },
-  "logic.new_check_type_doc": "Checks if a node type is one of a list of specified control flow statement types.",
-  "metadata": {
-    "filename": "control_flow_statements_if_for_while_try_and_with_should_not_be_nested_too_deeply.json",
-    "rule_id": "control_flow_statements_if_for_while_try_and_with_should_not_be_nested_too_deeply",
-    "title": "Control Flow Statements (if, for, while, try, with) should not be nested too deeply",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

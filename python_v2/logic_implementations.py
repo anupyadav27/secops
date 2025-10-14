@@ -1,3 +1,197 @@
+# Custom function to detect deeply nested control flow statements
+def is_deeply_nested_control_flow(node, ast_root=None, max_depth=3):
+    """
+    Returns True if the node is a control flow statement (If, For, While, Try, With) and is nested deeper than max_depth.
+    Calculates nesting depth by traversing from AST root if __parent__ is missing.
+    """
+    CONTROL_FLOW_TYPES = ["If", "For", "While", "Try", "With"]
+    if not isinstance(node, dict) or node.get('node_type') not in CONTROL_FLOW_TYPES:
+        return False
+    def get_nesting_depth(n, root):
+        # If __parent__ is present, use it
+        depth = 1
+        parent = n.get('__parent__')
+        while parent:
+            if parent.get('node_type') in CONTROL_FLOW_TYPES:
+                depth += 1
+            parent = parent.get('__parent__')
+        if n.get('__parent__'):
+            return depth
+        # Otherwise, traverse from root
+        def find_path(cur, target, path):
+            if cur is target:
+                return path
+            if isinstance(cur, dict):
+                for k, v in cur.items():
+                    if isinstance(v, dict):
+                        res = find_path(v, target, path + [cur])
+                        if res:
+                            return res
+                    elif isinstance(v, list):
+                        for item in v:
+                            if isinstance(item, dict):
+                                res = find_path(item, target, path + [cur])
+                                if res:
+                                    return res
+            return None
+        path = find_path(root, n, []) or []
+        depth = 1
+        for ancestor in path:
+            if ancestor.get('node_type') in CONTROL_FLOW_TYPES:
+                depth += 1
+        return depth
+    actual_depth = get_nesting_depth(node, ast_root) if ast_root else 1
+    return actual_depth > max_depth
+def is_out_of_range_datetime_constructor(node, ast_root=None):
+    """
+    Returns True if a Call node to datetime/date/time has out-of-range month or day arguments.
+    Triggers for month < 1 or > 12, day < 1 or > 31.
+    Handles both direct and attribute calls.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    func_name = func.get('attr') or func.get('id')
+    if func_name not in ("datetime", "date", "time"):
+        return False
+    args = node.get('args', [])
+    # Month is args[1], day is args[2] (if present)
+    if len(args) > 1 and isinstance(args[1], dict):
+        month = args[1].get('value')
+        if isinstance(month, int) and (month < 1 or month > 12):
+            return True
+    if len(args) > 2 and isinstance(args[2], dict):
+        day = args[2].get('value')
+        if isinstance(day, int) and (day < 1 or day > 31):
+            return True
+    return False
+# Custom function to detect single-character character classes in regex strings
+def has_single_character_class(node, ast_root=None):
+    """
+    Returns True if a regex string in a Call node contains a character class with only one character.
+    """
+    import re
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    args = node.get('args', [])
+    if not args or not isinstance(args[0], dict):
+        return False
+    regex_str = None
+    for key in ['s', 'value', 'constant', 'str', 'text']:
+        if isinstance(args[0].get(key), str):
+            regex_str = args[0][key]
+            break
+    if not isinstance(regex_str, str):
+        return False
+    for match in re.finditer(r'\[(.*?)\]', regex_str):
+        char_class = match.group(1)
+        if len(char_class) == 1:
+            return True
+    return False
+# Custom function to detect duplicate characters in regex character classes (case-insensitive)
+def has_duplicate_character_class(node, ast_root=None):
+    """
+    Returns True if a regex string in a Call node contains a character class with duplicate characters (case-insensitive).
+    """
+    import re
+    print('[DEBUG][has_duplicate_character_class] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        print('[DEBUG][has_duplicate_character_class] Not a Call node')
+        return False
+    args = node.get('args', [])
+    if not args or not isinstance(args[0], dict):
+        print('[DEBUG][has_duplicate_character_class] No args or first arg not dict')
+        return False
+    regex_str = None
+    # Try common keys for string value in AST node
+    for key in ['s', 'value', 'constant', 'str', 'text']:
+        if isinstance(args[0].get(key), str):
+            regex_str = args[0][key]
+            break
+    print('[DEBUG][has_duplicate_character_class] Regex string:', regex_str)
+    if not isinstance(regex_str, str):
+        print('[DEBUG][has_duplicate_character_class] Regex string not str')
+        return False
+    for match in re.finditer(r'\[(.*?)\]', regex_str):
+        char_class = match.group(1)
+        print('[DEBUG][has_duplicate_character_class] Found character class:', char_class)
+        seen = set()
+        for c in char_class:
+            c_lower = c.lower()
+            if c_lower in seen:
+                print('[DEBUG][has_duplicate_character_class] Duplicate found:', c)
+                return True
+            seen.add(c_lower)
+    print('[DEBUG][has_duplicate_character_class] No duplicates found')
+    return False
+def is_typing_generic_import(node):
+    pass
+
+# Custom function to detect unconditional replacement of collection content in For nodes
+def is_unconditional_collection_replacement(node, ast_root=None):
+    """
+    Returns True if a For node replaces collection content unconditionally (not inside an If).
+    Example:
+        for i in my_list:
+            my_list[i] = 'replacement'  # Unconditional
+    """
+    # Only process For nodes
+    if not isinstance(node, dict) or node.get('node_type') != 'For':
+        return False
+    # Check if the body contains an assignment to a collection element
+    body = node.get('body', [])
+    for stmt in body:
+        if stmt.get('node_type') == 'Assign':
+            targets = stmt.get('targets', [])
+            # Look for subscript assignment: my_list[i] = ...
+            for target in targets:
+                if target.get('node_type') == 'Subscript':
+                    # Unconditional if parent is not an If node
+                    # Check if parent is an If node (by traversing up if ast_root is provided)
+                    if ast_root:
+                        # Traverse up to see if this For node is inside an If
+                        def is_inside_if(n, parent=None):
+                            if n is node:
+                                return False
+                            if n.get('node_type') == 'If' and node in n.get('body', []):
+                                return True
+                            for k in ['body', 'orelse', 'args', 'targets', 'value', 'test']:
+                                v = n.get(k)
+                                if isinstance(v, list):
+                                    for child in v:
+                                        if isinstance(child, dict):
+                                            if is_inside_if(child, n):
+                                                return True
+                                elif isinstance(v, dict):
+                                    if is_inside_if(v, n):
+                                        return True
+                            return False
+                        if is_inside_if(ast_root):
+                            return False
+                    return True
+    return False
+
+    # Custom function to detect meaningless chained collection size comparisons
+    def is_meaningless_collection_comparison(node, ast_root=None):
+        """
+        Returns True if a Compare node has chained comparison with a constant in the middle (e.g., len(x) > 5 > len(y)).
+        """
+        if not isinstance(node, dict) or node.get('node_type') != 'Compare':
+            return False
+        comparators = node.get('comparators', [])
+        # Chained comparison: len(x) > 5 > len(y)
+        if len(comparators) >= 2:
+            # Check if the first comparator is a constant (int/float)
+            first = comparators[0]
+            if isinstance(first, (int, float)):
+                return True
+        return False
+    if node.get('node_type') == 'ImportFrom' and node.get('module') == 'typing':
+        forbidden = {'List', 'Dict', 'Set', 'Tuple', 'Union'}
+        for name_obj in node.get('names', []):
+            if isinstance(name_obj, dict) and name_obj.get('name') in forbidden:
+                return True
+    return False
 # Custom function to detect unused scope-limited definitions
 def is_unused_scopelimited_definition(node, ast_root=None):
     """
@@ -47,6 +241,66 @@ def is_unused_private_nested_class(node, ast_root=None):
     class_name = node.get('name')
     if not class_name or not class_name.startswith('_'):
         return False
+
+    # Custom function to detect list comprehensions used only to copy collections
+def is_comprehension_only_copy(node, ast_root=None):
+    """
+    Returns True if a ListComp node is used only to copy another collection (e.g., [i for i in b]).
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'ListComp':
+        return False
+    elt = node.get('elt')
+    generators = node.get('generators', [])
+    if not generators or not isinstance(elt, dict):
+        return False
+    gen = generators[0]
+    # Check if elt is a Name and matches the target of the generator
+    if elt.get('node_type') == 'Name' and gen.get('target', {}).get('node_type') == 'Name':
+        if elt.get('id') == gen.get('target', {}).get('id'):
+            # Only one generator, no ifs, and iter is a Name (e.g., b)
+            if len(generators) == 1 and not gen.get('ifs') and gen.get('iter', {}).get('node_type') == 'Name':
+                return True
+    return False
+
+# Custom function to detect constructors around generator expressions
+def is_constructor_around_generator_expression(node, ast_root=None):
+    """
+    Returns True if a Call node is a constructor (list, set, tuple) around a generator expression.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    if func.get('node_type') == 'Name' and func.get('id') in {'list', 'set', 'tuple'}:
+        args = node.get('args', [])
+        if args and isinstance(args[0], dict) and args[0].get('node_type') == 'GeneratorExp':
+            return True
+    return False
+
+# Custom function to detect nested If statements
+def is_nested_conditional_expression(node, ast_root=None):
+    """
+    Returns True if an If node contains another If node in its body.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'If':
+        return False
+    body = node.get('body', [])
+    for stmt in body:
+        if isinstance(stmt, dict) and stmt.get('node_type') == 'If':
+            return True
+    return False
+
+# Custom function for comparison to None as a constant
+def is_comparison_to_none_constant(node, ast_root=None):
+    """
+    Returns True if a Compare node compares to None as a constant.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Compare':
+        return False
+    comparators = node.get('comparators', [])
+    for comp in comparators:
+        if isinstance(comp, dict) and comp.get('node_type') == 'Constant' and comp.get('value') is None:
+            return True
+    return False
     # Check if this class is nested (parent is also a ClassDef)
     parent = node.get('__parent__')
     if not parent or parent.get('node_type') != 'ClassDef':
@@ -331,6 +585,34 @@ def is_unnecessary_equality_check(node):
             print('[DEBUG][is_unnecessary_equality_check] Triggered on node:', node)
             return True
     return False
+
+# Custom function: simple cognitive complexity heuristic
+def cognitive_complexity_check_impl(node, ast_root=None):
+    """
+    Heuristic for cognitive complexity: return True for FunctionDef nodes
+    whose top-level body contains more than 5 statements. This is a
+    conservative approximation used by the metadata-driven rule.
+    """
+    # Expect the node as a dict produced by ast_to_dict_with_parent
+    if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
+        return False
+    print(f"[DEBUG][cognitive_complexity_check_impl] Called for node: {node.get('node_type')} at line {node.get('lineno')}")
+    body = node.get('body', [])
+    if not isinstance(body, list):
+        return False
+    # Count only top-level statements (ignore nested defs/classes)
+    stmt_count = 0
+    for stmt in body:
+        if isinstance(stmt, dict):
+            # Skip nested FunctionDef or ClassDef from counting
+            if stmt.get('node_type') in ('FunctionDef', 'ClassDef'):
+                continue
+            stmt_count += 1
+        else:
+            # Non-dict entries (unlikely) still count
+            stmt_count += 1
+    # Threshold matches metadata heuristic (>5 statements)
+    return stmt_count > 5
 # Custom function: Detect Unicode grapheme clusters inside regex character classes
 def check_unicode_grapheme_clusters_in_regex(node):
     """
@@ -424,6 +706,51 @@ def async_forbidden_subprocess_call(node):
         return False
     return contains_forbidden_call(node.get('body', []))
 # ...existing code...
+def cancellation_scope_contains_checkpoint(node, ast_root=None):
+    """
+    Returns True if an AsyncWith node with a cancel_token context contains a checkpoint (either in items or as 'await checkpoint()' in the body).
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'AsyncWith':
+        return False
+    items = node.get('items', [])
+    has_cancel_token = False
+    has_checkpoint_item = False
+    for item in items:
+        context_expr = item.get('context_expr', {})
+        if isinstance(context_expr, dict):
+            if context_expr.get('id') == 'cancel_token':
+                has_cancel_token = True
+            if context_expr.get('id') == 'checkpoint':
+                has_checkpoint_item = True
+    if not has_cancel_token:
+        return False
+    if has_checkpoint_item:
+        return False  # Compliant, no finding
+    # Scan body for 'await checkpoint()'
+    def body_has_checkpoint(n):
+        if isinstance(n, dict):
+            if n.get('node_type') == 'Expr':
+                value = n.get('value', {})
+                if value.get('node_type') == 'Await':
+                    awaited = value.get('value', {})
+                    # Check for checkpoint.wait() or checkpoint()
+                    if awaited.get('node_type') == 'Call':
+                        func = awaited.get('func', {})
+                        if func.get('node_type') == 'Attribute' and func.get('value', {}).get('id') == 'checkpoint':
+                            return True
+                        if func.get('node_type') == 'Name' and func.get('id') == 'checkpoint':
+                            return True
+            for v in n.values():
+                if body_has_checkpoint(v):
+                    return True
+        elif isinstance(n, list):
+            for item in n:
+                if body_has_checkpoint(item):
+                    return True
+        return False
+    if body_has_checkpoint(node.get('body', [])):
+        return False  # Compliant, no finding
+    return True  # Noncompliant, checkpoint missing
 import re
 def check_admin_services_access_restricted_to_specific_ip_addresses(node):
     """
@@ -1164,9 +1491,15 @@ def is_async_function(node):
 
 # Auto-generated function for metadata creation
 def cognitive_complexity_check(node):
-    """Auto-generated STUB for cognitive_complexity_of_functions_should_not_be_too_high. Implement detection logic here."""
-    # TODO: implement detection that returns True when vulnerability exists
-    return False
+    """Delegate stub to the implemented cognitive_complexity_check with ast_root=None."""
+    try:
+        return cognitive_complexity_check_impl(node, None)
+    except Exception:
+        # Fall back to older implementation if present
+        try:
+            return cognitive_complexity_check(node, None)
+        except Exception:
+            return False
 
 def check_public_access_parameters(node):
     """Check if a function call contains public access parameters"""
@@ -1422,14 +1755,16 @@ def xml_signature_validation_check(node):
 
 # Auto-generated function for metadata creation
 def custom_check_cancellation_exceptions_should_be_reraised_after_cleanup(node):
-    if not isinstance(node, ast.WithStatement) or not isinstance(node.context_manager, ast.WithItem) or not isinstance(node.context_manager.context_expr, ast.TryExcept):
+    # Only process Raise nodes
+    if not isinstance(node, dict) or node.get('node_type') != 'Raise':
         return False
-    for target in node.context_manager.targets:
-        if isinstance(target, ast.Name) and target.id == 'cm':
-            for body in node.body:
-                if isinstance(body, ast.Raise) and isinstance(body.exc, ast.Name) and body.exc.id == 'CancelledError':
-                    if not any((isinstance(stmt, ast.Try) and isinstance(stmt.body, ast.RaiseFrom) and isinstance(stmt.body.from_expr, ast.Name) and stmt.body.from_expr.id == 'CancelledError') for stmt in node.body[::-1]):
-                        return True
+    # Check if exception being raised is CancelledError
+    exc = node.get('exc')
+    if isinstance(exc, dict) and exc.get('node_type') == 'Call' and exc.get('func', {}).get('id') == 'CancelledError':
+        # Check if parent field is 'finalbody' (i.e., inside a finally block)
+        parent_field = node.get('__parent_field__')
+        if parent_field == 'finalbody':
+            return True
     return False
 
 

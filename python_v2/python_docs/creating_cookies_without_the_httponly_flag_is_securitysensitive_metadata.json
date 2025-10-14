@@ -49,23 +49,23 @@
     "OWASP": "XSS"
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "value",
-      "arguments",
-      "kwargs",
-      "httponly"
-    ],
-    "forbidden_values": [
-      "False"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "attr"],
+        "forbidden_values": ["set"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["keywords", 0, "arg"],
+        "forbidden_values": ["httponly"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["keywords", 0, "value", "value"],
+        "forbidden_values": [false]
+      }
     ]
-  },
-  "metadata": {
-    "filename": "creating_cookies_without_the_httponly_flag_is_securitysensitive.json",
-    "rule_id": "creating_cookies_without_the_httponly_flag_is_securitysensitive",
-    "title": "Creating cookies without the HttpOnly flag is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

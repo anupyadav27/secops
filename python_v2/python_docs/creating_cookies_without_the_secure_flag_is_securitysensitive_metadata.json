@@ -55,26 +55,23 @@
     "OWASP": "A6"
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "body",
-      "expr",
-      "value",
-      "calls",
-      "0",
-      "args",
-      "1"
-    ],
-    "forbidden_values": [
-      "http.cookies.SimpleCookie"
-    ],
-    "check_type_doc": "Check if the given AST node represents a call to the SimpleCookie constructor"
-  },
-  "metadata": {
-    "filename": "creating_cookies_without_the_secure_flag_is_securitysensitive.json",
-    "rule_id": "creating_cookies_without_the_secure_flag_is_securitysensitive",
-    "title": "Creating cookies without the secure flag is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Critical"
+    "node_types": ["Assign", "Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["value", "func", "attr"],
+        "forbidden_values": ["SimpleCookie"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["targets", 0, "slice", "value"],
+        "forbidden_values": ["secure"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["value", "value"],
+        "forbidden_values": [false]
+      }
+    ]
   }
 }

@@ -101,10 +101,21 @@ def visit_ast_nodes(node, visit_fn, findings, filename, parent=None):
         # Debug print for parent node_type of Break/Continue/Return
         if node.get('node_type') in ['Break', 'Continue', 'Return']:
             parent_type = parent.get('node_type') if parent and isinstance(parent, dict) else None
-            print(f"[DEBUG] Node {node.get('node_type')} at line {node.get('lineno')}, parent node_type: {parent_type}")
+            parent_field = node.get('__parent_field__')
+            print(f"[DEBUG] Node {node.get('node_type')} at line {node.get('lineno')}, parent node_type: {parent_type}, parent_field: {parent_field}")
+        # Debug print for Compare node visitation
+        if node.get('node_type') == 'Compare':
+            print(f"[DEBUG][visit_ast_nodes] Visiting Compare node at line {node.get('lineno')}")
         visit_fn(node, findings, filename)
         for key, value in node.items():
-            if key not in ['lineno', 'col_offset', 'node_type', '__parent__']:
+            if key not in ['lineno', 'col_offset', 'node_type', '__parent__', '__parent_field__']:
+                # Annotate child node(s) with __parent_field__
+                if isinstance(value, dict):
+                    value['__parent_field__'] = key
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            item['__parent_field__'] = key
                 visit_ast_nodes(value, visit_fn, findings, filename, node)
     elif isinstance(node, list):
         for item in node:

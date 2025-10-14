@@ -46,22 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "declaration",
-      "name"
-    ],
-    "forbidden_values": [
-      "*"
-    ],
-    "new_check_type_doc": "Checks if a class or method is declared as public (has no privacy specifier or is explicitly public)."
-  },
-  "function_code": "def is_public_api(node):\n    if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and not node.qualname.startswith(\"_\"):\n        return True\n    return False",
-  "metadata": {
-    "filename": "creating_public_apis_is_securitysensitive.json",
-    "rule_id": "creating_public_apis_is_securitysensitive",
-    "title": "Creating public APIs is sensitive",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_types": ["ClassDef", "FunctionDef"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["name"],
+        "forbidden_values": ["*", "sensitive_data"]
+      }
+    ]
   }
 }

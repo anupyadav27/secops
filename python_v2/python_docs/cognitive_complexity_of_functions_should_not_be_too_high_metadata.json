@@ -48,15 +48,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "cognitive_complexity_check",
-    "function_code": "def cognitive_complexity_check(node):\n    return len(node.body.stmts) > 5"
-  },
-  "metadata": {
-    "filename": "cognitive_complexity_of_functions_should_not_be_too_high.json",
-    "rule_id": "cognitive_complexity_of_functions_should_not_be_too_high",
-    "title": "Cognitive Complexity of Functions Should Not Be Too High",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_types": ["FunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "cognitive_complexity_check",
+        "message": "Function has high cognitive complexity."
+      }
+    ]
   }
 }

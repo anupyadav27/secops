@@ -45,43 +45,38 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "n",
-      "name"
-    ],
-    "forbidden_values": [
-      "input",
-      "open",
-      "print",
-      "Exception",
-      "True",
-      "False",
-      "None",
-      "abs",
-      "round",
-      "max",
-      "min",
-      "sum",
-      "len",
-      "zip",
-      "range",
-      "filter",
-      "map",
-      "all",
-      "any",
-      "next",
-      "reversed",
-      "vars",
-      "globals",
-      "locals"
+    "node_types": ["Name"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["id"],
+        "forbidden_values": [
+          "input",
+          "open",
+          "print",
+          "Exception",
+          "True",
+          "False",
+          "None",
+          "abs",
+          "round",
+          "max",
+          "min",
+          "sum",
+          "len",
+          "zip",
+          "range",
+          "filter",
+          "map",
+          "all",
+          "any",
+          "next",
+          "reversed",
+          "vars",
+          "globals",
+          "locals"
+        ]
+      }
     ]
-  },
-  "metadata": {
-    "filename": "builtins_should_not_be_shadowed_by_local_variables.json",
-    "rule_id": "builtins_should_not_be_shadowed_by_local_variables",
-    "title": "Avoid shadowing built-in names by local variables",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

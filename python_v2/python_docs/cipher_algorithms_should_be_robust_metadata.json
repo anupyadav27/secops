@@ -47,25 +47,14 @@
     "OWASP": "A2: Cryptographic Storage"
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "node",
-      "name",
-      "value"
-    ],
-    "forbidden_values": [
-      "DES",
-      "RC4",
-      "MD5",
-      "SHA1"
-    ],
-    "new_check_type_doc": "Checks for specific cipher names. It uses a list of forbidden values."
-  },
-  "metadata": {
-    "filename": "cipher_algorithms_should_be_robust.json",
-    "rule_id": "cipher_algorithms_should_be_robust",
-    "title": "Use robust cipher algorithms",
-    "status": "ready",
-    "defaultSeverity": "Major"
+      "node_types": ["Call"],
+      "checks": [
+        {
+          "type": "property_comparison",
+          "property_path": ["func", "value", "id"],
+          "forbidden_values": ["DES", "RC4", "Blowfish"],
+          "message": "Avoid using weak cipher algorithms. Use robust algorithms like AES."
+        }
+      ]
   }
 }

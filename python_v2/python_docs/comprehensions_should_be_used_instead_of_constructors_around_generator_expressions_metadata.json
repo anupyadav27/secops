@@ -46,19 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "ast.Call.args.elts[0].value.body"
-    ],
-    "forbidden_empty": true,
-    "new_check_type_doc": "Checks if the given node is a list comprehension or a constructor around a generator expression."
-  },
-  "function_code": "def check_comprehension(node):\n    comprehension = ast.Expression(ast.Call(ast.Name('list', ast.Load()), [ast.List([ast.AnnAssign(target=target, value=comp_expr) for target, comp_expr in zip(vars, comp_exprs)])]))\n    return isinstance(node, comprehension)",
-  "metadata": {
-    "filename": "comprehensions_should_be_used_instead_of_constructors_around_generator_expressions.json",
-    "rule_id": "comprehensions_should_be_used_instead_of_constructors_around_generator_expressions",
-    "title": "Prefer list comprehensions over constructors around generator expressions",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_constructor_around_generator_expression",
+        "mode": "ast_node"
+      }
+    ]
   }
 }

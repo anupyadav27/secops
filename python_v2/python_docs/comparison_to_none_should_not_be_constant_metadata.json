@@ -48,21 +48,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "left",
-      "numpy_type"
-    ],
-    "forbidden_values": [
-      "None"
+    "node_types": ["Compare"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_comparison_to_none_constant",
+        "mode": "ast_node"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "comparison_to_none_should_not_be_constant.json",
-    "rule_id": "comparison_to_none_should_not_be_constant",
-    "title": "Avoid comparing with None as a constant",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

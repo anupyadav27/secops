@@ -46,49 +46,9 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "body",
-      "expressions",
-      "index",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "value",
-      "lineno",
-      "-1"
-    ],
-    "forbidden_values": [
-      "Comment"
-    ]
-  },
-  "metadata": {
-    "filename": "comments_should_not_be_located_at_the_end_of_lines_of_code.json",
-    "rule_id": "comments_should_not_be_located_at_the_end_of_lines_of_code",
-    "title": "Comments should not be located at the end of lines of code",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "check_type": "regex",
+    "node_type": "Expr",
+    "property_path": ["value", "s"],
+    "pattern": "^.*#.+$"
   }
 }

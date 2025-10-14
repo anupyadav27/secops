@@ -51,25 +51,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "parent",
-      "name",
-      "value"
-    ],
-    "forbidden_values": [
-      "list",
-      "set",
-      "dict",
-      "tuple"
+    "node_types": ["ListComp"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_comprehension_only_copy",
+        "mode": "ast_node"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "comprehensions_only_used_to_copy_should_be_replaced_with_the_respective_constructor_calls.json",
-    "rule_id": "comprehensions_only_used_to_copy_should_be_replaced_with_the_respective_constructor_calls",
-    "title": "Prefer constructor calls over list comprehensions for copying collections",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

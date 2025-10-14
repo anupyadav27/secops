@@ -40,20 +40,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "value",
-      "value",
-      "left",
-      "body"
+    "node_types": ["If"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "is_nested_conditional_expression"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "conditional_expressions_should_not_be_nested.json",
-    "rule_id": "conditional_expressions_should_not_be_nested",
-    "title": "Avoid Nested Conditional Expressions",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

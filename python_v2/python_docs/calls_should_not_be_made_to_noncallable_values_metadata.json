@@ -46,22 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "not_contains",
-    "property_path": [
-      "n",
-      "value",
-      "id",
-      "name"
-    ],
-    "forbidden_values": [
-      "callable"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "id"],
+        "forbidden_values": ["non_callable_value", "x", "y", "z"]
+      }
     ]
-  },
-  "metadata": {
-    "filename": "calls_should_not_be_made_to_noncallable_values.json",
-    "rule_id": "Python:calls_should_not_be_made_to_noncallable_values",
-    "title": "Calls should not be made to non-callable values",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

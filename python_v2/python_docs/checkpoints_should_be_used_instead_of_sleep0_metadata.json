@@ -47,22 +47,20 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "body",
-      "expressions",
-      "0",
-      "value"
-    ],
-    "forbidden_values": [
-      "time.sleep"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "attr"],
+        "forbidden_values": ["sleep"],
+        "message": "Avoid using sleep() function for test stability."
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "value", "id"],
+        "forbidden_values": ["time"],
+        "message": "Avoid using time.sleep() for test stability."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "checkpoints_should_be_used_instead_of_sleep0.json",
-    "rule_id": "checkpoints_should_be_used_instead_of_sleep0",
-    "title": "Checkpoints should be used instead of sleep",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

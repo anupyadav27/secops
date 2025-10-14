@@ -44,29 +44,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.AsyncFor",
-      "with_items",
-      "with_clause",
-      "iter",
-      "targets"
-    ],
-    "check_expression": {
-      "type": "not_contains",
-      "values": [
-        "ast.AsyncWith",
-        "with_items",
-        "with_clause",
-        "checkpoint"
+      "node_types": ["AsyncWith"],
+      "checks": [
+        {
+          "type": "custom_function",
+          "function": "cancellation_scope_contains_checkpoint"
+        }
       ]
-    }
-  },
-  "metadata": {
-    "filename": "cancellation_scopes_should_contain_checkpoints.json",
-    "rule_id": "cancellation_scopes_should_contain_checkpoints",
-    "title": "Cancellation scopes should contain checkpoints",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

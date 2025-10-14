@@ -47,19 +47,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "regex",
-    "property_path": [
-      "node.name"
-    ],
-    "forbidden_values": [
-      "^[A-Z][a-z0-9_]*$"
+    "node_types": ["ClassDef"],
+    "checks": [
+      {
+        "type": "regex",
+        "property_path": ["name"],
+        "pattern": "^[A-Z][a-zA-Z0-9_]*$",
+        "message": "Class name does not comply with the naming convention."
+      }
     ]
-  },
-  "metadata": {
-    "filename": "class_names_should_comply_with_a_naming_convention.json",
-    "rule_id": "class_names_should_comply_with_a_naming_convention",
-    "title": "Class Names Should Comply with a Naming Convention",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

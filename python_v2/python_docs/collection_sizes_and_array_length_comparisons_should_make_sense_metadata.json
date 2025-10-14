@@ -50,27 +50,8 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "children",
-      "1",
-      "value"
-    ],
-    "forbidden_values": [
-      "is",
-      ">",
-      "<",
-      "==",
-      "!="
-    ]
-  },
-  "function_code": "def check_collection_sizes_and_array_length_comparisons_sense(node):\n    return any(node['property_path'] == path and any(op in forb_ops for op in node['children'][1]['expression']['operators']) for path, forb_ops in FORBIDDEN_PATHS.items())\n\nFORBIDDEN_PATHS = {\n    ('len', 'call', 'arguments', '0'),\n    ('len', 'call', 'arguments', '1'),\n    ('len', 'call', 'key'),\n    ('len', 'call', 'args'),\n    ('len', 'attribute'),\n    ('len', 'subscript'),\n    ('len', 'binary_op'),\n    ('len', 'unary_op')\n}\n",
-  "metadata": {
-    "filename": "collection_sizes_and_array_length_comparisons_should_make_sense.json",
-    "rule_id": "collection_sizes_and_array_length_comparisons_should_make_sense",
-    "title": "Collection sizes and array length comparisons should make sense",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type": "custom_function",
+    "function": "is_meaningless_collection_comparison",
+    "node_type": "Compare"
   }
 }
