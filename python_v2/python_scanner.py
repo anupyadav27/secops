@@ -168,13 +168,43 @@ def scan_file(py_file, rules):
             if custom_function:
                 node_types = rule.logic.get('node_types', [])
                 def check_node(node, findings, filename):
+                    # Ensure '__parent__' is set for all nodes before custom function checks
+                    # This is already handled by visit_ast_nodes, but reinforce for safety
+                    if isinstance(node, dict) and '__parent__' not in node:
+                        node['__parent__'] = None
+                    if custom_function_name == "has_duplicate_dict_keys":
+                        # Run once per file, not per node
+                        result = custom_function(None, None, '\n'.join(ast_tree.get('source_lines', [])))
+                        if result:
+                            finding = {
+                                "rule_id": rule.rule_id,
+                                "message": rule.message,
+                                "file": filename,
+                                "line": 1,
+                                "status": "violation"
+                            }
+                            findings.append(finding)
+                        return
+                    if custom_function_name == "field_name_naming_convention_check":
+                        # Only check Assign nodes
+                        if isinstance(node, dict) and node.get('node_type') == 'Assign':
+                            result = custom_function(node)
+                            if result:
+                                finding = {
+                                    "rule_id": rule.rule_id,
+                                    "message": rule.message,
+                                    "file": filename,
+                                    "line": node.get('lineno', 0),
+                                    "status": "violation"
+                                }
+                                findings.append(finding)
+                        return
                     if isinstance(node, dict):
                         # If node_types is specified, only check those node types
                         if node_types:
                             if node.get('node_type') not in node_types:
                                 return
                         try:
-                            # Pass ast_root to custom functions that accept it
                             import inspect
                             params = inspect.signature(custom_function).parameters
                             if len(params) == 2:
@@ -211,15 +241,26 @@ def scan_file(py_file, rules):
                                             }
                                             findings.append(finding)
                                 else:
-                                    finding = {
-                                        "rule_id": rule.rule_id,
-                                        "message": rule.message,
-                                        "file": filename,
-                                        "line": node.get('lineno', 0),
-                                        "status": "violation"
-                                    }
-                                    if rule.rule_id == "unused_local_variables_should_be_removed":
-                                        print(f"[DEBUG][scanner] Appending finding for unused_local_variables_should_be_removed at line {node.get('lineno', 0)}")
+                                    if rule.rule_id == "cyclomatic_complexity_of_classes_should_not_be_too_high" and isinstance(result, dict):
+                                        finding = {
+                                            "rule_id": rule.rule_id,
+                                            "message": f"Class '{result.get('class_name')}' has cyclomatic complexity {result.get('complexity')}, which exceeds the threshold.",
+                                            "file": filename,
+                                            "line": node.get('lineno', 0),
+                                            "status": "violation",
+                                            "complexity": result.get('complexity'),
+                                            "class_name": result.get('class_name')
+                                        }
+                                    else:
+                                        finding = {
+                                            "rule_id": rule.rule_id,
+                                            "message": rule.message,
+                                            "file": filename,
+                                            "line": node.get('lineno', 0),
+                                            "status": "violation"
+                                        }
+                                        if rule.rule_id == "unused_local_variables_should_be_removed":
+                                            print(f"[DEBUG][scanner] Appending finding for unused_local_variables_should_be_removed at line {node.get('lineno', 0)}")
                                     findings.append(finding)
                         except Exception as e:
                             # print(f"[DEBUG] Error in custom function for {rule.rule_id} on node: {e}")

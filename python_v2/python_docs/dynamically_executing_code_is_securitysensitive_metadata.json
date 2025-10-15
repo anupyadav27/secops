@@ -45,15 +45,9 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "is_dynamic_execution",
-    "function_code": "def is_dynamic_execution(node):\n    call_nodes = [n for n in node.traverse() if n.get('call')]\n    return any(n.get('func') in ['os.system', 'subprocess.run'] for n in call_nodes)"
-  },
-  "metadata": {
-    "filename": "dynamically_executing_code_is_securitysensitive.json",
-    "rule_id": "dynamically_executing_code_is_securitysensitive",
-    "title": "Dynamically executing code is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type": "property_comparison",
+    "node_types": ["Call"],
+    "property_path": ["func", "attr"],
+    "forbidden_values": ["system", "popen", "execl", "execv", "execve", "execvp", "execvpe", "run", "call", "check_call", "check_output"]
   }
 }

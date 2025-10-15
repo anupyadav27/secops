@@ -48,24 +48,10 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.Call",
-      "func.name",
-      "value"
-    ],
-    "forbidden_values": [
-      "pandas.read_csv",
-      "pandas.read_table"
-    ],
-    "forbidden_empty": true
-  },
-  "function_code": "def custom_check(node):\n    call_nodes = node.findall(lambda n: isinstance(n, ast.Call))\n    for call_node in call_nodes:\n        if call_node.func.name in ['pandas.read_csv', 'pandas.read_table'] and not call_node.func.args:\n            return True\n    return False",
-  "metadata": {
-    "filename": "dtype_parameter_should_be_provided_when_using_pandasreadcsv_or_pandasreadtable.json",
-    "rule_id": "dtype_parameter_should_be_provided_when_using_pandasreadcsv_or_pandasreadtable",
-    "title": "Data type parameter should be provided when using pandas.read_csv or pandas.read_table",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "check_type": "not_exists",
+    "node_types": ["Call"],
+    "property_path": ["keywords", "arg"],
+    "forbidden_values": ["dtype"],
+    "func_attr_values": ["read_csv", "read_table"]
   }
 }

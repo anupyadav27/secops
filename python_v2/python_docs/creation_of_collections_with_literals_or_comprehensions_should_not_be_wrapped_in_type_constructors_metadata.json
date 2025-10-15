@@ -54,17 +54,18 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "nesting",
-      "expression",
-      "value",
-      "type"
-    ],
-    "forbidden_values": [
-      "list",
-      "dict",
-      "set"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "id"],
+        "forbidden_values": ["list", "dict", "set"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["args", 0, "node_type"],
+        "forbidden_values": ["List", "Dict", "Set", "ListComp", "DictComp", "SetComp"]
+      }
     ]
   },
   "metadata": {

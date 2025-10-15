@@ -46,14 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "pattern": "^(num_samples|batch_size)(\\s*,\\s*\\w+){3}$"
-  },
-  "metadata": {
-    "filename": "einops_pattern_should_be_valid.json",
-    "rule_id": "einops_pattern_should_be_valid",
-    "title": "Einops pattern should be valid",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "einops_pattern_check",
+        "node_types": ["Assign"]
+      }
+    ]
   }
 }

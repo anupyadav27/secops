@@ -47,27 +47,7 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "expressions",
-      "comprehension",
-      "generators",
-      "0",
-      "target_list",
-      "elts",
-      "0",
-      "target"
-    ],
-    "forbidden_values": [
-      "*"
-    ]
-  },
-  "metadata": {
-    "filename": "dictionary_comprehension_should_not_use_a_static_key.json",
-    "rule_id": "dictionary_comprehension_should_not_use_a_static_key",
-    "title": "Dictionary comprehension should not use a static key",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type": "custom_function",
+    "function": "dictcomp_static_key_check"
   }
 }

@@ -47,14 +47,8 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "ast.Module",
-      "body",
-      "strings",
-      "-1",
-      "text"
-    ],
-    "forbidden_empty": true,
+    "node_types": ["Module"],
+    "property_path": ["body", -1, "value", "s"],
     "ends_with_regex": "(\r\n|\n|\r)$"
   },
   "metadata": {

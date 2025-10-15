@@ -49,19 +49,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "left",
-      "operator",
-      "values"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "doubled_prefix_operator_check",
+        "node_types": ["Compare"]
+      }
     ]
-  },
-  "metadata": {
-    "filename": "doubled_prefix_operators_not_and_should_not_be_used.json",
-    "rule_id": "doubled_prefix_operators_not_and_should_not_be_used",
-    "title": "Do not use double prefix operators '!=' and '!=<'",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

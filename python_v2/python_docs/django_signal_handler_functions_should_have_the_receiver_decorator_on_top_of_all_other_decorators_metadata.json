@@ -46,41 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "node",
-      "decorator_list",
-      "elements",
-      "*",
-      "decorator",
-      "name"
-    ],
-    "forbidden_empty": [
-      1
-    ],
-    "required_present": [
-      "Receiver"
-    ],
-    "property_comparison": {
-      "left": [
-        "node",
-        "decorator_list",
-        "elements",
-        "*",
-        "decorator",
-        "name"
-      ],
-      "right": [
-        "Receiver"
-      ],
-      "operator": "not_in"
-    }
-  },
-  "metadata": {
-    "filename": "django_signal_handler_functions_should_have_the_receiver_decorator_on_top_of_all_other_decorators.json",
-    "rule_id": "django_signal_handler_functions_should_have_the_receiver_decorator_on_top_of_all_other_decorators",
-    "title": "Signal handlers should have the Receiver decorator on top of all other decorators",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "signal_handler_receiver_not_top",
+        "node_types": ["FunctionDef"]
+      }
+    ]
   }
 }

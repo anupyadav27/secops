@@ -45,21 +45,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "nodedata",
-      "name",
-      "name"
-    ],
-    "forbidden_values": [
-      "BigClass"
+    "node_types": ["ClassDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "cyclomatic_complexity_of_class"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "cyclomatic_complexity_of_classes_should_not_be_too_high.json",
-    "rule_id": "cyclomatic_complexity_of_classes_should_not_be_too_high",
-    "title": "A class has too high a cyclomatic complexity",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

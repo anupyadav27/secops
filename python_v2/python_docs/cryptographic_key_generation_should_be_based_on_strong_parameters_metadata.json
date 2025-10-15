@@ -50,32 +50,24 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.Call",
-      "func.name",
-      "value"
-    ],
-    "forbidden_values": [
-      "rsa.newkeys"
-    ],
-    "required_present": [
-      "ast.arguments",
-      "args",
-      "kwargs"
-    ],
-    "property_comparison": "not_contains",
-    "property_value": {
-      "key_size": {
-        "min_value": 1024
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "id"],
+        "forbidden_values": ["newkeys"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "attr"],
+        "forbidden_values": ["newkeys"]
+      },
+      {
+        "type": "property_comparison",
+        "property_path": ["args", 0, "value"],
+        "comparison": "lt",
+        "value": 1024
       }
-    }
-  },
-  "metadata": {
-    "filename": "cryptographic_key_generation_should_be_based_on_strong_parameters.json",
-    "rule_id": "cryptographic_key_generation_should_be_based_on_strong_parameters",
-    "title": "Cryptographic key generation should be based on strong parameters",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    ]
   }
 }

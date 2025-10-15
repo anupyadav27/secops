@@ -48,26 +48,8 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "value",
-      "CreateBucketConfiguration",
-      "Encryption",
-      "ServerSideEncryptionConfiguration",
-      "0",
-      "ServerSideEncryptionByDefault",
-      "SSEAlgorithm"
-    ],
-    "forbidden_values": [
-      "AES256"
-    ]
-  },
-  "metadata": {
-    "filename": "disabling_serverside_encryption_of_s3_buckets_is_securitysensitive.json",
-    "rule_id": "disabling_serverside_encryption_of_s3_buckets_is_securitysensitive",
-    "title": "Disabling server-side encryption of S3 buckets is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Critical"
+    "check_type": "custom_function",
+    "function": "s3_bucket_missing_encryption",
+    "node_types": ["Call"]
   }
 }

@@ -46,17 +46,9 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "forbidden_empty",
-    "property_path": [
-      "n",
-      "name"
-    ]
-  },
-  "metadata": {
-    "filename": "function_names_should_comply_with_a_naming_convention.json",
-    "rule_id": "function_names_should_comply_with_a_naming_convention",
-    "title": "Function names should comply with a naming convention",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "check_type": "regex",
+    "node_types": ["FunctionDef"],
+    "property_path": ["name"],
+    "forbidden_regex": "^(func|f|g|h|x|y|z|foo|bar|baz)$"
   }
 }

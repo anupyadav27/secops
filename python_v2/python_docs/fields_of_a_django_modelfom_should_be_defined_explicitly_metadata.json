@@ -46,20 +46,7 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name",
-      "value",
-      "Meta",
-      "fields_specified"
-    ]
-  },
-  "metadata": {
-    "filename": "fields_of_a_django_modelfom_should_be_defined_explicitly.json",
-    "rule_id": "fields_of_a_django_modelfom_should_be_defined_explicitly",
-    "title": "Fields of a Django ModelForm should be defined explicitly",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+  "check_type": "custom_function",
+  "function": "django_modelform_meta_fields_specified_check"
   }
 }

@@ -49,28 +49,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "declaration",
-      "ast.ClassDef",
-      "body",
-      "ast.BaseClass",
-      "elts"
-    ],
-    "forbidden_values": [
+    "node_types": ["ClassDef"],
+    "checks": [
       {
-        "type": "list",
-        "values": [
-          "object"
-        ]
+        "type": "property_comparison",
+        "property_path": ["bases", "*", "id"],
+        "forbidden_values": ["object"]
       }
     ]
-  },
-  "metadata": {
-    "filename": "custom_exception_classes_should_inherit_from_exception_or_one_of_its_subclasses.json",
-    "rule_id": "custom_exception_classes_should_inherit_from_exception_or_one_of_its_subclasses",
-    "title": "Custom exceptions should inherit from Exception or one of its subclasses",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

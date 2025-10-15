@@ -47,20 +47,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node.name",
-      "value"
-    ],
-    "forbidden_values": [
-      "__str__"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "django_model_missing_str_method",
+        "node_types": ["ClassDef"]
+      }
     ]
-  },
-  "metadata": {
-    "filename": "django_models_should_define_a_str_method.json",
-    "rule_id": "django_models_should_define_a_str_method",
-    "title": "Django models should define a `__str__` method",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

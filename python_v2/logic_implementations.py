@@ -1,3 +1,324 @@
+def with_taskgroup_single_start_soon_check(node, ast_root=None):
+    """
+    Returns True if a With node uses TaskGroup and has exactly one start_soon call in its body.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'With':
+        return False
+    # Check context manager is TaskGroup
+    items = node.get('items', [])
+    if not items or not isinstance(items[0], dict):
+        return False
+    context_expr = items[0].get('context_expr')
+    if not context_expr or not (context_expr.get('id') == 'TaskGroup' or context_expr.get('attr') == 'TaskGroup'):
+        return False
+    # Check body has exactly one statement
+    body = node.get('body', [])
+    if len(body) != 1:
+        return False
+    stmt = body[0]
+    # Check statement is a call to start_soon
+    if stmt.get('node_type') == 'Expr' and isinstance(stmt.get('value'), dict):
+        call = stmt['value']
+        if call.get('node_type') == 'Call':
+            func = call.get('func', {})
+            if func.get('attr') == 'start_soon':
+                return True
+    return False
+def django_modelform_meta_fields_specified_check(node, ast_root=None):
+    """
+    Returns True if 'fields_specified' is assigned inside a Meta class of a ModelForm.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    # Check assignment target
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        return False
+    if targets[0].get('id') != 'fields_specified':
+        return False
+    # Check parent is Meta class
+    parent = node.get('__parent__')
+    if not parent or parent.get('node_type') != 'ClassDef' or parent.get('name') != 'Meta':
+        return False
+    # Check grandparent is ModelForm class
+    grandparent = parent.get('__parent__')
+    if not grandparent or grandparent.get('node_type') != 'ClassDef':
+        return False
+    # Check if ModelForm in bases
+    bases = grandparent.get('bases', [])
+    is_modelform = any(
+        (b.get('attr') == 'ModelForm' or b.get('id') == 'ModelForm')
+        for b in bases if isinstance(b, dict)
+    )
+    return is_modelform
+def field_name_naming_convention_check(node, ast_root=None):
+    """
+    Returns True if a class field name does not comply with snake_case naming convention.
+    Only triggers for assignments inside class definitions.
+    """
+    import re
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    parent = node.get('__parent__')
+    if not parent or parent.get('node_type') != 'ClassDef':
+        return False
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        return False
+    field_name = targets[0].get('id')
+    if not field_name:
+        return False
+    # Check for camelCase or PascalCase (should be snake_case)
+    if re.match(r'[A-Z][a-z]*', field_name) or re.search(r'[a-z][A-Z]', field_name):
+        return True
+    return False
+def has_duplicate_dict_keys(node, ast_root=None, source_code=None):
+    """
+    Returns True if a dictionary literal contains duplicate keys.
+    This function should be called with the original source code for token analysis,
+    since Python AST does not retain duplicate keys.
+    """
+    if source_code is None or not isinstance(source_code, str):
+        return False
+    import re
+    # Regex to match dictionary literals: { ... }
+    dict_literals = re.findall(r'\{[^}]*\}', source_code)
+    for literal in dict_literals:
+        # Find all string keys in the literal
+        keys = re.findall(r'(["\"][^"\"]*["\"]|\'[^\']*\')\s*:', literal)
+        # Remove quotes and count occurrences
+        key_counts = {}
+        for k in keys:
+            k_clean = k.strip('"\'')
+            key_counts[k_clean] = key_counts.get(k_clean, 0) + 1
+        if any(count > 1 for count in key_counts.values()):
+            return True
+    return False
+def except_clause_raises_same_exception(node, ast_root=None):
+    """
+    Returns True if an ExceptHandler node raises the same exception type as it catches.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'ExceptHandler':
+        return False
+    except_type = None
+    if 'type' in node and isinstance(node['type'], dict):
+        except_type = node['type'].get('id')
+    body = node.get('body', [])
+    if not body:
+        return False
+    first_stmt = body[0]
+    if isinstance(first_stmt, dict) and first_stmt.get('node_type') == 'Raise':
+        exc = first_stmt.get('exc')
+        if isinstance(exc, dict) and exc.get('node_type') == 'Call':
+            func = exc.get('func', {})
+            if func.get('id') == except_type:
+                return True
+    return False
+def einops_pattern_check(node, ast_root=None):
+    """
+    Returns True if an Assign node does not match the valid Einops pattern:
+    - value must be a list of 4 strings
+    - first element must be 'num_samples' or 'batch_size'
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    value = node.get('value')
+    if isinstance(value, list) and len(value) == 4:
+        first = value[0]
+        if first in ("num_samples", "batch_size") and all(isinstance(v, str) for v in value):
+            return False  # Compliant
+        return True  # Noncompliant
+    return True  # Noncompliant if not a list of 4 strings
+def doubled_prefix_operator_check(node, ast_root=None):
+    """
+    Returns True if a Compare node uses both NotEq and Lt operators (chained comparison).
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Compare':
+        return False
+    ops = node.get('ops', [])
+    op_types = [op.get('node_type') for op in ops if isinstance(op, dict)]
+    # Detect both NotEq and Lt in the same Compare node
+    if 'NotEq' in op_types and 'Lt' in op_types:
+        return True
+    return False
+def missing_docstring_check(node, ast_root=None):
+    """
+    Returns True if a FunctionDef, ClassDef, or Module node is missing a docstring.
+    Handles AST in dict format as used by the scanner.
+    """
+    if not isinstance(node, dict):
+        return False
+    node_type = node.get('node_type')
+    if node_type not in ('FunctionDef', 'ClassDef', 'Module'):
+        return False
+    body = node.get('body', [])
+    if not body:
+        # No body, so no docstring
+        return True
+    first_item = body[0]
+    # Docstring is an Expr node with a Constant or Str value (depending on Python version)
+    if isinstance(first_item, dict) and first_item.get('node_type') == 'Expr':
+        value = first_item.get('value', {})
+        # For Python 3.8+, docstring is Constant; older is Str
+        if value.get('node_type') == 'Constant' and isinstance(value.get('value'), str) and value.get('value').strip():
+            return False
+        if value.get('node_type') == 'Str' and isinstance(value.get('s'), str) and value.get('s').strip():
+            return False
+    # If first item is not a docstring Expr node, docstring is missing
+    return True
+# Custom function to check if receiver decorator is not the top decorator
+def signal_handler_receiver_not_top(node, ast_root=None):
+    """
+    Returns True if a FunctionDef node has a receiver decorator, but it is not the top decorator.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
+        return False
+    decorators = node.get('decorator_list', [])
+    if not decorators or len(decorators) < 2:
+        return False  # Must have at least two decorators to check order
+    # Check if any decorator is receiver
+    has_receiver = any(
+        (d.get('id') == 'receiver' or (d.get('func', {}).get('id') == 'receiver'))
+        for d in decorators if isinstance(d, dict)
+    )
+    if not has_receiver:
+        return False
+    # Check if the top decorator is receiver
+    top = decorators[0]
+    if isinstance(top, dict) and (top.get('id') == 'receiver' or (top.get('func', {}).get('id') == 'receiver')):
+        return False  # Compliant
+    return True  # Noncompliant: receiver is not the top decorator
+def django_model_missing_str_method(node, ast_root=None):
+    print('[DEBUG][django_model_missing_str_method] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    if not isinstance(node, dict) or node.get('node_type') != 'ClassDef':
+        return False
+    bases = node.get('bases', [])
+    print('[DEBUG][django_model_missing_str_method] bases:', bases)
+    is_model = False
+    for base in bases:
+        if isinstance(base, dict):
+            print('[DEBUG][django_model_missing_str_method] base:', base)
+            if base.get('attr') == 'Model' or base.get('id') == 'Model':
+                is_model = True
+            if base.get('attr') == 'Model' and base.get('value', {}).get('id') == 'models':
+                is_model = True
+    print('[DEBUG][django_model_missing_str_method] is_model:', is_model)
+    if not is_model:
+        return False
+    for item in node.get('body', []):
+        print('[DEBUG][django_model_missing_str_method] body item:', item)
+        if isinstance(item, dict) and item.get('node_type') == 'FunctionDef' and item.get('name') == '__str__':
+            print('[DEBUG][django_model_missing_str_method] Found __str__ method')
+            return False
+    print('[DEBUG][django_model_missing_str_method] __str__ method not found, returning True')
+    return True
+# Custom function to detect Django model classes missing __str__ method
+def django_model_missing_str_method(node, ast_root=None):
+    """
+    Returns True if a Django model class does not define a __str__ method.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'ClassDef':
+        return False
+    # Check if class inherits from models.Model
+    bases = node.get('bases', [])
+    is_model = False
+    for base in bases:
+        if isinstance(base, dict):
+            # Handles models.Model and direct Model
+            if base.get('attr') == 'Model' or base.get('id') == 'Model':
+                is_model = True
+            if base.get('attr') == 'Model' and base.get('value', {}).get('id') == 'models':
+                is_model = True
+    if not is_model:
+        return False
+    # Check if any method is named __str__
+    for item in node.get('body', []):
+        if isinstance(item, dict) and item.get('node_type') == 'FunctionDef' and item.get('name') == '__str__':
+            return False
+    return True
+# Custom function to detect missing Encryption key in S3 CreateBucketConfiguration
+def s3_bucket_missing_encryption(node, ast_root=None):
+    """
+    Returns True if a Call to create_bucket has CreateBucketConfiguration without Encryption key.
+    """
+    print('[DEBUG][s3_bucket_missing_encryption] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    if func.get('attr') != 'create_bucket':
+        return False
+    keywords = node.get('keywords', [])
+    for kw in keywords:
+        if kw.get('arg') == 'CreateBucketConfiguration':
+            config = kw.get('value', {})
+            print('[DEBUG][s3_bucket_missing_encryption] config:', config)
+            if config.get('node_type') == 'Dict':
+                keys = config.get('keys', [])
+                print('[DEBUG][s3_bucket_missing_encryption] keys:', keys)
+                # Check if any key is 'Encryption'
+                for k in keys:
+                    print('[DEBUG][s3_bucket_missing_encryption] key:', k)
+                    if (isinstance(k, dict) and k.get('node_type') == 'Constant' and k.get('value') == 'Encryption'):
+                        print('[DEBUG][s3_bucket_missing_encryption] Found Encryption key')
+                        return False
+                print('[DEBUG][s3_bucket_missing_encryption] Encryption key not found, returning True')
+                return True
+            else:
+                print('[DEBUG][s3_bucket_missing_encryption] config is not Dict')
+    return False
+def has_csrf_exempt_decorator(node):
+    """Return True if a FunctionDef node has a csrf_exempt decorator."""
+    if not isinstance(node, dict):
+        return False
+    if node.get('node_type') != 'FunctionDef':
+        return False
+    decorators = node.get('decorator_list', [])
+    for deco in decorators:
+        if isinstance(deco, dict) and deco.get('id') == 'csrf_exempt':
+            return True
+    return False
+import ast
+
+def dictcomp_static_key_check(node):
+    """Return True if a DictComp uses a static key (Constant node) in dict AST format."""
+    if not isinstance(node, dict):
+        return False
+    if node.get('node_type') != 'DictComp':
+        return False
+    key_node = node.get('key')
+    if isinstance(key_node, dict) and key_node.get('node_type') == 'Constant':
+        return True
+    return False
+from logging_basicConfig_debug_check import logging_basicConfig_debug_check
+from deprecated_numpy_alias_check import deprecated_numpy_alias_check
+from dictcomp_static_key_check import dictcomp_static_key_check
+def pandas_to_datetime_forbidden_format(node, ast_root=None):
+    """
+    Returns True if pd.to_datetime is called with a forbidden date format as the first argument and dayfirst/yearfirst is set.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    # Check for pd.to_datetime
+    if func.get('attr') != 'to_datetime':
+        return False
+    value = func.get('value', {})
+    if value.get('id') != 'pd':
+        return False
+    args = node.get('args', [])
+    if not args or not isinstance(args[0], dict):
+        return False
+    date_str = args[0].get('value')
+    import re
+    forbidden_pattern = re.compile(r'^(\d{4}-\d{2}-\d{2})$')
+    if not (isinstance(date_str, str) and forbidden_pattern.match(date_str)):
+        return False
+    # Check for dayfirst or yearfirst in keywords
+    keywords = node.get('keywords', [])
+    for kw in keywords:
+        if kw.get('arg') in ('dayfirst', 'yearfirst'):
+            return True
+    return False
 # Custom function to detect deeply nested control flow statements
 def is_deeply_nested_control_flow(node, ast_root=None, max_depth=3):
     """
@@ -45,7 +366,6 @@ def is_deeply_nested_control_flow(node, ast_root=None, max_depth=3):
 def is_out_of_range_datetime_constructor(node, ast_root=None):
     """
     Returns True if a Call node to datetime/date/time has out-of-range month or day arguments.
-    Triggers for month < 1 or > 12, day < 1 or > 31.
     Handles both direct and attribute calls.
     """
     if not isinstance(node, dict) or node.get('node_type') != 'Call':
@@ -63,6 +383,31 @@ def is_out_of_range_datetime_constructor(node, ast_root=None):
     if len(args) > 2 and isinstance(args[2], dict):
         day = args[2].get('value')
         if isinstance(day, int) and (day < 1 or day > 31):
+            return True
+    return False
+
+def equality_check_against_numpynan(node, ast_root=None):
+    """
+    Returns True if a Compare node checks equality (== or !=) against np.nan or numpy.nan.
+    Handles both left and any comparator sides.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Compare':
+        return False
+    # Helper to check if an AST node is np.nan or numpy.nan
+    def is_numpynan(subnode):
+        if not isinstance(subnode, dict):
+            return False
+        if subnode.get('node_type') == 'Attribute' and subnode.get('attr') == 'nan':
+            value = subnode.get('value', {})
+            if value.get('node_type') == 'Name' and value.get('id') in ('np', 'numpy'):
+                return True
+        return False
+    # Check left side
+    if is_numpynan(node.get('left')):
+        return True
+    # Check all comparators
+    for comp in node.get('comparators', []):
+        if is_numpynan(comp):
             return True
     return False
 # Custom function to detect single-character character classes in regex strings
@@ -124,20 +469,24 @@ def has_duplicate_character_class(node, ast_root=None):
             seen.add(c_lower)
     print('[DEBUG][has_duplicate_character_class] No duplicates found')
     return False
-def is_typing_generic_import(node):
-    pass
-
-# Custom function to detect unconditional replacement of collection content in For nodes
-def is_unconditional_collection_replacement(node, ast_root=None):
+def is_typing_generic_import(node, threshold=10):
     """
-    Returns True if a For node replaces collection content unconditionally (not inside an If).
-    Example:
-        for i in my_list:
-            my_list[i] = 'replacement'  # Unconditional
+    Calculates cyclomatic complexity for a class node.
+    Returns True if complexity exceeds threshold.
+    Debug print added to verify invocation and show complexity calculation.
     """
-    # Only process For nodes
-    if not isinstance(node, dict) or node.get('node_type') != 'For':
+    print(f"[DEBUG] cyclomatic_complexity_of_class called for node: {getattr(node, 'name', None)}")
+    if not hasattr(node, 'body'):
+        print("[DEBUG] Node has no body attribute.")
         return False
+    complexity = 0
+    for item in node.body:
+        if hasattr(item, 'body'):
+            for subitem in item.body:
+                if isinstance(subitem, (ast.If, ast.For, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.AsyncFor)):
+                    complexity += 1
+    print(f"[DEBUG] Calculated complexity for class {getattr(node, 'name', None)}: {complexity}")
+    return complexity > threshold
     # Check if the body contains an assignment to a collection element
     body = node.get('body', [])
     for stmt in body:
@@ -170,22 +519,24 @@ def is_unconditional_collection_replacement(node, ast_root=None):
                             return False
                     return True
     return False
+    """
+    Returns True if a Call node to datetime/date/time has out-of-range month or day arguments.
 
-    # Custom function to detect meaningless chained collection size comparisons
-    def is_meaningless_collection_comparison(node, ast_root=None):
-        """
-        Returns True if a Compare node has chained comparison with a constant in the middle (e.g., len(x) > 5 > len(y)).
-        """
-        if not isinstance(node, dict) or node.get('node_type') != 'Compare':
-            return False
-        comparators = node.get('comparators', [])
-        # Chained comparison: len(x) > 5 > len(y)
         if len(comparators) >= 2:
-            # Check if the first comparator is a constant (int/float)
-            first = comparators[0]
-            if isinstance(first, (int, float)):
-                return True
+    """
+    """
+    Returns True if a Compare node checks equality (== or !=) against np.nan or numpy.nan.
+    Handles both left and any comparator sides.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Compare':
         return False
+    # Helper to check if an AST node is np.nan or numpy.nan
+    # Check if the first comparator is a constant (int/float)
+    comparators = node.get('comparators', [])
+    if len(comparators) >= 2:
+        first = comparators[0]
+        if isinstance(first, (int, float)):
+            return True
     if node.get('node_type') == 'ImportFrom' and node.get('module') == 'typing':
         forbidden = {'List', 'Dict', 'Set', 'Tuple', 'Union'}
         for name_obj in node.get('names', []):
@@ -483,9 +834,10 @@ def is_unread_private_attribute(node, ast_root=None):
     search_usage(class_node)
     print('[DEBUG][is_unread_private_attribute] Used:', used)
     return not used
-def is_unused_classprivate_method(node, ast_root=None):
+# Custom function to detect unused private methods
+def is_unused_private_method(node, ast_root=None):
     """
-    Returns True if a private method (name starts with '_') in a class is never called in its class.
+    Returns True if a private method (name starts with '_') is never called in the codebase.
     """
     if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
         return False
@@ -706,6 +1058,70 @@ def async_forbidden_subprocess_call(node):
         return False
     return contains_forbidden_call(node.get('body', []))
 # ...existing code...
+def cyclomatic_complexity_of_class(node, ast_root=None, threshold=10):
+    """
+    Returns True if the cyclomatic complexity of a class exceeds the threshold.
+    Cyclomatic complexity is calculated by counting decision points in all methods of the class.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'ClassDef':
+        return False
+    def count_complexity(n):
+        count = 0
+        if isinstance(n, dict):
+            if n.get('node_type') in ['If', 'For', 'While', 'Try', 'With', 'ExceptHandler', 'BoolOp']: # decision points
+                count += 1
+            for v in n.values():
+                count += count_complexity(v)
+        elif isinstance(n, list):
+            for item in n:
+                count += count_complexity(item)
+        return count
+    total_complexity = 0
+    # Count complexity in all methods (FunctionDef) in the class
+    for stmt in node.get('body', []):
+        if isinstance(stmt, dict) and stmt.get('node_type') == 'FunctionDef':
+            total_complexity += count_complexity(stmt)
+    return total_complexity > threshold
+def is_hardcoded_credential(node, ast_root=None):
+    """
+    Returns True if an Assign node assigns a string constant to a variable with a credential-related name.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        return False
+    var_name = targets[0].get('id', '').lower()
+    credential_keywords = [
+        'password', 'passwd', 'pwd', 'username', 'user', 'secret', 'token', 'key', 'api_key', 'access_key', 'auth', 'credential'
+    ]
+    if not any(k in var_name for k in credential_keywords):
+        return False
+    value = node.get('value', {})
+    # Check for string constant assignment
+    if value.get('node_type') == 'Constant' and isinstance(value.get('value'), str):
+        return True
+    return False
+def is_hardcoded_credential(node, ast_root=None):
+    """
+    Returns True if an Assign node assigns a string constant to a variable with a credential-related name.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        return False
+    targets = node.get('targets', [])
+    if not targets or not isinstance(targets[0], dict):
+        return False
+    var_name = targets[0].get('id', '').lower()
+    credential_keywords = [
+        'password', 'passwd', 'pwd', 'username', 'user', 'secret', 'token', 'key', 'api_key', 'access_key', 'auth', 'credential'
+    ]
+    if not any(k in var_name for k in credential_keywords):
+        return False
+    value = node.get('value', {})
+    # Check for string constant assignment
+    if value.get('node_type') == 'Constant' and isinstance(value.get('value'), str):
+        return True
+    return False
 def cancellation_scope_contains_checkpoint(node, ast_root=None):
     """
     Returns True if an AsyncWith node with a cancel_token context contains a checkpoint (either in items or as 'await checkpoint()' in the body).

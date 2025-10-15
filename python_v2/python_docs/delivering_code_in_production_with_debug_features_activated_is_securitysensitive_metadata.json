@@ -49,23 +49,14 @@
     "OWASP": "A08"
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name",
-      "value"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "logging_basicConfig_debug_check",
+        "message": "Debug features activated in production code via logging.basicConfig(level=logging.DEBUG)."
+      }
     ],
-    "check_values": [
-      "logging",
-      "debug"
-    ],
-    "check_type_doc": "Checks if the node has a name property with the values 'logging' and 'debug'."
-  },
-  "metadata": {
-    "filename": "delivering_code_in_production_with_debug_features_activated_is_securitysensitive.json",
-    "rule_id": "delivering_code_in_production_with_debug_features_activated_is_securitysensitive",
-    "title": "Delivering code in production with debug features activated is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type_doc": "Uses a custom function to robustly detect logging.basicConfig(level=logging.DEBUG) calls."
   }
 }

@@ -46,17 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "n",
-      "body",
-      "decorator_list",
-      0,
-      "args",
-      "value"
-    ],
-    "forbidden_values": [
-      "None"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "missing_docstring_check",
+        "node_types": ["FunctionDef", "ClassDef", "Module"]
+      }
     ]
   },
   "metadata": {

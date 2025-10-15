@@ -48,23 +48,7 @@
     "OWASP": "A5"
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name",
-      "decorator_list",
-      "0",
-      "name"
-    ],
-    "forbidden_values": [
-      "csrf_exempt"
-    ]
-  },
-  "metadata": {
-    "filename": "disabling_csrf_protections_is_securitysensitive.json",
-    "rule_id": "disabling_csrf_protections_is_securitysensitive",
-    "title": "Disabling CSRF protections is security sensitive",
-    "status": "ready",
-    "defaultSeverity": "Critical"
+    "check_type": "custom_function",
+    "function": "has_csrf_exempt_decorator"
   }
 }

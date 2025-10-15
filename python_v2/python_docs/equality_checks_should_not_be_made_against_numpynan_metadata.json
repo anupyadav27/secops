@@ -10,18 +10,18 @@
     "func": "Constant/Issue",
     "constantCost": "5min"
   },
-  "tags": [
-    "numpy",
-    "comparison",
-    "nan"
-  ],
-  "impact": "Code logic may be incorrect due to unexpected comparison results.",
-  "recommendation": "Use the numpy.isnan() function to check for napym.nan.",
-  "references": [],
+  "logic": {
+    "check_type": "custom_function",
+    "function": "equality_check_against_numpynan"
+  },
   "examples": {
     "noncompliant": [
       {
-        "code": "import numpy as np\n\nvalue = np.nan\nif value == 0:\n    print('Equal')",
+        "code": "import numpy as np\n\nvalue = np.nan\nif value == np.nan:\n    print('Equal to np.nan')",
+        "description": "Comparison with np.nan will always return False"
+      },
+      {
+        "code": "import numpy\nval2 = numpy.nan\nif val2 == numpy.nan:\n    print('Equal to numpy.nan')",
         "description": "Comparison with numpy.nan will always return False"
       }
     ],
@@ -44,24 +44,6 @@
     "CWE": "",
     "CERT": "",
     "OWASP": ""
-  },
-  "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "left",
-      "value"
-    ],
-    "forbidden_values": [
-      "numpy.nan"
-    ],
-    "new_check_type_doc": "Check if the left value of a comparison is numpy.nan"
-  },
-  "metadata": {
-    "filename": "equality_checks_should_not_be_made_against_numpynan.json",
-    "rule_id": "equality_checks_should_not_be_made_against_numpynan",
-    "title": "Equality checks should not be made against numpy.nan",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
+  
 }

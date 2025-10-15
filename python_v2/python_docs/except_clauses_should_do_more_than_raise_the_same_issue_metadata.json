@@ -46,15 +46,7 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "custom_check_except_clauses",
-    "function_code": "def custom_check_except_clauses(node):\n    for raise_node in node.get('raises', []):\n        if isinstance(raise_node['type'], str) and raise_node['type'] == 'RaiseFrom' and raise_node['args'][0]['value'] == raise_node['args'][1]['value']:\n            return True\n    return False"
-  },
-  "metadata": {
-    "filename": "except_clauses_should_do_more_than_raise_the_same_issue.json",
-    "rule_id": "except_clauses_should_do_more_than_raise_the_same_issue",
-    "title": "Except clauses should do more than raise the same issue",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type": "custom_function",
+    "function": "except_clause_raises_same_exception"
   }
 }

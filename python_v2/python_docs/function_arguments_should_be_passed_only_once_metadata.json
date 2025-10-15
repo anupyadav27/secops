@@ -47,21 +47,8 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "args",
-      "[1:]",
-      "name"
-    ],
-    "forbidden_values": [
-      "node.args[0].name"
-    ]
-  },
-  "metadata": {
-    "filename": "function_arguments_should_be_passed_only_once.json",
-    "rule_id": "function_arguments_should_be_passed_only_once",
-    "title": "Function arguments should be passed only once",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_types": ["FunctionDef"],
+    "property_path": ["args", "args", "name"],
+    "forbidden_duplicates": true
   }
 }

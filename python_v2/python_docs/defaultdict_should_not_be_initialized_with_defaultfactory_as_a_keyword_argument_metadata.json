@@ -50,25 +50,9 @@
     "OWASP": ""
   },
   "logic": {
+    "node_types": ["Call"],
     "check_type": "property_comparison",
-    "property_path": [
-      "node.expr",
-      "value",
-      "args",
-      "args",
-      "arg",
-      "value",
-      "keyword"
-    ],
-    "forbidden_values": [
-      "default_factory"
-    ]
-  },
-  "metadata": {
-    "filename": "defaultdict_should_not_be_initialized_with_defaultfactory_as_a_keyword_argument.json",
-    "rule_id": "defaultdict_should_not_be_initialized_with_defaultfactory_as_a_keyword_argument",
-    "title": "DefaultDict should not be initialized with default factory as a keyword argument",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "property_path": ["keywords", "*", "arg"],
+    "forbidden_values": ["default_factory"]
   }
 }

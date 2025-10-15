@@ -46,17 +46,8 @@
   },
   "logic": {
     "check_type": "min_value",
-    "property_path": [
-      "ast_node",
-      "lineno"
-    ],
+    "node_types": ["Module"],
+    "property_path": ["end_lineno"],
     "min_value": 100
-  },
-  "metadata": {
-    "filename": "files_should_not_be_too_complex.json",
-    "rule_id": "files_should_not_be_too_complex",
-    "title": "Files should not be too complex",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

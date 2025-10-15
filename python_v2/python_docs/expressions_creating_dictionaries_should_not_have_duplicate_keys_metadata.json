@@ -45,24 +45,8 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "expression",
-      "value",
-      "children",
-      0,
-      "value",
-      "key"
-    ],
-    "forbidden_values": [
-      "duplicate_key"
-    ]
-  },
-  "metadata": {
-    "filename": "expressions_creating_dictionaries_should_not_have_duplicate_keys.json",
-    "rule_id": "expressions_creating_dictionaries_should_not_have_duplicate_keys",
-    "title": "Expressions creating dictionaries should not have duplicate keys",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+  "check_type": "custom_function",
+  "function": "has_duplicate_dict_keys",
+  "node_types": ["Dict"]
   }
 }

@@ -47,21 +47,8 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name",
-      "value"
-    ],
-    "forbidden_values": [
-      "False",
-      "false"
-    ]
-  },
-  "metadata": {
-    "filename": "disabling_autoescaping_in_template_engines_is_securitysensitive.json",
-    "rule_id": "disabling_autoescaping_in_template_engines_is_securitysensitive",
-    "title": "Disabling autoescaping in template engines is a security sensitive practice",
-    "status": "ready",
-    "defaultSeverity": "Critical"
+    "node_types": ["Assign"],
+    "property_path": ["value", "value"],
+    "forbidden_values": [false, "False"]
   }
 }

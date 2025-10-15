@@ -45,21 +45,17 @@
     "OWASP": "A3_2017_Sensitive_Data_Exposure"
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      " expressions",
-      "expression",
-      "value"
-    ],
+    "check_type": "property_comparison",
+    "node_types": ["Assign"],
+    "property_path": ["targets", "id"],
     "forbidden_values": [
-      "^(secret|password|api_key|token|key|access_key|token|credentials)$"
+      "(?i)secret",
+      "(?i)password",
+      "(?i)api_key",
+      "(?i)token",
+      "(?i)key",
+      "(?i)access_key",
+      "(?i)credentials"
     ]
-  },
-  "metadata": {
-    "filename": "encrypting_data_is_securitysensitive.json",
-    "rule_id": "encrypting_data_is_securitysensitive",
-    "title": "Encrypting data may expose sensitive information",
-    "status": "ready",
-    "defaultSeverity": "Critical"
   }
 }

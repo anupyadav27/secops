@@ -46,27 +46,8 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "type"
-    ],
-    "forbidden_values": [
-      "TaskGroup"
-    ],
-    "check_arguments": {
-      "node_type": "FunctionDef",
-      "property_path": [
-        "body",
-        "async_for"
-      ]
-    }
-  },
-  "metadata": {
-    "filename": "taskgroupnursery_should_not_be_used_for_a_single_start_call.json",
-    "rule_id": "taskgroupnursery_should_not_be_used_for_a_single_start_call",
-    "title": "Task group nursery should not be used for a single start call",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "check_type": "custom_function",
+    "node_types": ["With"],
+    "function": "with_taskgroup_single_start_soon_check"
   }
 }

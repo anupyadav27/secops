@@ -43,27 +43,7 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.ClassDef",
-      "body",
-      "body",
-      "expr",
-      "attrs",
-      "value",
-      "value",
-      "arg",
-      "value"
-    ],
-    "forbidden_values": [
-      "[A-Z][a-z]*"
-    ]
-  },
-  "metadata": {
-    "filename": "field_names_should_comply_with_a_naming_convention.json",
-    "rule_id": "field_names_should_comply_with_a_naming_convention",
-    "title": "Field names should comply with a naming convention",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+  "check_type": "custom_function",
+  "function": "field_name_naming_convention_check"
   }
 }

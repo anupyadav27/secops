@@ -46,21 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "node",
-      "value"
-    ],
-    "forbidden_values": [
-      "^(\\d{4}-\\d{2}-\\d{2})$"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "pandas_to_datetime_forbidden_format"
+      }
     ]
-  },
-  "function_code": "def check_date_format(node):\n    return re.match(r'^(\\d{4}-\\d{2}-\\d{2})$', str(node)) is not None",
-  "metadata": {
-    "filename": "dates_should_be_formatted_correctly_when_using_pandastodatetime_with_dayfirst_or_yearfirst_arguments.json",
-    "rule_id": "Python:dates_should_be_formatted_correctly_when_using_pandastodatetime_with_dayfirst_or_yearfirst_arguments",
-    "title": "Dates should be formatted correctly when using pandas.to_datetime with dayfirst or yearfirst arguments",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }
