@@ -46,25 +46,8 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "parent",
-      "parent",
-      "value"
-    ],
-    "forbidden_values": [
-      "(",
-      ")",
-      "(",
-      ")"
-    ]
-  },
-  "metadata": {
-    "filename": "redundant_pairs_of_parentheses_should_be_removed.json",
-    "rule_id": "redundant_pairs_of_parentheses_should_be_removed",
-    "title": "Redundant pairs of parentheses",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+  "check_type": "custom_function",
+  "node_types": ["BinOp"],
+  "function": "has_redundant_parentheses"
   }
 }

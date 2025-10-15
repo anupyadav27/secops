@@ -44,18 +44,10 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "value",
-      "test",
-      "if_value",
-      "comparators",
-      1,
-      "value"
-    ],
-    "forbidden_values": [
-      "=="
-    ]
+    "node_types": ["If", "IfExp"],
+    "property_path": ["test"],
+    "comparison": "duplicate",
+    "message_on_duplicate": "Multiple IF/ELIF statements have the same condition."
   },
   "metadata": {
     "filename": "related_ifelse_if_statements_should_not_have_the_same_condition.json",

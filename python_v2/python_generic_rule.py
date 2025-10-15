@@ -279,11 +279,7 @@ class PythonGenericRule:
         starts_with = check.get("starts_with")
         equals = check.get("equals")
         condition = check.get("condition")
-        #print(f"[DEBUG] Property comparison check details:")
-        #print(f"[DEBUG] - Property path: {property_path}")
-        #print(f"[DEBUG] - Starts with: {starts_with}")
-        #print(f"[DEBUG] - Node type: {node_type}")
-        #print(f"[DEBUG] - Node structure: {node if isinstance(node, dict) else type(node)}")
+        comparison = check.get("comparison") or self.logic.get("comparison")
 
         if not property_path:
             return findings
@@ -292,99 +288,54 @@ class PythonGenericRule:
         if condition:
             cond_path = condition.get("property") or condition.get("path")
             cond_equals = condition.get("equals")
-            # print(f"[DEBUG] Checking condition:")
-            # print(f"[DEBUG] - Condition path: {cond_path}")
-            # print(f"[DEBUG] - Condition equals: {cond_equals}")
             if cond_path and cond_equals:
                 cond_values = self._get_property_values(node, cond_path)
-                # print(f"[DEBUG] - Condition values found: {cond_values}")
                 condition_met = False
                 for found_path, value in cond_values:
-                    # print(f"[DEBUG] - Checking condition value: {value}")
                     if value == cond_equals:
                         condition_met = True
-                        # print(f"[DEBUG] - Condition met!")
                         break
                 if not condition_met:
-                    # print(f"[DEBUG] - Condition not met, skipping")
                     return findings
 
-        # First check condition if present
-        condition_met = True
-        if condition:
-            cond_property = condition.get('property')
-            cond_equals = condition.get('equals')
-            # print(f"[DEBUG] Checking condition: property={cond_property} equals={cond_equals}")
-            
-            cond_values = self._get_property_values(node, cond_property)
-            condition_met = False
-            for _, cond_value in cond_values:
-                # print(f"[DEBUG] Checking condition value: {cond_value}")
-                if cond_value == cond_equals:
-                    condition_met = True
-                    break
-            
-            if not condition_met:
-                # print("[DEBUG] Condition not met, skipping value checks")
-                return findings
-
-        # Get property values to check
-        # Enhanced: extract regex string from multiple possible keys in args[0]
-        property_values = []
-        if property_path == ["args", 0, "s"]:
-            args = node.get("args", [])
-            if args and isinstance(args[0], dict):
-                regex_str = None
-                for key in ["s", "value", "constant", "str", "text"]:
-                    if isinstance(args[0].get(key), str):
-                        regex_str = args[0][key]
-                        break
-                if regex_str is not None:
-                    property_values.append((property_path, regex_str))
-        else:
-            property_values = self._get_property_values(node, property_path)
-        # Custom logic for single-character character class in regex
-        import re
-        if self.rule_id == "character_classes_in_regular_expressions_should_not_contain_only_one_character":
-            for found_path, value in property_values:
-                if isinstance(value, str):
-                    for match in re.finditer(r"\[(.*?)\]", value):
-                        char_class = match.group(1)
-                        if len(char_class) == 1:
+        # Duplicate comparison logic for related If/IfExp statements
+        if comparison == "duplicate":
+            # Only run for If/IfExp nodes
+            if node.get("node_type") in ["If", "IfExp"]:
+                parent = node.get("__parent__")
+                if parent and "body" in parent:
+                    current_test = node.get("test")
+                    for sibling in parent["body"]:
+                        if sibling is node or sibling.get("node_type") not in ["If", "IfExp"]:
+                            continue
+                        # Deep compare ASTs for test property
+                        if self._deep_compare_ast(current_test, sibling.get("test")):
                             finding = self._make_finding(
-                                filename, node_type, node_name, found_path, value,
-                                check.get('message', self.message), node
+                                filename, node_type, node_name, property_path, current_test,
+                                check.get('message_on_duplicate', self.message), node
                             )
-                            unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                            unique_key = (self.rule_id, filename, node.get('lineno', 0), str(property_path))
                             if unique_key not in seen_findings:
                                 seen_findings.add(unique_key)
                                 findings.append(finding)
-        elif check.get("contains_duplicate_character_class"):
-            for found_path, value in property_values:
-                if isinstance(value, str):
-                    for match in re.finditer(r"\[(.*?)\]", value):
-                        char_class = match.group(1)
-                        seen = set()
-                        for c in char_class:
-                            c_lower = c.lower()
-                            if c_lower in seen:
-                                finding = self._make_finding(
-                                    filename, node_type, node_name, found_path, value,
-                                    check.get('message', self.message), node
-                                )
-                                unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
-                                if unique_key not in seen_findings:
-                                    seen_findings.add(unique_key)
-                                    findings.append(finding)
-                                break
-                            seen.add(c_lower)
-        else:
-            forbidden_values = check.get("forbidden_values", [])
-            for found_path, value in property_values:
-                if node_type == "ExceptHandler" and found_path == ["type", "node_type"]:
-                    print(f"[DEBUG] Checking ExceptHandler at line {node.get('lineno')}, type.node_type: {value}")
-                # Match forbidden values as both string and integer representations
-                if forbidden_values and (value in forbidden_values or str(value) in forbidden_values):
+                            break
+            return findings
+
+        # Get property values to check
+        property_values = self._get_property_values(node, property_path)
+        forbidden_values = check.get("forbidden_values", [])
+        for found_path, value in property_values:
+            if forbidden_values and value in forbidden_values:
+                finding = self._make_finding(
+                    filename, node_type, node_name, found_path, value,
+                    check.get('message', self.message), node
+                )
+                unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                if unique_key not in seen_findings:
+                    seen_findings.add(unique_key)
+                    findings.append(finding)
+            if starts_with and isinstance(value, str):
+                if value.startswith(starts_with):
                     finding = self._make_finding(
                         filename, node_type, node_name, found_path, value,
                         check.get('message', self.message), node
@@ -393,30 +344,50 @@ class PythonGenericRule:
                     if unique_key not in seen_findings:
                         seen_findings.add(unique_key)
                         findings.append(finding)
-                if starts_with and isinstance(value, str):
-                    if value.startswith(starts_with):
-                        finding = self._make_finding(
-                            filename, node_type, node_name, found_path, value,
-                            check.get('message', self.message), node
-                        )
-                        unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
-                        if unique_key not in seen_findings:
-                            seen_findings.add(unique_key)
-                            findings.append(finding)
-                # NEW: regex property_comparison support
-                regex_pattern = check.get("regex")
-                if regex_pattern and isinstance(value, str):
-                    import re
-                    if re.search(regex_pattern, value):
-                        finding = self._make_finding(
-                            filename, node_type, node_name, found_path, value,
-                            check.get('message', self.message), node
-                        )
-                        unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
-                        if unique_key not in seen_findings:
-                            seen_findings.add(unique_key)
-                            findings.append(finding)
-            return findings
+            regex_pattern = check.get("regex")
+            if regex_pattern and isinstance(value, str):
+                import re
+                if re.search(regex_pattern, value):
+                    finding = self._make_finding(
+                        filename, node_type, node_name, found_path, value,
+                        check.get('message', self.message), node
+                    )
+                    unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                    if unique_key not in seen_findings:
+                        seen_findings.add(unique_key)
+                        findings.append(finding)
+        return findings
+
+    def _deep_compare_ast(self, obj1, obj2, visited=None):
+        """Deep compare two AST objects, ignoring line numbers and col offsets, avoiding infinite recursion."""
+        if visited is None:
+            visited = set()
+        obj1_id = id(obj1)
+        obj2_id = id(obj2)
+        pair_id = (obj1_id, obj2_id)
+        if pair_id in visited:
+            return True
+        visited.add(pair_id)
+        if type(obj1) != type(obj2):
+            return False
+        if isinstance(obj1, dict) and isinstance(obj2, dict):
+            keys1 = set(obj1.keys()) - {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
+            keys2 = set(obj2.keys()) - {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
+            if keys1 != keys2:
+                return False
+            for key in keys1:
+                if not self._deep_compare_ast(obj1.get(key), obj2.get(key), visited):
+                    return False
+            return True
+        elif isinstance(obj1, list) and isinstance(obj2, list):
+            if len(obj1) != len(obj2):
+                return False
+            for i in range(len(obj1)):
+                if not self._deep_compare_ast(obj1[i], obj2[i], visited):
+                    return False
+            return True
+        else:
+            return obj1 == obj2
 
     def _apply_exists_check(self, check, node, filename, node_type, node_name, seen_findings):
         """Apply exists checks (property must exist)."""

@@ -51,24 +51,8 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "n.value",
-      "type",
-      "name"
-    ],
-    "forbidden_values": [
-      "TypeVar"
-    ],
-    "required_present": [
-      "n.value",
-      "type"
-    ]
-  },
-  "metadata": {
-    "filename": "type_hints_of_generic_types_should_specify_their_type_parameters.json",
-    "rule_id": "type_hints_of_generic_types_should_specify_their_type_parameters",
-    "title": "Type hints of generic types should specify their type parameters",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_type": "arg",
+    "property_path": ["annotation", "id"],
+    "forbidden_values": ["List", "Dict", "Set", "Tuple", "Optional"]
   }
 }

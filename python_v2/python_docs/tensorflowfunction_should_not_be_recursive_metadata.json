@@ -46,24 +46,10 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "body",
-      "expression_list",
-      "expressions",
-      "index",
-      "expression",
-      "name"
-    ],
-    "forbidden_values": [
-      "RECURSIVE_FUNCTION"
-    ]
-  },
-  "metadata": {
-    "filename": "tensorflowfunction_should_not_be_recursive.json",
-    "rule_id": "tensorflowfunction_should_not_be_recursive",
-    "title": "TensorFlow function should not be recursive",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_type": "FunctionDef",
+    "recursive_calls": true,
+    "decorator_list": {
+      "contains": "@tf.function"
+    }
   }
 }

@@ -45,23 +45,14 @@
     "CERT": "",
     "OWASP": ""
   },
+  "node_types": ["ClassDef"],
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.ClassDef",
-      "name"
-    ],
-    "expected_value": "BaseException",
-    "forbidden_values": [
-      "Exception"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_exception_inheritance",
+        "message": "Custom exception should derive from BaseException instead of Exception"
+      }
     ]
-  },
-  "function_code": "def check_custom_exception_inheritance(node):\n    for class_def in node.get('body').get('body'):\n        if isinstance(class_def, ast.ClassDef) and class_def.name and class_def.name.id not in ('BaseException', 'Exception'):\n            if not class_def.bases or any(base.arg not in ('BaseException', 'Exception') for base in class_def.bases):\n                return True",
-  "metadata": {
-    "filename": "raised_exceptions_must_derive_from_baseexception.json",
-    "rule_id": "raised_exceptions_must_derive_from_BaseException",
-    "title": "Raised exceptions must derive from BaseException",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

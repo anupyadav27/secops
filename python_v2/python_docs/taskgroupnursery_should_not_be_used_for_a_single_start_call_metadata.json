@@ -47,7 +47,7 @@
   },
   "logic": {
     "check_type": "custom_function",
-    "node_types": ["With"],
+    "node_types": ["With", "AsyncWith"],
     "function": "with_taskgroup_single_start_soon_check"
   }
 }

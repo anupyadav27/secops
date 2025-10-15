@@ -47,20 +47,9 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "n.expr.value",
-      "n.expr.type"
-    ],
-    "forbidden_values": [
-      "ListComp",
-      "map"
-    ]
-  },
-  "metadata": {
-    "filename": "redundant_collection_functions_should_be_avoided.json",
-    "rule_id": "redundant_collection_functions_should_be_avoided",
-    "title": "Redundant collection functions should be avoided",
-    "status": "ready",
-    "defaultSeverity": "Minor"
+    "node_types": ["ListComp", "Call"],
+    "property_path": ["func", "id"],
+    "forbidden_values": ["map"],
+    "additional_node_types": ["ListComp"]
   }
 }

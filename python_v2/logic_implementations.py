@@ -1,8 +1,177 @@
+def has_redundant_parentheses(node, ast_root=None):
+    """
+    Detects redundant parentheses in binary operations.
+    Returns True if redundant parentheses are found.
+    """
+    if not isinstance(node, dict):
+        print("[DEBUG] Node is not a dict")
+        return False
+
+    if node.get('node_type') != 'BinOp':
+        print("[DEBUG] Node is not BinOp")
+        return False
+
+    # Get the operands and operator
+    left = node.get('left')
+    right = node.get('right')
+    op = node.get('op', {}).get('node_type')
+
+    print(f"[DEBUG] Checking BinOp with operator {op}")
+
+    # Check if operands are also BinOp nodes
+    if isinstance(left, dict) and left.get('node_type') == 'BinOp':
+        left_op = left.get('op', {}).get('node_type')
+        # If the parent operator has higher or equal precedence, parentheses are redundant
+        if _has_higher_or_equal_precedence(op, left_op):
+            print(f"[DEBUG] Redundant parentheses found in left operand: {left_op} inside {op}")
+            return True
+
+    if isinstance(right, dict) and right.get('node_type') == 'BinOp':
+        right_op = right.get('op', {}).get('node_type')
+        # If the parent operator has higher precedence, parentheses are redundant
+        if _has_higher_precedence(op, right_op):
+            print(f"[DEBUG] Redundant parentheses found in right operand: {right_op} inside {op}")
+            return True
+
+    print("[DEBUG] No redundant parentheses found")
+    return False
+
+def _has_higher_or_equal_precedence(op1, op2):
+    """Helper function to check operator precedence"""
+    precedence = {
+        'Mult': 5, 'Div': 5, 'FloorDiv': 5, 'Mod': 5,
+        'Add': 4, 'Sub': 4,
+        'BitOr': 3, 'BitXor': 3, 'BitAnd': 3,
+        'LShift': 2, 'RShift': 2
+    }
+    return precedence.get(op1, 0) >= precedence.get(op2, 0)
+
+def _has_higher_precedence(op1, op2):
+    """Helper function to check strict precedence"""
+    precedence = {
+        'Mult': 5, 'Div': 5, 'FloorDiv': 5, 'Mod': 5,
+        'Add': 4, 'Sub': 4,
+        'BitOr': 3, 'BitXor': 3, 'BitAnd': 3,
+        'LShift': 2, 'RShift': 2
+    }
+    return precedence.get(op1, 0) > precedence.get(op2, 0)
+def check_exception_inheritance(node, ast_root=None):
+    """
+    Check if a class derives from Exception instead of BaseException.
+    Returns True if the rule is violated (derives from Exception).
+    """
+    if not isinstance(node, dict):
+        print("[DEBUG] Node is not a dict, skipping")
+        return False
+
+    # If this is an assignment, try to parse it for code strings that might contain custom exceptions
+    if node.get('node_type') == 'Assign' and 'value' in node:
+        value = node.get('value', {})
+        if isinstance(value, dict) and value.get('node_type') == 'Constant':
+            str_value = value.get('value')
+            if isinstance(str_value, str):
+                print(f"[DEBUG] Found code string, trying to parse it")
+                try:
+                    import ast
+                    tree = ast.parse(str_value)
+                    # Convert AST to dict format
+                    def ast_to_dict(n):
+                        if isinstance(n, ast.AST):
+                            # Create a dict with node type and attributes
+                            dict_node = {'node_type': type(n).__name__}
+                            # Add relevant attributes
+                            for key, value in ast.iter_fields(n):
+                                # Convert child nodes recursively
+                                if isinstance(value, (list, tuple)):
+                                    dict_node[key] = [ast_to_dict(x) if isinstance(x, (ast.AST, list, tuple)) else x for x in value]
+                                else:
+                                    dict_node[key] = ast_to_dict(value) if isinstance(value, (ast.AST, list, tuple)) else value
+                            return dict_node
+                        elif isinstance(n, (list, tuple)):
+                            return [ast_to_dict(x) if isinstance(x, (ast.AST, list, tuple)) else x for x in n]
+                        return n
+                    tree_dict = ast_to_dict(tree)
+                    # Check each node in the tree for inheritance from Exception
+                    for n in tree_dict.get('body', []):
+                        if n.get('node_type') == 'ClassDef':
+                            # Reuse the original logic for class definitions
+                            bases = n.get('bases', [])
+                            if bases:
+                                for base in bases:
+                                    if not isinstance(base, dict):
+                                        continue
+                                    base_type = base.get('node_type')
+                                    if base_type == 'Name' and base.get('id') == 'Exception':
+                                        return True
+                                    elif base_type == 'Attribute' and base.get('attr') == 'Exception':
+                                        return True
+                                    # Recurse into parent classes if needed
+                except:
+                    pass
+
+    elif node.get('node_type') == 'ClassDef':
+        class_name = node.get('name', 'unknown')
+        print(f"[DEBUG] Checking inheritance for class {class_name}")
+
+        # Check class bases
+        bases = node.get('bases', [])
+        if not bases:
+            print(f"[DEBUG] Class {class_name} has no bases")
+            return False
+
+        # Check each base class in the inheritance chain
+        for base in bases:
+            if not isinstance(base, dict):
+                print(f"[DEBUG] Base for {class_name} is not a dict")
+                continue
+
+            base_type = base.get('node_type')
+            print(f"[DEBUG] Base type for {class_name} is {base_type}")
+
+            # Handle attribute access (e.g. exceptions.Exception)
+            if base_type == 'Attribute':
+                base_name = base.get('attr')
+                print(f"[DEBUG] Found Attribute base {base_name} for {class_name}")
+                if base_name == 'Exception':
+                    print(f"[DEBUG] Class {class_name} inherits from Exception (attribute)")
+                    return True
+                if base_name == 'BaseException':
+                    print(f"[DEBUG] Class {class_name} inherits from BaseException (attribute)")
+                    return False
+
+            # Handle direct name reference
+            elif base_type == 'Name':
+                base_name = base.get('id')
+                print(f"[DEBUG] Found Name base {base_name} for {class_name}")
+                if base_name == 'Exception':
+                    print(f"[DEBUG] Class {class_name} inherits from Exception (direct)")
+                    return True
+                if base_name == 'BaseException':
+                    print(f"[DEBUG] Class {class_name} inherits from BaseException (direct)")
+                    return False
+
+                # Handle inheritance through another class
+                if ast_root and isinstance(ast_root, dict):
+                    print(f"[DEBUG] Searching for parent class {base_name} in AST")
+                    for parent_node in ast_root.get('body', []):
+                        if (isinstance(parent_node, dict) and 
+                            parent_node.get('node_type') == 'ClassDef' and 
+                            parent_node.get('name') == base_name):
+                            print(f"[DEBUG] Found parent class {base_name}, checking its inheritance")
+                            if check_exception_inheritance(parent_node, ast_root):
+                                print(f"[DEBUG] Parent class {base_name} violates the rule")
+                                return True
+                            break
+
+        print(f"[DEBUG] Class {class_name} inheritance check complete, no violation found")
+    return False
+
 def with_taskgroup_single_start_soon_check(node, ast_root=None):
     """
-    Returns True if a With node uses TaskGroup and has exactly one start_soon call in its body.
+    Returns True if a With or AsyncWith node uses TaskGroup and has exactly one start_soon call in its body.
     """
-    if not isinstance(node, dict) or node.get('node_type') != 'With':
+    print(f"[DEBUG] Invoked with_taskgroup_single_start_soon_check for node_type: {node.get('node_type')}")
+    if not isinstance(node, dict) or node.get('node_type') not in ('With', 'AsyncWith'):
         return False
     # Check context manager is TaskGroup
     items = node.get('items', [])

@@ -54,20 +54,8 @@
   },
   "logic": {
     "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name"
-    ],
-    "forbidden_values": [
-      "_",
-      "__"
-    ]
-  },
-  "metadata": {
-    "filename": "test_methods_should_be_discoverable.json",
-    "rule_id": "test_methods_should_be_discoverable",
-    "title": "Test methods should be discoverable",
-    "status": "ready",
-    "defaultSeverity": "Major"
+    "node_type": "FunctionDef",
+    "property_path": ["name"],
+    "forbidden_prefixes": ["_", "__"]
   }
 }
