@@ -46,13 +46,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "not_contains",
-    "property_path": [
-      "node",
-      "value",
-      "args",
-      1,
-      "ExpectedBucketOwner"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "s3_operation_missing_expected_bucket_owner"
+      }
     ]
   },
   "metadata": {

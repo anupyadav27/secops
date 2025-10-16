@@ -50,16 +50,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "ast.Expression.value",
-      "re.compile",
-      "pattern.groups"
-    ],
-    "forbidden_empty": [
-      "ast.Expression.value",
-      "re.compile",
-      "pattern.groups"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "replacement_string_references_existing_group"
+      }
     ]
   },
   "metadata": {

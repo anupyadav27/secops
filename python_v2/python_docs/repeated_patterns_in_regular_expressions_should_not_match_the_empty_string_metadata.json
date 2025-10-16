@@ -45,9 +45,10 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "custom_check_repeated_empty_regex",
-    "function_code": "def custom_check_repeated_empty_regex(node):\n    regex = ast.Regex(body=node.body)\n    if regex.pattern.count(r'') > 1:\n        return True\n    return False"
+    "check_type": "custom_function",
+    "node_types": ["Call"],
+    "custom_function": "has_repeated_empty_match_pattern",
+    "message": "Repeated pattern in regular expression matches the empty string."
   },
   "metadata": {
     "filename": "repeated_patterns_in_regular_expressions_should_not_match_the_empty_string.json",

@@ -1,18 +1,5 @@
 {
-  "file_scanned": "D:\\task10\\test\\test_arguments_given_to_functions_should_be_of_an_expected_type_trigger.py",
-  "vulnerabilities_found": 2,
-  "findings": [
-    {
-      "rule_id": "all_except_blocks_should_be_able_to_catch_exceptions",
-      "message": "All except blocks should be able to catch exceptions",
-      "line": 3,
-      "status": "violation"
-    },
-    {
-      "rule_id": "arguments_given_to_functions_should_be_of_an_expected_type",
-      "message": "Arguments given to functions should be of an expected type",
-      "line": 7,
-      "status": "violation"
-    }
-  ]
+  "file_scanned": "D:\\scanner\\python_v2\\test\\test_arguments_given_to_functions_should_be_of_an_expected_type_trigger.py",
+  "vulnerabilities_found": 0,
+  "findings": []
 }

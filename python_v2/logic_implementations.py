@@ -1,14 +1,258 @@
+# Custom function to detect commented-out code sections
+import re
+def commented_out_code_section_check(node, ast_root=None, source_lines=None):
+    """
+    Returns True if a line is a comment that looks like code (e.g., assignment, function call, keyword).
+    Expects 'source_lines' to be provided as a list of lines from the source file.
+    """
+    if source_lines is None:
+        return False
+    code_like_pattern = re.compile(r"^\s*#\s*(if |for |while |def |class |return |import |from |print\(|\w+\s*=|\w+\()")
+    for idx, line in enumerate(source_lines):
+        if code_like_pattern.match(line):
+            return {
+                'message': 'A section of code has been commented out.',
+                'line': idx + 1
+            }
+    return False
+# Custom function: detects both return and yield in the same function
+def return_and_yield_in_same_function(node, ast_root=None):
+    """
+    Returns True if both a Return and a Yield node are present in the same FunctionDef node.
+    """
+    #print("[DEBUG][return_and_yield_in_same_function] Checking node:", node.get('node_type'), "at line", node.get('lineno'))
+
+    if not isinstance(node, dict):
+        #print("[DEBUG][return_and_yield_in_same_function] Node is not a dict")
+        return False
+
+    node_type = node.get('node_type')
+
+    # If we're at the Module level or a nested block, check each function in the body
+    if 'body' in node and isinstance(node['body'], list):
+        # For each node in the body...
+        for child in node['body']:
+            if isinstance(child, dict):
+                # If this is a function definition, analyze it
+                if child.get('node_type') == 'FunctionDef':
+                    # Search within the function body for return and yield nodes
+                    has_return = False
+                    has_yield = False
+                    
+                    # Helper function to check for return/yield in a statement list
+                    def check_statements(stmts):
+                        nonlocal has_return, has_yield
+                        for stmt in stmts:
+                            if isinstance(stmt, dict):
+                                stmt_type = stmt.get('node_type')
+                                if stmt_type == 'Return':
+                                    #print(f"[DEBUG][return_and_yield_in_same_function] Found Return in function {child.get('name')} at line {stmt.get('lineno')}")
+                                    has_return = True
+                                elif stmt_type == 'Expr':
+                                    # Yield statements are wrapped in Expr nodes
+                                    value = stmt.get('value', {})
+                                    if isinstance(value, dict) and value.get('node_type') == 'Yield':
+                                       # print(f"[DEBUG][return_and_yield_in_same_function] Found Yield in function {child.get('name')} at line {stmt.get('lineno')}")
+                                        has_yield = True
+                                elif stmt_type == 'If' or stmt_type == 'For' or stmt_type == 'While' or stmt_type == 'Try':
+                                    # Recursively check blocks for nested returns/yields
+                                    if 'body' in stmt and isinstance(stmt['body'], list):
+                                        check_statements(stmt['body'])
+                                    if 'orelse' in stmt and isinstance(stmt['orelse'], list):
+                                        check_statements(stmt['orelse'])
+                                    if 'finalbody' in stmt and isinstance(stmt['finalbody'], list):
+                                        check_statements(stmt['finalbody'])
+                    
+                    # Check all statements in the function body
+                    check_statements(child['body'])
+                    
+                    # If we found both return and yield, this function triggers the rule
+                    if has_return and has_yield:
+                        #print(f"[DEBUG][return_and_yield_in_same_function] Found both return and yield in function {child.get('name')} at line {child.get('lineno')}")
+                        return True
+                    #print(f"[DEBUG][return_and_yield_in_same_function] Function {child.get('name')} at line {child.get('lineno')}: has_return={has_return}, has_yield={has_yield}")
+                # If not a function, recursively check it in case it contains functions
+                elif return_and_yield_in_same_function(child, ast_root):
+                    return True
+
+    return False
+# Custom function: detects reserved environment variable overrides in Lambda functions
+def reserved_env_var_override_lambda(node, ast_root=None):
+    """
+    Returns True if an assignment overrides a reserved AWS environment variable in os.environ.
+    """
+    #print("[DEBUG][reserved_env_var_override_lambda] Called for node:", node.get('node_type'), "at line", node.get('lineno'))
+
+    reserved_vars = {"AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"}
+    if not isinstance(node, dict) or node.get('node_type') != 'Assign':
+        #print("[DEBUG][reserved_env_var_override_lambda] Not an Assign node")
+        return False
+
+    targets = node.get('targets', [])
+    if not targets:
+        #print("[DEBUG][reserved_env_var_override_lambda] No targets found")
+        return False
+
+    target = targets[0]
+    #print("[DEBUG][reserved_env_var_override_lambda] Target node type:", target.get('node_type'))
+
+    # Check for Subscript node: os.environ['VAR']
+    if target.get('node_type') == 'Subscript':
+        value = target.get('value', {})
+        # Check for os.environ
+        if value.get('node_type') == 'Attribute' and value.get('attr') == 'environ':
+            os_obj = value.get('value', {})
+            if os_obj.get('node_type') == 'Name' and os_obj.get('id') == 'os':
+                # Python 3.8+: slice.value, Python 3.9+: slice
+                slice_node = target.get('slice', {})
+                #print("[DEBUG][reserved_env_var_override_lambda] Slice node:", slice_node)
+                var_name = None
+                if isinstance(slice_node, dict):
+                    if 'value' in slice_node:
+                        var_name = slice_node.get('value')
+                    elif slice_node.get('node_type') == 'Constant':
+                        var_name = slice_node.get('value')
+                    elif slice_node.get('node_type') == 'Str':
+                        var_name = slice_node.get('s')
+                elif isinstance(slice_node, str):
+                    var_name = slice_node
+                #print("[DEBUG][reserved_env_var_override_lambda] Variable name:", var_name)
+                if var_name in reserved_vars:
+                    #print("[DEBUG][reserved_env_var_override_lambda] Found reserved variable:", var_name)
+                    return True
+    return False
+# Custom function: checks if replacement string references an existing regex group
+def replacement_string_references_existing_group(node, ast_root=None):
+    """
+    Returns True if the replacement string in a regex substitution does NOT reference any group in the pattern.
+    Flags if the replacement string does NOT reference any group.
+    """
+    import re
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+
+    func = node.get('func', {})
+    # Check for .sub() method (pattern.sub or re.sub)
+    if func.get('node_type') == 'Attribute' and func.get('attr') == 'sub':
+        args = node.get('args', [])
+        if len(args) < 1:
+            return False
+        # First argument: replacement string
+        repl_arg = args[0]
+        if repl_arg.get('node_type') == 'Constant':
+            replacement = repl_arg.get('value')
+        elif repl_arg.get('node_type') == 'Str':
+            replacement = repl_arg.get('s')
+        else:
+            return False
+        if not isinstance(replacement, str):
+            return False
+        # Check for group reference in replacement string
+        if re.search(r'(\\\d+|\\g<\w+>|\$\d+)', replacement):
+            return False  # Compliant: references a group
+        return True  # Noncompliant: does not reference a group
+    # Check for re.sub() call
+    elif func.get('node_type') == 'Name' and func.get('id') == 'sub':
+        args = node.get('args', [])
+        if len(args) < 2:
+            return False
+        # Second argument: replacement string
+        repl_arg = args[1]
+        if repl_arg.get('node_type') == 'Constant':
+            replacement = repl_arg.get('value')
+        elif repl_arg.get('node_type') == 'Str':
+            replacement = repl_arg.get('s')
+        else:
+            return False
+        if not isinstance(replacement, str):
+            return False
+        if re.search(r'(\\\d+|\\g<\w+>|\$\d+)', replacement):
+            return False  # Compliant
+        return True  # Noncompliant
+    return False
+# Custom function: detects repeated patterns in regex that can match the empty string
+def has_repeated_empty_match_pattern(node, ast_root=None):
+    """
+    Returns True if a regex pattern contains a group that can match the empty string.
+    """
+    import re
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+
+    # Check that this is a re.compile() or re.findall() call
+    func = node.get('func', {})
+    if not isinstance(func, dict) or func.get('node_type') != 'Attribute':
+        return False
+
+    # Check it's .compile() or .findall()
+    if func.get('attr') not in ('compile', 'findall'):
+        return False
+
+    # Check it's from the 're' module
+    value = func.get('value')
+    if not isinstance(value, dict) or value.get('node_type') != 'Name' or value.get('id') != 're':
+        return False
+
+    # Get the regex pattern argument
+    args = node.get('args', [])
+    if not args or not isinstance(args[0], dict):
+        return False
+
+    # Extract the regex string
+    arg = args[0]
+    regex_str = None
+    if arg.get('node_type') == 'Constant':  # Python 3.8+
+        regex_str = arg.get('value')
+    elif arg.get('node_type') == 'Str':  # Older Python versions
+        regex_str = arg.get('s')
+    
+    if not isinstance(regex_str, str):
+        return False
+
+    # Remove 'r' prefix if present for raw strings
+    if regex_str.startswith(('r', 'R')):
+        regex_str = regex_str[1:]
+    if regex_str.startswith(("'", '"')):
+        regex_str = regex_str[1:-1]
+
+    # Check for groups with * or ? quantifiers that can match empty string
+    # Look for:
+    # 1. (...)[*?] - Groups with * or ? quantifier
+    # 2. [^)]+ matches any chars in group except closing paren
+    has_empty_match = re.search(r'\(([^)]+)\)[*?]', regex_str)
+    
+    # If we found a potential empty match pattern, verify it's not a false positive
+    if has_empty_match:
+        # Extract the group content
+        group_content = has_empty_match.group(1)
+        # Check if the group contains alternations or single chars that could match empty
+        if '|' in group_content or len(group_content.strip()) == 1:
+            return True
+
+    return False
+    # Try to extract the regex string from the first argument
+    if len(node.args) > 0:
+        arg = node.args[0]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            pattern = arg.value
+            # Look for repeated group patterns that can match empty string
+            # Examples: (a|b)*, (a|b)?
+            import re
+            # This regex matches any group with * or ? quantifier
+            if re.search(r'(\([^)]+\)[*?])', pattern):
+                return True
+    return False
 def has_redundant_parentheses(node, ast_root=None):
     """
     Detects redundant parentheses in binary operations.
     Returns True if redundant parentheses are found.
     """
     if not isinstance(node, dict):
-        print("[DEBUG] Node is not a dict")
+       # print("[DEBUG] Node is not a dict")
         return False
 
     if node.get('node_type') != 'BinOp':
-        print("[DEBUG] Node is not BinOp")
+        #print("[DEBUG] Node is not BinOp")
         return False
 
     # Get the operands and operator
@@ -16,24 +260,24 @@ def has_redundant_parentheses(node, ast_root=None):
     right = node.get('right')
     op = node.get('op', {}).get('node_type')
 
-    print(f"[DEBUG] Checking BinOp with operator {op}")
+    #print(f"[DEBUG] Checking BinOp with operator {op}")
 
     # Check if operands are also BinOp nodes
     if isinstance(left, dict) and left.get('node_type') == 'BinOp':
         left_op = left.get('op', {}).get('node_type')
         # If the parent operator has higher or equal precedence, parentheses are redundant
         if _has_higher_or_equal_precedence(op, left_op):
-            print(f"[DEBUG] Redundant parentheses found in left operand: {left_op} inside {op}")
+            #print(f"[DEBUG] Redundant parentheses found in left operand: {left_op} inside {op}")
             return True
 
     if isinstance(right, dict) and right.get('node_type') == 'BinOp':
         right_op = right.get('op', {}).get('node_type')
         # If the parent operator has higher precedence, parentheses are redundant
         if _has_higher_precedence(op, right_op):
-            print(f"[DEBUG] Redundant parentheses found in right operand: {right_op} inside {op}")
+            #print(f"[DEBUG] Redundant parentheses found in right operand: {right_op} inside {op}")
             return True
 
-    print("[DEBUG] No redundant parentheses found")
+    #print("[DEBUG] No redundant parentheses found")
     return False
 
 def _has_higher_or_equal_precedence(op1, op2):
@@ -61,7 +305,7 @@ def check_exception_inheritance(node, ast_root=None):
     Returns True if the rule is violated (derives from Exception).
     """
     if not isinstance(node, dict):
-        print("[DEBUG] Node is not a dict, skipping")
+        #print("[DEBUG] Node is not a dict, skipping")
         return False
 
     # If this is an assignment, try to parse it for code strings that might contain custom exceptions
@@ -70,7 +314,7 @@ def check_exception_inheritance(node, ast_root=None):
         if isinstance(value, dict) and value.get('node_type') == 'Constant':
             str_value = value.get('value')
             if isinstance(str_value, str):
-                print(f"[DEBUG] Found code string, trying to parse it")
+                #print(f"[DEBUG] Found code string, trying to parse it")
                 try:
                     import ast
                     tree = ast.parse(str_value)
@@ -111,66 +355,66 @@ def check_exception_inheritance(node, ast_root=None):
 
     elif node.get('node_type') == 'ClassDef':
         class_name = node.get('name', 'unknown')
-        print(f"[DEBUG] Checking inheritance for class {class_name}")
+        #print(f"[DEBUG] Checking inheritance for class {class_name}")
 
         # Check class bases
         bases = node.get('bases', [])
         if not bases:
-            print(f"[DEBUG] Class {class_name} has no bases")
+            #print(f"[DEBUG] Class {class_name} has no bases")
             return False
 
         # Check each base class in the inheritance chain
         for base in bases:
             if not isinstance(base, dict):
-                print(f"[DEBUG] Base for {class_name} is not a dict")
+                #print(f"[DEBUG] Base for {class_name} is not a dict")
                 continue
 
             base_type = base.get('node_type')
-            print(f"[DEBUG] Base type for {class_name} is {base_type}")
+            #print(f"[DEBUG] Base type for {class_name} is {base_type}")
 
             # Handle attribute access (e.g. exceptions.Exception)
             if base_type == 'Attribute':
                 base_name = base.get('attr')
-                print(f"[DEBUG] Found Attribute base {base_name} for {class_name}")
+                #print(f"[DEBUG] Found Attribute base {base_name} for {class_name}")
                 if base_name == 'Exception':
-                    print(f"[DEBUG] Class {class_name} inherits from Exception (attribute)")
+                    #print(f"[DEBUG] Class {class_name} inherits from Exception (attribute)")
                     return True
                 if base_name == 'BaseException':
-                    print(f"[DEBUG] Class {class_name} inherits from BaseException (attribute)")
+                    #print(f"[DEBUG] Class {class_name} inherits from BaseException (attribute)")
                     return False
 
             # Handle direct name reference
             elif base_type == 'Name':
                 base_name = base.get('id')
-                print(f"[DEBUG] Found Name base {base_name} for {class_name}")
+                #print(f"[DEBUG] Found Name base {base_name} for {class_name}")
                 if base_name == 'Exception':
-                    print(f"[DEBUG] Class {class_name} inherits from Exception (direct)")
+                    #print(f"[DEBUG] Class {class_name} inherits from Exception (direct)")
                     return True
                 if base_name == 'BaseException':
-                    print(f"[DEBUG] Class {class_name} inherits from BaseException (direct)")
+                    #print(f"[DEBUG] Class {class_name} inherits from BaseException (direct)")
                     return False
 
                 # Handle inheritance through another class
                 if ast_root and isinstance(ast_root, dict):
-                    print(f"[DEBUG] Searching for parent class {base_name} in AST")
+                    #print(f"[DEBUG] Searching for parent class {base_name} in AST")
                     for parent_node in ast_root.get('body', []):
                         if (isinstance(parent_node, dict) and 
                             parent_node.get('node_type') == 'ClassDef' and 
                             parent_node.get('name') == base_name):
-                            print(f"[DEBUG] Found parent class {base_name}, checking its inheritance")
+                            #print(f"[DEBUG] Found parent class {base_name}, checking its inheritance")
                             if check_exception_inheritance(parent_node, ast_root):
-                                print(f"[DEBUG] Parent class {base_name} violates the rule")
+                                #print(f"[DEBUG] Parent class {base_name} violates the rule")
                                 return True
                             break
 
-        print(f"[DEBUG] Class {class_name} inheritance check complete, no violation found")
+        #print(f"[DEBUG] Class {class_name} inheritance check complete, no violation found")
     return False
 
 def with_taskgroup_single_start_soon_check(node, ast_root=None):
     """
     Returns True if a With or AsyncWith node uses TaskGroup and has exactly one start_soon call in its body.
     """
-    print(f"[DEBUG] Invoked with_taskgroup_single_start_soon_check for node_type: {node.get('node_type')}")
+   # print(f"[DEBUG] Invoked with_taskgroup_single_start_soon_check for node_type: {node.get('node_type')}")
     if not isinstance(node, dict) or node.get('node_type') not in ('With', 'AsyncWith'):
         return False
     # Check context manager is TaskGroup
@@ -358,28 +602,28 @@ def signal_handler_receiver_not_top(node, ast_root=None):
         return False  # Compliant
     return True  # Noncompliant: receiver is not the top decorator
 def django_model_missing_str_method(node, ast_root=None):
-    print('[DEBUG][django_model_missing_str_method] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    #print('[DEBUG][django_model_missing_str_method] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
     if not isinstance(node, dict) or node.get('node_type') != 'ClassDef':
         return False
     bases = node.get('bases', [])
-    print('[DEBUG][django_model_missing_str_method] bases:', bases)
+    #print('[DEBUG][django_model_missing_str_method] bases:', bases)
     is_model = False
     for base in bases:
         if isinstance(base, dict):
-            print('[DEBUG][django_model_missing_str_method] base:', base)
+            #print('[DEBUG][django_model_missing_str_method] base:', base)
             if base.get('attr') == 'Model' or base.get('id') == 'Model':
                 is_model = True
             if base.get('attr') == 'Model' and base.get('value', {}).get('id') == 'models':
                 is_model = True
-    print('[DEBUG][django_model_missing_str_method] is_model:', is_model)
+    #print('[DEBUG][django_model_missing_str_method] is_model:', is_model)
     if not is_model:
         return False
     for item in node.get('body', []):
-        print('[DEBUG][django_model_missing_str_method] body item:', item)
+        #print('[DEBUG][django_model_missing_str_method] body item:', item)
         if isinstance(item, dict) and item.get('node_type') == 'FunctionDef' and item.get('name') == '__str__':
-            print('[DEBUG][django_model_missing_str_method] Found __str__ method')
+            #print('[DEBUG][django_model_missing_str_method] Found __str__ method')
             return False
-    print('[DEBUG][django_model_missing_str_method] __str__ method not found, returning True')
+    #print('[DEBUG][django_model_missing_str_method] __str__ method not found, returning True')
     return True
 # Custom function to detect Django model classes missing __str__ method
 def django_model_missing_str_method(node, ast_root=None):
@@ -410,7 +654,7 @@ def s3_bucket_missing_encryption(node, ast_root=None):
     """
     Returns True if a Call to create_bucket has CreateBucketConfiguration without Encryption key.
     """
-    print('[DEBUG][s3_bucket_missing_encryption] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    # print('[DEBUG][s3_bucket_missing_encryption] Invoked for node:', node.get('node_type'), 'at line', node.get('lineno'))
     if not isinstance(node, dict) or node.get('node_type') != 'Call':
         return False
     func = node.get('func', {})
@@ -420,20 +664,38 @@ def s3_bucket_missing_encryption(node, ast_root=None):
     for kw in keywords:
         if kw.get('arg') == 'CreateBucketConfiguration':
             config = kw.get('value', {})
-            print('[DEBUG][s3_bucket_missing_encryption] config:', config)
+            #print('[DEBUG][s3_bucket_missing_encryption] config:', config)
             if config.get('node_type') == 'Dict':
                 keys = config.get('keys', [])
-                print('[DEBUG][s3_bucket_missing_encryption] keys:', keys)
+                #print('[DEBUG][s3_bucket_missing_encryption] keys:', keys)
                 # Check if any key is 'Encryption'
                 for k in keys:
-                    print('[DEBUG][s3_bucket_missing_encryption] key:', k)
+                    #print('[DEBUG][s3_bucket_missing_encryption] key:', k)
                     if (isinstance(k, dict) and k.get('node_type') == 'Constant' and k.get('value') == 'Encryption'):
-                        print('[DEBUG][s3_bucket_missing_encryption] Found Encryption key')
+                        #print('[DEBUG][s3_bucket_missing_encryption] Found Encryption key')
                         return False
-                print('[DEBUG][s3_bucket_missing_encryption] Encryption key not found, returning True')
+                #print('[DEBUG][s3_bucket_missing_encryption] Encryption key not found, returning True')
                 return True
-            else:
-                print('[DEBUG][s3_bucket_missing_encryption] config is not Dict')
+            # Config is not a Dict
+            #print('[DEBUG][s3_bucket_missing_encryption] config is not Dict')
+            return True
+    return False
+
+# Custom function to detect missing ExpectedBucketOwner parameter in S3 operations
+def s3_operation_missing_expected_bucket_owner(node, ast_root=None):
+    """
+    Returns True if an S3 operation Call node is missing the ExpectedBucketOwner keyword argument.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'Call':
+        return False
+    func = node.get('func', {})
+    # Check for S3 Object operations (delete, put, get, etc.)
+    if func.get('node_type') == 'Attribute' and func.get('attr') in ['delete', 'put', 'get', 'download_file', 'upload_file']:
+        keywords = node.get('keywords', [])
+        for kw in keywords:
+            if kw.get('arg') == 'ExpectedBucketOwner':
+                return False
+        return True
     return False
 def has_csrf_exempt_decorator(node):
     """Return True if a FunctionDef node has a csrf_exempt decorator."""
@@ -608,13 +870,13 @@ def has_duplicate_character_class(node, ast_root=None):
     Returns True if a regex string in a Call node contains a character class with duplicate characters (case-insensitive).
     """
     import re
-    print('[DEBUG][has_duplicate_character_class] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    #print('[DEBUG][has_duplicate_character_class] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
     if not isinstance(node, dict) or node.get('node_type') != 'Call':
-        print('[DEBUG][has_duplicate_character_class] Not a Call node')
+        #print('[DEBUG][has_duplicate_character_class] Not a Call node')
         return False
     args = node.get('args', [])
     if not args or not isinstance(args[0], dict):
-        print('[DEBUG][has_duplicate_character_class] No args or first arg not dict')
+        #print('[DEBUG][has_duplicate_character_class] No args or first arg not dict')
         return False
     regex_str = None
     # Try common keys for string value in AST node
@@ -622,21 +884,21 @@ def has_duplicate_character_class(node, ast_root=None):
         if isinstance(args[0].get(key), str):
             regex_str = args[0][key]
             break
-    print('[DEBUG][has_duplicate_character_class] Regex string:', regex_str)
+    #print('[DEBUG][has_duplicate_character_class] Regex string:', regex_str)
     if not isinstance(regex_str, str):
-        print('[DEBUG][has_duplicate_character_class] Regex string not str')
+        #print('[DEBUG][has_duplicate_character_class] Regex string not str')
         return False
     for match in re.finditer(r'\[(.*?)\]', regex_str):
         char_class = match.group(1)
-        print('[DEBUG][has_duplicate_character_class] Found character class:', char_class)
+        #print('[DEBUG][has_duplicate_character_class] Found character class:', char_class)
         seen = set()
         for c in char_class:
             c_lower = c.lower()
             if c_lower in seen:
-                print('[DEBUG][has_duplicate_character_class] Duplicate found:', c)
+                #print('[DEBUG][has_duplicate_character_class] Duplicate found:', c)
                 return True
             seen.add(c_lower)
-    print('[DEBUG][has_duplicate_character_class] No duplicates found')
+    #print('[DEBUG][has_duplicate_character_class] No duplicates found')
     return False
 def is_typing_generic_import(node, threshold=10):
     """
@@ -644,9 +906,9 @@ def is_typing_generic_import(node, threshold=10):
     Returns True if complexity exceeds threshold.
     Debug print added to verify invocation and show complexity calculation.
     """
-    print(f"[DEBUG] cyclomatic_complexity_of_class called for node: {getattr(node, 'name', None)}")
+    #print(f"[DEBUG] cyclomatic_complexity_of_class called for node: {getattr(node, 'name', None)}")
     if not hasattr(node, 'body'):
-        print("[DEBUG] Node has no body attribute.")
+        #print("[DEBUG] Node has no body attribute.")
         return False
     complexity = 0
     for item in node.body:
@@ -654,7 +916,7 @@ def is_typing_generic_import(node, threshold=10):
             for subitem in item.body:
                 if isinstance(subitem, (ast.If, ast.For, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.AsyncFor)):
                     complexity += 1
-    print(f"[DEBUG] Calculated complexity for class {getattr(node, 'name', None)}: {complexity}")
+    #print(f"[DEBUG] Calculated complexity for class {getattr(node, 'name', None)}: {complexity}")
     return complexity > threshold
     # Check if the body contains an assignment to a collection element
     body = node.get('body', [])
@@ -851,18 +1113,18 @@ def is_unused_local_variable(node, ast_root=None):
     """
     Returns True if a local variable assigned in an Assign node is never used in the function body.
     """
-    print('[DEBUG][is_unused_local_variable] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    #print('[DEBUG][is_unused_local_variable] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
     if not isinstance(node, dict) or node.get('node_type') != 'Assign':
-        print('[DEBUG][is_unused_local_variable] Node is not Assign')
+       #print('[DEBUG][is_unused_local_variable] Node is not Assign')
         return False
     targets = node.get('targets', [])
     if not targets or not isinstance(targets[0], dict):
-        print('[DEBUG][is_unused_local_variable] No valid targets')
+        #print('[DEBUG][is_unused_local_variable] No valid targets')
         return False
     var_name = targets[0].get('id')
-    print('[DEBUG][is_unused_local_variable] Variable name:', var_name)
+    #print('[DEBUG][is_unused_local_variable] Variable name:', var_name)
     if not var_name:
-        print('[DEBUG][is_unused_local_variable] No variable name')
+        #print('[DEBUG][is_unused_local_variable] No variable name')
         return False
     # Find the nearest FunctionDef parent, or use ast_root if provided
     func_root = None
@@ -874,13 +1136,13 @@ def is_unused_local_variable(node, ast_root=None):
         root = root.get('__parent__')
     if not func_root and ast_root:
         func_root = ast_root
-    print('[DEBUG][is_unused_local_variable] Function root node_type:', func_root.get('node_type') if func_root else None)
+    #print('[DEBUG][is_unused_local_variable] Function root node_type:', func_root.get('node_type') if func_root else None)
     used = False
     def search_usage(n):
         nonlocal used
         if isinstance(n, dict):
             if n.get('node_type') == 'Name' and n.get('id') == var_name:
-                print('[DEBUG][is_unused_local_variable] Usage found for:', var_name, 'at line', n.get('lineno'))
+                #print('[DEBUG][is_unused_local_variable] Usage found for:', var_name, 'at line', n.get('lineno'))
                 used = True
             for v in n.values():
                 search_usage(v)
@@ -890,21 +1152,21 @@ def is_unused_local_variable(node, ast_root=None):
     if func_root:
         search_usage(func_root)
     else:
-        print('[DEBUG][is_unused_local_variable] No function root found, searching from node')
+        #print('[DEBUG][is_unused_local_variable] No function root found, searching from node')
         search_usage(node)
-    print('[DEBUG][is_unused_local_variable] Used:', used)
+    #print('[DEBUG][is_unused_local_variable] Used:', used)
     return not used
 # Custom function to detect unused imports
 def is_unused_import(node, ast_root=None):
     """
     Returns True if an import in an Import node is unused in the AST.
     """
-    print('[DEBUG][is_unused_import] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+    #print('[DEBUG][is_unused_import] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
     if not isinstance(node, dict) or node.get('node_type') != 'Import':
-        print('[DEBUG][is_unused_import] Node is not Import')
+        #print('[DEBUG][is_unused_import] Node is not Import')
         return False
     imported_names = [alias.get('name') for alias in node.get('names', []) if isinstance(alias, dict)]
-    print('[DEBUG][is_unused_import] Imported names:', imported_names)
+    #print('[DEBUG][is_unused_import] Imported names:', imported_names)
     root = ast_root if ast_root is not None else node
     while root.get('__parent__'):
         root = root.get('__parent__')
@@ -924,25 +1186,25 @@ def is_unused_import(node, ast_root=None):
             for item in n:
                 collect_used_names(item)
     collect_used_names(root)
-    print('[DEBUG][is_unused_import] Used names in AST:', used_names)
+    #print('[DEBUG][is_unused_import] Used names in AST:', used_names)
     unused_found = False
     for name in imported_names:
         if name not in used_names:
-            print('[DEBUG][is_unused_import] Unused import detected:', name)
+            #print('[DEBUG][is_unused_import] Unused import detected:', name)
             unused_found = True
     if unused_found:
         return True
-    print('[DEBUG][is_unused_import] All imports are used')
+    #print('[DEBUG][is_unused_import] All imports are used')
     return False
 # Shared custom function for bare raise statement context detection
 def is_unread_private_attribute(node, ast_root=None):
     """
     Returns True if a private attribute (name starts with '_') assigned in a class is never read anywhere in the class.
     """
-    print('[DEBUG][is_unread_private_attribute] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
+   #print('[DEBUG][is_unread_private_attribute] Called for node:', node.get('node_type'), 'at line', node.get('lineno'))
     targets = node.get('targets', [])
     if not targets or not isinstance(targets[0], dict):
-        print('[DEBUG][is_unread_private_attribute] No valid targets')
+        #print('[DEBUG][is_unread_private_attribute] No valid targets')
         return False
     target = targets[0]
     attr_name = None
@@ -950,9 +1212,9 @@ def is_unread_private_attribute(node, ast_root=None):
         attr_name = target.get('attr')
     elif target.get('node_type') == 'Name':
         attr_name = target.get('id')
-    print('[DEBUG][is_unread_private_attribute] Attribute name:', attr_name)
+    #print('[DEBUG][is_unread_private_attribute] Attribute name:', attr_name)
     if not attr_name or not attr_name.startswith('_') or attr_name.startswith('__'):
-        print('[DEBUG][is_unread_private_attribute] Not a private attribute')
+        #print('[DEBUG][is_unread_private_attribute] Not a private attribute')
         return False
     # Find the nearest ClassDef ancestor by walking up the parent chain
     current = node
@@ -960,27 +1222,27 @@ def is_unread_private_attribute(node, ast_root=None):
     while current:
         parent = current.get('__parent__')
         if parent:
-            print('[DEBUG][is_unread_private_attribute] Traversing parent node_type:', parent.get('node_type'))
+           #print('[DEBUG][is_unread_private_attribute] Traversing parent node_type:', parent.get('node_type'))
             if parent.get('node_type') == 'ClassDef':
                 class_node = parent
                 break
         current = parent
-    print('[DEBUG][is_unread_private_attribute] Class node_type:', class_node.get('node_type') if class_node else None)
+   # print('[DEBUG][is_unread_private_attribute] Class node_type:', class_node.get('node_type') if class_node else None)
     if not class_node:
-        print('[DEBUG][is_unread_private_attribute] No ClassDef ancestor found')
+        #print('[DEBUG][is_unread_private_attribute] No ClassDef ancestor found')
         return False
     used = False
     def search_usage(n):
         nonlocal used
         if n is node:
-            print(f'[DEBUG][is_unread_private_attribute] Skipping assignment node itself at line {n.get("lineno")}')
+            #print(f'[DEBUG][is_unread_private_attribute] Skipping assignment node itself at line {n.get("lineno")}')
             return  # Skip the assignment node itself
         if isinstance(n, dict):
             if n.get('node_type') == 'Attribute' and n.get('attr') == attr_name:
-                print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
+                #print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
                 used = True
             elif n.get('node_type') == 'Name' and n.get('id') == attr_name:
-                print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
+                #print('[DEBUG][is_unread_private_attribute] Usage found for:', attr_name, 'at line', n.get('lineno'))
                 used = True
             # Also skip nested Assign nodes for the same attribute
             if n.get('node_type') == 'Assign':
@@ -993,7 +1255,7 @@ def is_unread_private_attribute(node, ast_root=None):
                     elif target.get('node_type') == 'Name':
                         target_name = target.get('id')
                 if target_name == attr_name and n is not node:
-                    print(f'[DEBUG][is_unread_private_attribute] Skipping nested assignment for {attr_name} at line {n.get("lineno")}')
+                    #print(f'[DEBUG][is_unread_private_attribute] Skipping nested assignment for {attr_name} at line {n.get("lineno")}')
                     return
             for v in n.values():
                 search_usage(v)
@@ -1001,7 +1263,7 @@ def is_unread_private_attribute(node, ast_root=None):
             for item in n:
                 search_usage(item)
     search_usage(class_node)
-    print('[DEBUG][is_unread_private_attribute] Used:', used)
+    #print('[DEBUG][is_unread_private_attribute] Used:', used)
     return not used
 # Custom function to detect unused private methods
 def is_unused_private_method(node, ast_root=None):
@@ -1103,7 +1365,7 @@ def is_unnecessary_equality_check(node):
                     if left.get('node_type') == 'Name':
                         left_names.add(left.get('id'))
         if len(left_names) == 1 and len(values) > 1:
-            print('[DEBUG][is_unnecessary_equality_check] Triggered on node:', node)
+            #print('[DEBUG][is_unnecessary_equality_check] Triggered on node:', node)
             return True
     return False
 
@@ -1117,7 +1379,7 @@ def cognitive_complexity_check_impl(node, ast_root=None):
     # Expect the node as a dict produced by ast_to_dict_with_parent
     if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
         return False
-    print(f"[DEBUG][cognitive_complexity_check_impl] Called for node: {node.get('node_type')} at line {node.get('lineno')}")
+    #print(f"[DEBUG][cognitive_complexity_check_impl] Called for node: {node.get('node_type')} at line {node.get('lineno')}")
     body = node.get('body', [])
     if not isinstance(body, list):
         return False
@@ -1425,6 +1687,23 @@ def is_weak_password(password):
     """Check if a password is considered weak"""
     if not isinstance(password, str) or len(password) < 3:
         return False
+    password_lower = password.lower()
+    weak_passwords = [
+        '123456', 'password', 'admin', 'root', 'user', 'guest', 'test',
+        'admin123', 'password123', 'root123', 'user123', 'test123',
+        'qwerty', 'abc123', '111111', '000000', 'letmein', 'welcome',
+        'monkey', 'dragon', 'master', 'secret', 'login', 'pass',
+        '12345678', '1234567890', 'password1', 'admin1', 'secret123'
+    ]
+    if password_lower in weak_passwords:
+        return True
+    if password.isdigit() and len(password) <= 8:
+        return True
+    if len(password) <= 6:
+        return True
+    if all(ord(password[i]) == ord(password[0]) + i for i in range(len(password))):
+        return True
+    return False
 
 def check_union_type_expressions_preferred(node):
     """
@@ -1785,6 +2064,147 @@ def hardcoded_passwords_are_securitysensitive(node):
                 return True
     return False
 
+# Custom function: checks if a resource is initialized inside a lambda handler function
+def resource_initialized_inside_lambda_handler_check(node, ast_root=None):
+    """
+    Returns True if a resource is initialized inside a function named 'lambda_handler'.
+    Resource initialization is detected by instantiation or function calls that return resources.
+    """
+    if not isinstance(node, dict) or node.get('node_type') != 'FunctionDef':
+        return False
+    func_name = node.get('name', '')
+    # Check for typical lambda handler names
+    if not func_name.lower().startswith('lambda_handler'):
+        return False
+
+    # Resource initialization patterns to check
+    aws_resource_patterns = {
+        'connect_to_db', 'create_connection', 'connect', 'create_client',
+        'resource', 'client', 'from_service', 'session', 'create_session'
+    }
+    aws_service_patterns = {
+        'dynamodb', 's3', 'rds', 'sns', 'sqs', 'lambda', 'kinesis',
+        'stepfunctions', 'athena', 'redshift', 'secretsmanager'
+    }
+
+    def check_for_aws_resource_init(value):
+        """Check if a node represents AWS resource initialization"""
+        if not isinstance(value, dict):
+            return False
+        node_type = value.get('node_type')
+        
+        # Direct boto3 resource/client calls
+        if node_type == 'Call':
+            func = value.get('func', {})
+            if func.get('node_type') == 'Attribute':
+                # Check for boto3.resource('s3') etc
+                if func.get('attr') in aws_resource_patterns:
+                    value_node = func.get('value', {})
+                    if (value_node.get('node_type') == 'Name' and 
+                        value_node.get('id') in {'boto3', 'aws'}):
+                        return True
+                    # Check for client.from_service() type calls
+                    if value_node.get('node_type') == 'Attribute' and value_node.get('attr') in aws_service_patterns:
+                        return True
+            # Check for direct calls to connection functions
+            elif func.get('node_type') == 'Name':
+                if func.get('id') in aws_resource_patterns:
+                    return True
+            
+            # Check arguments for AWS service names
+            args = value.get('args', [])
+            for arg in args:
+                if isinstance(arg, dict) and arg.get('node_type') == 'Constant':
+                    arg_value = arg.get('value', '')
+                    if isinstance(arg_value, str) and arg_value.lower() in aws_service_patterns:
+                        return True
+                    
+            # Check keywords for AWS service names
+            keywords = value.get('keywords', [])
+            for kw in keywords:
+                if isinstance(kw, dict) and kw.get('arg') == 'service_name':
+                    value_node = kw.get('value', {})
+                    if value_node.get('node_type') == 'Constant':
+                        service = value_node.get('value', '')
+                        if isinstance(service, str) and service.lower() in aws_service_patterns:
+                            return True
+        return False
+
+    def is_resource_init(stmt):
+        """Check if a statement contains resource initialization"""
+        if not isinstance(stmt, dict):
+            return False
+            
+        # Check node type to handle different AST structures
+        node_type = stmt.get('node_type')
+        
+        # Direct assignments
+        if node_type == 'Assign':
+            targets = stmt.get('targets', [])
+            if not targets:
+                return False
+                
+            value = stmt.get('value', {})
+            return check_for_aws_resource_init(value)
+            
+        # If statements and other control flows
+        elif node_type == 'If':
+            body = stmt.get('body', [])
+            orelse = stmt.get('orelse', [])
+            
+            # Check both if and else branches
+            for sub_stmt in body + orelse:
+                if is_resource_init(sub_stmt):
+                    return True
+                    
+        # For statements
+        elif node_type in ('For', 'AsyncFor'):
+            for sub_stmt in stmt.get('body', []) + stmt.get('orelse', []):
+                if is_resource_init(sub_stmt):
+                    return True
+                    
+        # While statements
+        elif node_type == 'While':
+            for sub_stmt in stmt.get('body', []) + stmt.get('orelse', []):
+                if is_resource_init(sub_stmt):
+                    return True
+                    
+        # Try blocks
+        elif node_type == 'Try':
+            # Check try body
+            for sub_stmt in stmt.get('body', []):
+                if is_resource_init(sub_stmt):
+                    return True
+            # Check except handlers
+            for handler in stmt.get('handlers', []):
+                if isinstance(handler, dict):
+                    for sub_stmt in handler.get('body', []):
+                        if is_resource_init(sub_stmt):
+                            return True
+            # Check else
+            for sub_stmt in stmt.get('orelse', []):
+                if is_resource_init(sub_stmt):
+                    return True
+            # Check finally
+            for sub_stmt in stmt.get('finalbody', []):
+                if is_resource_init(sub_stmt):
+                    return True
+                    
+        # With statements
+        elif node_type == 'With':
+            for sub_stmt in stmt.get('body', []):
+                if is_resource_init(sub_stmt):
+                    return True
+                    
+        return False
+
+    # Check all statements in function body
+    for stmt in node.get('body', []):
+        if is_resource_init(stmt):
+            return True
+            
+    return False
+
 # Auto-generated function for metadata creation
 def hardcoded_secrets_are_securitysensitive(node):
     """Detects hardcoded secrets in assignments or function arguments."""
@@ -2071,7 +2491,10 @@ def all_except_blocks_should_be_able_to_catch_exceptions_check(node):
 
 # Auto-generated function for metadata creation
 def is_async_function(node):
-    return node.type == 'FunctionDef' and node.name == 'lambda_handler' and node.body.value.value.async_value
+    """
+    Stub function for is_async_function. Implement detection logic here.
+    """
+    pass
 
 
 # Auto-generated function for metadata creation
@@ -2216,14 +2639,9 @@ def secret_detection(node):
 
 # Auto-generated function for metadata creation
 def is_implicit_concatenation(node):
-    # Check for implicit concatenation of bytes and strings
-    for child in node.children:
-        if isinstance(child, ast.Num):
-            parent = getattr(node, 'parent', None)
-            if parent and hasattr(parent, 'body') and isinstance(parent, ast.BinOp):
-                if (isinstance(parent.left, ast.Str) or isinstance(parent.left, ast.Bytes) or
-                    isinstance(parent.right, ast.Str) or isinstance(parent.right, ast.Bytes)):
-                    return child.n in parent.body
+    """
+    Stub function for is_implicit_concatenation. Implement detection logic here.
+    """
     return False
 
 
@@ -2284,14 +2702,14 @@ def check_cloudwatch_namespace(node):
                     if isinstance(namespace, str) and namespace.startswith('aws'):
                         return {
                             'message': f"CloudWatch metric namespace '{namespace}' should not start with 'aws'",
-                            'line': value.get('lineno', 1)
+                            'line': node.get('lineno', 1)
                         }
     return False
 
 
 # Auto-generated function for metadata creation
 def custom_check_repeated_empty_regex(node):
-    """Auto-generated STUB for repeated_patterns_in_regular_expressions_should_not_match_the_empty_string. Implement detection logic here."""
+    """Detects regex patterns that can match the empty string and may cause performance issues."""
     # TODO: implement detection that returns True when vulnerability exists
     return False
 
@@ -2494,3 +2912,27 @@ def lambda_handler_compliance_check(node):
                     'line': node.get('lineno', 1)
                 })
     return findings if findings else False
+
+def has_reluctant_quantifier_followed_by_empty_match(node, ast_root=None):
+    """
+    Returns True if a regex pattern contains a reluctant quantifier (e.g., .*?) followed by an expression that can match the empty string (e.g., .*
+    )
+    """
+    # Only process Call nodes for re.compile
+    if node.get("node_type") != "Call":
+        return False
+    func = node.get("func", {})
+    if func.get("attr") != "compile":
+        return False
+    # Get the regex string argument
+    args = node.get("args", [])
+    if not args or not isinstance(args[0], dict):
+        return False
+    regex_str = args[0].get("value")
+    if not isinstance(regex_str, str):
+        return False
+    # Look for a reluctant quantifier followed by an expression that can match empty string
+    import re
+    # Example: .*? followed by .*
+    pattern = r"\.\*\?\.\*"
+    return bool(re.search(pattern, regex_str))

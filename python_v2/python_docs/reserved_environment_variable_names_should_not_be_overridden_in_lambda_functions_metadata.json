@@ -48,22 +48,12 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node.body.statements[*].expression.value",
-      "os"
-    ],
-    "forbidden_values": [
-      "AWS_REGION",
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY"
+    "node_types": ["Assign"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "reserved_env_var_override_lambda"
+      }
     ]
-  },
-  "metadata": {
-    "filename": "reserved_environment_variable_names_should_not_be_overridden_in_lambda_functions.json",
-    "rule_id": "reserved_environment_variable_names_should_not_be_overridden_in_lambda_functions",
-    "title": "Avoid overriding reserved environment variable names in Lambda functions",
-    "status": "ready",
-    "defaultSeverity": "Major"
   }
 }

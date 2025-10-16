@@ -44,17 +44,11 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "n",
-      "body",
-      "elts",
-      "0",
-      "value",
-      "type"
-    ],
-    "forbidden_values": [
-      "Comment"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "commented_out_code_section_check"
+      }
     ]
   },
   "metadata": {

@@ -50,17 +50,11 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "not_contains",
-    "property_path": [
-      "body",
-      "statements",
-      "index",
-      "value",
-      "name"
-    ],
-    "forbidden_values": [
-      "RETURN",
-      "YIELD"
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "return_and_yield_in_same_function"
+      }
     ]
   },
   "metadata": {

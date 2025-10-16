@@ -46,17 +46,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "name",
-      "value",
-      "func",
-      "name"
-    ],
-    "forbidden_values": [
-      "random",
-      "random.random"
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["func", "attr"],
+        "forbidden_values": ["random"]
+      }
     ]
   },
   "metadata": {

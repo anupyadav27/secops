@@ -285,7 +285,7 @@ def scan_file(py_file, rules):
                         # print(f"[ERROR] Rule {rule.rule_id} raised exception: {e}")
                         continue
             if findings:
-                # print(f"[DEBUG] Adding {len(findings)} findings for rule {rule.rule_id} to all_findings.")
+                print(f"[DEBUG] Adding {len(findings)} findings for rule {rule.rule_id} to all_findings.")
                 all_findings.extend(findings)
         except Exception as e:
             # print(f"[DEBUG] Error applying rule {rule.metadata.get('rule_id')}: {e}")
@@ -314,7 +314,7 @@ def clean_for_json(obj, depth=0, max_depth=10):
 # Step 8: Reporting
 if __name__ == "__main__":
     metadata_map = load_rule_metadata()
-    # print(f"\nNumber of rule metadata files loaded: {len(metadata_map)}")
+    print(f"\nNumber of rule metadata files loaded: {len(metadata_map)}")
     rules = load_rules(metadata_map)
     results = scan_file(py_file, rules)
     

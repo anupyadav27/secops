@@ -50,47 +50,11 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "ast.FunctionDef",
-      "body",
-      "stmt",
-      "1:expression"
-    ],
-    "forbidden_values": [
-      "ast.Assign",
+    "node_types": ["FunctionDef"],
+    "checks": [
       {
-        "check_type": "regex",
-        "regex": "Assignment(.*=)Assignment"
-      }
-    ],
-    "required_present": [
-      {
-        "property_path": [
-          "ast.FunctionDef",
-          "args",
-          "args"
-        ],
-        "check_type": "property_comparison",
-        "forbidden_values": [
-          "ast.Arg"
-        ]
-      },
-      {
-        "property_path": [
-          "ast.FunctionDef",
-          "args",
-          "vararg"
-        ],
-        "check_type": "required_present"
-      },
-      {
-        "property_path": [
-          "ast.FunctionDef",
-          "args",
-          "kwarg"
-        ],
-        "check_type": "required_present"
+        "type": "custom_function",
+        "function": "resource_initialized_inside_lambda_handler_check"
       }
     ]
   },

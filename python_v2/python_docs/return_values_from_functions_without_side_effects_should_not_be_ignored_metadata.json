@@ -47,9 +47,13 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "forbidden_empty",
-    "property_path": [
-      "node.body.statements[0].expression.value"
+    "node_types": ["FunctionDef"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "check_function_returns_value",
+        "function_code": "def check_function_returns_value(node):\n    # Skip special methods and test methods\n    name = node.get('name', '')\n    if name.startswith('test_') or name.startswith('__'):\n        return False\n\n    # Skip if function has decorators\n    if node.get('decorator_list'):\n        return False\n\n    # Don't check constructors\n    if name == '__init__':\n        return False\n\n    # Check function body for returns with values\n    for stmt in node.get('body', []):\n        if not isinstance(stmt, dict):\n            continue\n        \n        # Found a return with a value\n        if stmt.get('node_type') == 'Return' and stmt.get('value'):\n            return False\n\n        # Function has side effects like print or global\n        if stmt.get('node_type') == 'Global':\n            return False\n        if stmt.get('node_type') == 'Expr' and isinstance(stmt.get('value'), dict) and stmt['value'].get('node_type') == 'Call':\n            return False\n\n    # No proper return value found and no side effects detected\n    return True"
+      }
     ]
   },
   "metadata": {

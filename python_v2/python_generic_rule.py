@@ -781,26 +781,42 @@ class PythonGenericRule:
 
 # For backward compatibility
 GenericRule = PythonGenericRule
+
+     
 '''
+#!/usr/bin/env python3
+"""
+Python Generic Rule Engine - Enhanced Version
+
+A generic rule engine that can apply any rule based on JSON metadata to Python AST.
+Handles AST traversal, rule applicability checking, and pattern matching.
+"""
+
+import re
+import ast
+import json
+import logic_implementations
+from typing import Any, Dict, List, Optional, Union
 def _make_finding(self, filename, node_type, node_name, property_path, value, message=None, node=None):
-        """Create a finding with Python-specific information."""
-        finding = {
-            "rule_id": self.rule_id,
-            "message": message or self.message,
-            "node": f"{node_type}.{node_name}",
-            "file": filename,
-            "property_path": property_path,
-            "value": value,
-            "status": "violation"
-        }
-        if node:
-            finding["line"] = node.get('lineno', 1)
-            finding["column"] = node.get('col_offset', 0)
-        if "severity" in self.metadata:
-            finding["severity"] = self.metadata["severity"]
-        elif "defaultSeverity" in self.metadata:
-            finding["severity"] = self.metadata["defaultSeverity"]
-        return finding
+    """Create a finding with Python-specific information."""
+    finding = {
+        "rule_id": self.rule_id,
+        "message": message or self.message,
+        "node": f"{node_type}.{node_name}",
+        "file": filename,
+        "property_path": property_path,
+        "value": value,
+        "status": "violation"
+    }
+    if node:
+        finding["line"] = node.get('lineno', 1)
+        finding["column"] = node.get('col_offset', 0)
+    if "severity" in self.metadata:
+        finding["severity"] = self.metadata["severity"]
+    elif "defaultSeverity" in self.metadata:
+        finding["severity"] = self.metadata["defaultSeverity"]
+    return finding
+
 def ast_to_dict_with_parent(node, parent=None):
     import ast
     if isinstance(node, ast.AST):
@@ -952,6 +968,8 @@ class PythonGenericRule:
         """Apply a single generic check with proper node type resolution and error handling."""
         findings = []
         check_type = check.get("type") or check.get("check_type")
+        node_types = check.get("node_types", self.logic.get("node_types", []))
+        #print(f"[DEBUG][_apply_single_check] Attempting check_type: {check_type} for node_types: {node_types}")
 
         # Resolve node_types: check-specific, fallback to root
         if is_root_check:
@@ -1047,12 +1065,7 @@ class PythonGenericRule:
         starts_with = check.get("starts_with")
         equals = check.get("equals")
         condition = check.get("condition")
-        
-        # print(f"[DEBUG] Property comparison check details:")
-        # print(f"[DEBUG] - Property path: {property_path}")
-        # print(f"[DEBUG] - Starts with: {starts_with}")
-        # print(f"[DEBUG] - Node type: {node_type}")
-        # print(f"[DEBUG] - Node structure: {node if isinstance(node, dict) else type(node)}")
+        comparison = check.get("comparison") or self.logic.get("comparison")
 
         if not property_path:
             return findings
@@ -1061,55 +1074,44 @@ class PythonGenericRule:
         if condition:
             cond_path = condition.get("property") or condition.get("path")
             cond_equals = condition.get("equals")
-            # print(f"[DEBUG] Checking condition:")
-            # print(f"[DEBUG] - Condition path: {cond_path}")
-            # print(f"[DEBUG] - Condition equals: {cond_equals}")
             if cond_path and cond_equals:
                 cond_values = self._get_property_values(node, cond_path)
-                # print(f"[DEBUG] - Condition values found: {cond_values}")
                 condition_met = False
                 for found_path, value in cond_values:
-                    # print(f"[DEBUG] - Checking condition value: {value}")
                     if value == cond_equals:
                         condition_met = True
-                        # print(f"[DEBUG] - Condition met!")
                         break
                 if not condition_met:
-                    # print(f"[DEBUG] - Condition not met, skipping")
                     return findings
 
-        # First check condition if present
-        condition_met = True
-        if condition:
-            cond_property = condition.get('property')
-            cond_equals = condition.get('equals')
-            # print(f"[DEBUG] Checking condition: property={cond_property} equals={cond_equals}")
-            
-            cond_values = self._get_property_values(node, cond_property)
-            condition_met = False
-            for _, cond_value in cond_values:
-                # print(f"[DEBUG] Checking condition value: {cond_value}")
-                if cond_value == cond_equals:
-                    condition_met = True
-                    break
-            
-            if not condition_met:
-                # print("[DEBUG] Condition not met, skipping value checks")
-                return findings
+        # Duplicate comparison logic for related If/IfExp statements
+        if comparison == "duplicate":
+            # Only run for If/IfExp nodes
+            if node.get("node_type") in ["If", "IfExp"]:
+                parent = node.get("__parent__")
+                if parent and "body" in parent:
+                    current_test = node.get("test")
+                    for sibling in parent["body"]:
+                        if sibling is node or sibling.get("node_type") not in ["If", "IfExp"]:
+                            continue
+                        # Deep compare ASTs for test property
+                        if self._deep_compare_ast(current_test, sibling.get("test")):
+                            finding = self._make_finding(
+                                filename, node_type, node_name, property_path, current_test,
+                                check.get('message_on_duplicate', self.message), node
+                            )
+                            unique_key = (self.rule_id, filename, node.get('lineno', 0), str(property_path))
+                            if unique_key not in seen_findings:
+                                seen_findings.add(unique_key)
+                                findings.append(finding)
+                            break
+            return findings
 
         # Get property values to check
         property_values = self._get_property_values(node, property_path)
-        # print(f"[DEBUG] Found {len(property_values)} values for path {property_path}")
-        
         forbidden_values = check.get("forbidden_values", [])
         for found_path, value in property_values:
-            print(f"[DEBUG][property_comparison] found_path: {found_path}, value: {value}, forbidden_values: {forbidden_values}")
-            # Debug print for ExceptHandler node type
-            if node_type == "ExceptHandler" and found_path == ["type", "node_type"]:
-                print(f"[DEBUG] Checking ExceptHandler at line {node.get('lineno')}, type.node_type: {value}")
-            # Check forbidden_values
             if forbidden_values and value in forbidden_values:
-                print(f"[DEBUG][property_comparison] MATCHED forbidden value: {value}")
                 finding = self._make_finding(
                     filename, node_type, node_name, found_path, value,
                     check.get('message', self.message), node
@@ -1118,7 +1120,6 @@ class PythonGenericRule:
                 if unique_key not in seen_findings:
                     seen_findings.add(unique_key)
                     findings.append(finding)
-            # Existing starts_with logic
             if starts_with and isinstance(value, str):
                 if value.startswith(starts_with):
                     finding = self._make_finding(
@@ -1129,7 +1130,50 @@ class PythonGenericRule:
                     if unique_key not in seen_findings:
                         seen_findings.add(unique_key)
                         findings.append(finding)
+            regex_pattern = check.get("regex")
+            if regex_pattern and isinstance(value, str):
+                import re
+                if re.search(regex_pattern, value):
+                    finding = self._make_finding(
+                        filename, node_type, node_name, found_path, value,
+                        check.get('message', self.message), node
+                    )
+                    unique_key = (self.rule_id, filename, finding.get('line', 0), str(finding.get('property_path', [])))
+                    if unique_key not in seen_findings:
+                        seen_findings.add(unique_key)
+                        findings.append(finding)
         return findings
+
+    def _deep_compare_ast(self, obj1, obj2, visited=None):
+        """Deep compare two AST objects, ignoring line numbers and col offsets, avoiding infinite recursion."""
+        if visited is None:
+            visited = set()
+        obj1_id = id(obj1)
+        obj2_id = id(obj2)
+        pair_id = (obj1_id, obj2_id)
+        if pair_id in visited:
+            return True
+        visited.add(pair_id)
+        if type(obj1) != type(obj2):
+            return False
+        if isinstance(obj1, dict) and isinstance(obj2, dict):
+            keys1 = set(obj1.keys()) - {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
+            keys2 = set(obj2.keys()) - {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
+            if keys1 != keys2:
+                return False
+            for key in keys1:
+                if not self._deep_compare_ast(obj1.get(key), obj2.get(key), visited):
+                    return False
+            return True
+        elif isinstance(obj1, list) and isinstance(obj2, list):
+            if len(obj1) != len(obj2):
+                return False
+            for i in range(len(obj1)):
+                if not self._deep_compare_ast(obj1[i], obj2[i], visited):
+                    return False
+            return True
+        else:
+            return obj1 == obj2
 
     def _apply_exists_check(self, check, node, filename, node_type, node_name, seen_findings):
         """Apply exists checks (property must exist)."""
@@ -1327,7 +1371,7 @@ class PythonGenericRule:
                             results.append((new_full_path, item))
                         else:
                             stack.append((item, remaining_path, new_full_path))
-            elif current_key.startswith('[') and current_key.endswith(']'):
+            elif isinstance(current_key, str) and current_key.startswith('[') and current_key.endswith(']'):
                 # For array index, get specific item
                 try:
                     idx = int(current_key[1:-1])
@@ -1446,95 +1490,81 @@ class PythonGenericRule:
                     stack.append((item, path + [f"[{idx}]"]))
         return found_nodes
 
-    def _get_property_values(self, node, property_path, visited=None, depth=0, max_depth=20):
-        if not isinstance(node, dict) or not property_path:
+    def _get_properties_with_wildcard(self, obj, prop_path, depth=0, max_depth=100):
+        # Recursion-safe: track visited objects
+        visited = getattr(self, '_visited_wildcard', None)
+        if visited is None:
+            visited = set()
+            self._visited_wildcard = visited
+
+        obj_id = id(obj)
+        if obj_id in visited:
+            # print(f"[SAFE EXIT] Already visited object at depth {depth}, avoiding recursion.")
             return []
-        # Convert path to list if it's a string with dot notation
-        if isinstance(property_path, str):
-            parts = []
-            current = ""
-            in_brackets = False
-            for char in property_path:
-                if char == '[':
-                    in_brackets = True
-                    if current:
-                        parts.append(current)
-                    current = char
-                elif char == ']':
-                    in_brackets = False
-                    current += char
-                    parts.append(current)
-                    current = ""
-                elif char == '.' and not in_brackets:
-                    if current:
-                        parts.append(current)
-                        current = ""
-                else:
-                    current += char
-            if current:
-                parts.append(current)
-            property_path = parts
-        stack = [(node, property_path, [])]
+        visited.add(obj_id)
+
+        if depth > max_depth:
+            # print(f"[RECURSION WARNING] Max recursion depth ({max_depth}) reached at path: {prop_path}")
+            return []
+
+        if not isinstance(obj, (dict, list)):
+            if not prop_path:
+                return [([], obj)]
+            return []
+
+        if not prop_path:
+            return [([], obj)]
+
         results = []
-        visited_nodes = set()
-        while stack:
-            current_node, current_path, full_path = stack.pop()
-            if not isinstance(current_node, (dict, list)):
-                continue
-            node_id = id(current_node)
-            if node_id in visited_nodes:
-                continue
-            visited_nodes.add(node_id)
-            if not current_path:
-                continue
-            current_key = current_path[0]
-            remaining_path = current_path[1:] if len(current_path) > 1 else []
-            if current_key == '*':
-                items = current_node.items() if isinstance(current_node, dict) else enumerate(current_node)
-                for key, value in items:
-                    if isinstance(current_node, dict) and key in ['lineno', 'col_offset', 'end_lineno', 'node_type', '__parent__', 'ctx', 'parent']:
+        key = prop_path[0]
+        rest = prop_path[1:]
+        # Expanded skip_keys to include more cycle-prone fields
+        skip_keys = ['lineno', 'col_offset', 'node_type', '__parent__', 'ctx', 'body', 'args', 'keywords']
+
+        if isinstance(obj, dict):
+            if key == "*":
+                for k, v in obj.items():
+                    if k in skip_keys:
                         continue
-                    key_str = str(key) if isinstance(current_node, dict) else f"[{key}]"
-                    new_full_path = full_path + [key_str]
-                    if not remaining_path:
-                        results.append((new_full_path, value))
-                    else:
-                        if isinstance(value, dict) or isinstance(value, list):
-                            stack.append((value, remaining_path, new_full_path))
-            elif current_key == '[*]':
-                if isinstance(current_node, list):
-                    for idx, item in enumerate(current_node):
-                        new_full_path = full_path + [f"[{idx}]"]
-                        if not remaining_path:
-                            results.append((new_full_path, item))
-                        else:
-                            stack.append((item, remaining_path, new_full_path))
-            elif (isinstance(current_key, str) and current_key.startswith('[') and current_key.endswith(']')):
-                try:
-                    idx = int(current_key[1:-1])
-                except ValueError:
-                    idx = None
-                if idx is not None and isinstance(current_node, list) and 0 <= idx < len(current_node):
-                    item = current_node[idx]
-                    new_full_path = full_path + [current_key]
-                    if not remaining_path:
-                        results.append((new_full_path, item))
-                    else:
-                        stack.append((item, remaining_path, new_full_path))
-            elif isinstance(current_key, int):
-                if isinstance(current_node, list) and 0 <= current_key < len(current_node):
-                    item = current_node[current_key]
-                    new_full_path = full_path + [f"[{current_key}]"]
-                    if not remaining_path:
-                        results.append((new_full_path, item))
-                    else:
-                        stack.append((item, remaining_path, new_full_path))
-            elif isinstance(current_node, dict) and current_key in current_node:
-                value = current_node[current_key]
-                new_full_path = full_path + [current_key]
-                if not remaining_path:
-                    results.append((new_full_path, value))
-                else:
-                    stack.append((value, remaining_path, new_full_path))
+                    sub_results = self._get_properties_with_wildcard(v, rest, depth + 1, max_depth)
+                    for path, value in sub_results:
+                        results.append(([k] + path, value))
+            elif key in obj and key not in skip_keys:
+                sub_results = self._get_properties_with_wildcard(obj[key], rest, depth + 1, max_depth)
+                for path, value in sub_results:
+                    results.append(([key] + path, value))
+
+        elif isinstance(obj, list):
+            for idx, item in enumerate(obj):
+                sub_results = self._get_properties_with_wildcard(item, rest, depth + 1, max_depth)
+                for path, value in sub_results:
+                    results.append(([f"[{idx}]"] + path, value))
+
         return results
+
+    def _make_finding(self, filename, node_type, node_name, property_path, value, message=None, node=None):
+        """Create a finding with Python-specific information."""
+        finding = {
+            "rule_id": self.rule_id,
+            "message": message or self.message,
+            "node": f"{node_type}.{node_name}",
+            "file": filename,
+            "property_path": property_path,
+            "value": value,
+            "status": "violation"
+        }
+        
+        if node:
+            finding["line"] = node.get('lineno', 1)
+            finding["column"] = node.get('col_offset', 0)
+        
+        if "severity" in self.metadata:
+            finding["severity"] = self.metadata["severity"]
+        elif "defaultSeverity" in self.metadata:
+            finding["severity"] = self.metadata["defaultSeverity"]
+            
+        return finding
+
+# For backward compatibility
+GenericRule = PythonGenericRule
 '''
