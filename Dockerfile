@@ -21,8 +21,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire project
-COPY . .
+
+# Clone the latest code from GitHub
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/* \
+     && git clone https://github.com/harshitadutt267/scanner_engine.git /app/scanner_engine
+
+# Set working directory to the cloned repo
+WORKDIR /app/scanner_engine
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' appuser && \
