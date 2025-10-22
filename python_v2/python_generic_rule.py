@@ -9,7 +9,7 @@ Handles AST traversal, rule applicability checking, and pattern matching.
 import re
 import ast
 import json
-import logic_implementations
+from . import logic_implementations
 from typing import Any, Dict, List, Optional, Union
 def _make_finding(self, filename, node_type, node_name, property_path, value, message=None, node=None):
     """Create a finding with Python-specific information."""
@@ -58,7 +58,7 @@ Handles AST traversal, rule applicability checking, and pattern matching.
 import re
 import ast
 import json
-import logic_implementations
+from . import logic_implementations
 from typing import Any, Dict, List, Optional, Union
 
 def collect_leaf_properties(obj, parent_path=None):
@@ -83,6 +83,78 @@ def collect_leaf_properties(obj, parent_path=None):
 
 
 class PythonGenericRule:
+    def custom_argument_type_any(self, ast_tree, filename, seen_findings):
+        """Custom function to find functions with argument type 'Any'."""
+        findings = []
+        def visit(node):
+            if isinstance(node, dict) and node.get("node_type") == "FunctionDef":
+                args = node.get("args", {}).get("args", [])
+                for arg in args:
+                    annotation = arg.get("annotation")
+                    arg_name = arg.get("arg")
+                    arg_type = None
+                    if isinstance(annotation, dict):
+                        if annotation.get("id"):
+                            arg_type = annotation["id"]
+                        elif annotation.get("attr"):
+                            arg_type = annotation["attr"]
+                        elif annotation.get("value") and annotation["value"].get("id"):
+                            arg_type = annotation["value"]["id"]
+                    if arg_type == "Any":
+                        finding = self._make_finding(
+                            filename,
+                            node.get("node_type"),
+                            node.get("name"),
+                            ["args", arg_name, "annotation"],
+                            arg_type,
+                            self.metadata.get("message", "Confusing type check."),
+                            node
+                        )
+                        unique_key = (self.rule_id, filename, node.get('lineno', 0), str(["args", arg_name, "annotation"]))
+                        if unique_key not in seen_findings:
+                            seen_findings.add(unique_key)
+                            findings.append(finding)
+            # Visit children
+            for k, v in node.items() if isinstance(node, dict) else []:
+                if isinstance(v, dict):
+                    findings.extend(visit(v))
+                elif isinstance(v, list):
+                    for item in v:
+                        if isinstance(item, dict):
+                            findings.extend(visit(item))
+            return findings
+        return visit(ast_tree)
+    def _apply_argument_type_check(self, check, node, filename, node_type, node_name, seen_findings):
+        """Apply argument type checks to function arguments for forbidden types."""
+        findings = []
+        forbidden_values = check.get("forbidden_values", [])
+        if isinstance(node, dict) and "args" in node and isinstance(node["args"], dict) and "args" in node["args"]:
+            for arg in node["args"]["args"]:
+                annotation = arg.get("annotation")
+                arg_name = arg.get("arg")
+                arg_type = None
+                if isinstance(annotation, dict):
+                    if annotation.get("id"):
+                        arg_type = annotation["id"]
+                    elif annotation.get("attr"):
+                        arg_type = annotation["attr"]
+                    elif annotation.get("value") and annotation["value"].get("id"):
+                        arg_type = annotation["value"]["id"]
+                if arg_type in forbidden_values:
+                    finding = self._make_finding(
+                        filename,
+                        node_type,
+                        node_name,
+                        ["args", arg_name, "annotation"],
+                        arg_type,
+                        check.get("message", self.message),
+                        node
+                    )
+                    unique_key = (self.rule_id, filename, node.get('lineno', 0), str(["args", arg_name, "annotation"]))
+                    if unique_key not in seen_findings:
+                        seen_findings.add(unique_key)
+                        findings.append(finding)
+        return findings
     """
     Generic rule engine for Python AST processing.
     """
@@ -202,6 +274,8 @@ class PythonGenericRule:
                 findings.extend(self._apply_regex_check(check, node, filename, node_type, node_name, source_lines, seen_findings))
             elif check_type == "property_comparison":
                 findings.extend(self._apply_property_comparison_check(check, node, filename, node_type, node_name, seen_findings))
+            elif check_type == "argument_type_check":
+                findings.extend(self._apply_argument_type_check(check, node, filename, node_type, node_name, seen_findings))
             elif check_type == "exists":
                 findings.extend(self._apply_exists_check(check, node, filename, node_type, node_name, seen_findings))
             elif check_type == "not_exists":
@@ -620,8 +694,6 @@ class PythonGenericRule:
         Apply a custom function from logic_implementations.py to all AST nodes.
         """
         findings = []
-        # Import logic_implementations and get the function
-        import logic_implementations
         custom_fn = getattr(logic_implementations, function_name, None)
         if not custom_fn:
             # print(f"[DEBUG] Custom function {function_name} not found or not callable")
@@ -653,7 +725,7 @@ class PythonGenericRule:
         if not function_name:
             return None
         try:
-            import logic_implementations
+            from . import logic_implementations
             if hasattr(logic_implementations, function_name):
                 func = getattr(logic_implementations, function_name)
                 if callable(func):
@@ -795,7 +867,7 @@ Handles AST traversal, rule applicability checking, and pattern matching.
 import re
 import ast
 import json
-import logic_implementations
+from . import logic_implementations
 from typing import Any, Dict, List, Optional, Union
 def _make_finding(self, filename, node_type, node_name, property_path, value, message=None, node=None):
     """Create a finding with Python-specific information."""
@@ -844,7 +916,7 @@ Handles AST traversal, rule applicability checking, and pattern matching.
 import re
 import ast
 import json
-import logic_implementations
+from . import logic_implementations
 from typing import Any, Dict, List, Optional, Union
 
 def collect_leaf_properties(obj, parent_path=None):
@@ -1407,7 +1479,7 @@ class PythonGenericRule:
         """
         findings = []
         # Import logic_implementations and get the function
-        import logic_implementations
+    from . import logic_implementations
         custom_fn = getattr(logic_implementations, function_name, None)
         if not custom_fn:
             # print(f"[DEBUG] Custom function {function_name} not found or not callable")
@@ -1439,7 +1511,7 @@ class PythonGenericRule:
         if not function_name:
             return None
         try:
-            import logic_implementations
+            from . import logic_implementations
             if hasattr(logic_implementations, function_name):
                 func = getattr(logic_implementations, function_name)
                 if callable(func):

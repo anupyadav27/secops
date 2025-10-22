@@ -47,9 +47,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom",
-    "custom_function": "custom_check_type_aliases_without_type_statement",
-    "function_code": "def custom_check_type_aliases_without_type_statement(node):\n    for node in ast.walk(node):\n        if isinstance(node, (ast.Alias, ast.TypeVar)) and node.type is None:\n            return True\n    return False"
+    "node_types": ["Assign"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "type_alias_without_type_statement_check",
+        "message": "Global type alias declaration without type statement."
+      }
+    ]
   },
   "metadata": {
     "filename": "type_aliases_should_be_declared_with_a_type_statement.json",

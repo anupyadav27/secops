@@ -1,5 +1,0 @@
-{
-  "rule_id": "regular_expressions_should_be_syntactically_valid",
-  "new_check_type": "pattern",
-  "description": "This check type matches regular expressions containing contradictory lookahead assertions."
-}

@@ -1,1 +1,0 @@
-reluctant_quantifiers_in_regular_expressions_should_be_followed_by_an_expression_that_cant_match_the_empty_string

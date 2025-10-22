@@ -50,9 +50,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "node_type": "arg",
-    "property_path": ["annotation", "id"],
-    "forbidden_values": ["List", "Dict", "Set", "Tuple", "Optional"]
+    "node_types": ["arg"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["annotation", "id"],
+        "forbidden_values": ["List", "Dict", "Set", "Tuple", "Optional"],
+        "message": "Missing type specification for generic type"
+      }
+    ]
   }
 }

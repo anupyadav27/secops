@@ -9,6 +9,58 @@ This project contains multiple scanner implementations for different programming
 - **Python Scanner (v1 & v2)**: Static analysis for Python code
 - **Terraform Scanner (v2)**: Security and configuration analysis for Terraform files
 
+## Docker Deployment
+
+### Building the Docker Image
+
+```bash
+docker build -t scanner-api .
+```
+
+### Running the Container
+
+```bash
+docker run -p 8000:8000 scanner-api
+```
+
+### Using Docker Compose (Optional)
+
+```yaml
+version: '3.8'
+services:
+  scanner-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
+
+## API Endpoints
+
+- `POST /scan` - Scan a single file
+- `POST /scan-folder` - Scan a zipped folder (for Terraform projects)
+- `GET /health` - Health check endpoint
+
+### Example Usage
+
+```bash
+# Scan a Python file
+curl -X POST "http://localhost:8000/scan" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@example.py"
+
+# Scan a Terraform project (zipped)
+curl -X POST "http://localhost:8000/scan-folder" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@terraform-project.zip"
+```
+
 Each scanner uses a generic rule engine that applies rules defined in JSON metadata files, making it easy to add new rules without modifying the core scanning logic.
 
 ## Project Structure

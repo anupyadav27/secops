@@ -1,6 +1,6 @@
 # scanner_file.py
 # Per-file scanning logic (Mode A)
-from scanner_common import parse_terraform_file, load_rule_metadata, load_rules, visit_dict
+from .scanner_common import parse_terraform_file, load_rule_metadata, load_rules, visit_dict
 import os
 import json
 
@@ -30,7 +30,7 @@ def per_file_scan(tf_files):
                 break
         if selected_rule_id:
             print(f"[rule_engine] Running only rule: {metadata_map[selected_rule_id].get('name', metadata_map[selected_rule_id].get('title', ''))} (id={selected_rule_id})")
-            from generic_rule import GenericRule
+            from .generic_rule import GenericRule
             rules = [GenericRule(metadata_map[selected_rule_id])]
         else:
             print(f"Rule '{rule_name_input}' not found. Running all rules instead.")
@@ -56,5 +56,17 @@ def per_file_scan(tf_files):
         }
         with open(report_file, "w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=2)
-    # print(f"Detailed report saved to: {report_file}")
-    # print(f"Number of rules loaded: {len(rules)}")
+
+    # API entry point for plugin system
+    def run_scan(file_path):
+        """Scan a single Terraform file and return findings as a list of dicts."""
+        metadata_map = load_rule_metadata()
+        rules = load_rules(metadata_map)
+        results = scan_file(file_path, rules)
+        cleaned_results = []
+        for finding in results:
+            if isinstance(finding, dict):
+                if 'file' in finding:
+                    del finding['file']
+            cleaned_results.append(finding)
+        return cleaned_results

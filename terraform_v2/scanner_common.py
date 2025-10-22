@@ -6,7 +6,7 @@ import os
 import sys
 import json
 import hcl2
-from generic_rule import GenericRule
+from .generic_rule import GenericRule
 
 def parse_terraform_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -92,28 +92,25 @@ def get_tf_files_from_path(path):
         # print(f"Path '{path}' does not exist.")
         sys.exit(1)
 
-if __name__ == "__main__":
-    from scanner_file import per_file_scan
-    from scanner_project import merged_project_scan
 
-    user_path = input("Enter path to a .tf file or a folder containing .tf/.tfvars files: ").strip()
-    tf_files = get_tf_files_from_path(user_path)
-
-    if len(tf_files) == 1:
-        # print(f"Scanning file: {tf_files[0]}")
-        pass
-    else:
-        # print("Found the following Terraform files:")
-        for idx, fname in enumerate(tf_files, 1):
-            # print(f"  {idx}. {os.path.basename(fname)}")
-            pass
-        pass
-
-    mode = input("Choose mode: (1) Per-file scanning, (2) Merged project scanning: ").strip()
-    if mode == '1':
-        per_file_scan(tf_files)
-    elif mode == '2':
-        merged_project_scan(tf_files)
-    else:
-        # print("Invalid mode selected.")
-        sys.exit(1)
+# API entry point for plugin system
+def run_scan(file_path):
+    """Scan a single Terraform file and return findings as a list of dicts."""
+    metadata_map = load_rule_metadata()
+    rules = load_rules(metadata_map)
+    ast_tree = parse_terraform_file(file_path)
+    all_findings = []
+    for rule in rules:
+        findings = []
+        if hasattr(rule, 'visit') and callable(getattr(rule, 'visit')):
+            visit_dict(ast_tree, rule.visit, findings, file_path)
+            all_findings.extend(findings)
+        else:
+            all_findings.extend(rule.check(ast_tree, file_path))
+    # Clean findings for API (remove 'file' key if present)
+    cleaned_results = []
+    for finding in all_findings:
+        if isinstance(finding, dict) and 'file' in finding:
+            del finding['file']
+        cleaned_results.append(finding)
+    return cleaned_results

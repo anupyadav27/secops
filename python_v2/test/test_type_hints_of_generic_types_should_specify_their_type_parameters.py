@@ -1,3 +1,36 @@
+# Noncompliant: should trigger the rule
+from typing import List, Dict, Set, Tuple, Optional
+
+def func1(arg: List):
+    pass
+
+def func2(arg: Dict):
+    pass
+
+def func3(arg: Set):
+    pass
+
+def func4(arg: Tuple):
+    pass
+
+def func5(arg: Optional):
+    pass
+
+# Compliant: should NOT trigger the rule
+def func6(arg: List[str]):
+    pass
+
+def func7(arg: Dict[str, int]):
+    pass
+
+def func8(arg: Set[int]):
+    pass
+
+def func9(arg: Tuple[int, int]):
+    pass
+
+def func10(arg: Optional[str]):
+    pass
 import sys
 sys.path.insert(0, '../')
 from python_scanner import scan_file_for_rules

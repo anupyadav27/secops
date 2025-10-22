@@ -1,5 +1,0 @@
-{
-  "rule_id": "except_clauses_should_do_more_than_raise_the_same_issue",
-  "new_check_type": "property_comparison",
-  "description": "Check if the left value of a comparison is numpy.nan"
-}

@@ -45,23 +45,18 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "property_comparison",
-    "property_path": [
-      "node",
-      "decorator_list",
-      0,
-      "name"
-    ],
-    "forbidden_values": [
-      "Any"
+    "node_types": ["FunctionDef"],
+    "checks": [
+      {
+        "type": "property_comparison",
+        "property_path": ["returns", "id"],
+        "forbidden_values": ["Any"]
+      },
+      {
+        "type": "custom_function",
+        "function": "argument_type_any_check",
+        "message": "Confusing type check."
+      }
     ]
-  },
-  "function_code": "def check_type_confusing(node):\n    return 'Any' in node.get('decorator_list', [])",
-  "metadata": {
-    "filename": "type_checks_shouldnt_be_confusing.json",
-    "rule_id": "type_checks_shouldnt_be_confusing",
-    "title": "Type checks should not be confusing",
-    "status": "ready",
-    "defaultSeverity": "Minor"
   }
 }

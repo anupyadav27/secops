@@ -1,6 +1,19 @@
+# API entry point for folder scanning (for use by FastAPI)
+def run_terraform_scan(tf_files: list) -> dict:
+    asts = parse_all_files_with_metadata(tf_files)
+    merged_ast = merge_asts(asts)
+    variables, locals_, resources, outputs, modules = build_symbol_tables(merged_ast)
+    resolve_references_in_dict(merged_ast, variables, locals_)
+    metadata_map = load_rule_metadata()
+    rules = load_rules(metadata_map)
+    findings = scan_merged_ast(merged_ast, rules)
+    return {
+        "files": tf_files,
+        "findings": findings
+    }
 # scanner_project.py
 # Project-level (merged AST) scanning logic (Mode B)
-from scanner_common import parse_all_files_with_metadata, load_rule_metadata, load_rules, visit_dict
+from .scanner_common import parse_all_files_with_metadata, load_rule_metadata, load_rules, visit_dict
 import os
 import json
 

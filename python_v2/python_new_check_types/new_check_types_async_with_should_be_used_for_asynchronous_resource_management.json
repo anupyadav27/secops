@@ -1,5 +1,0 @@
-{
-  "rule_id": "async_with_should_be_used_for_asynchronous_resource_management",
-  "new_check_type": "property_comparison",
-  "description": "Checks if the function is decorated with 'async' but does not use 'await' or 'async with'. This check type is specific to async functions."
-}

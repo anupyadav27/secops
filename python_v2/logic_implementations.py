@@ -1,3 +1,74 @@
+# Custom function: detects duplicate implementations in conditional branches
+def duplicate_conditional_branch_check(node, ast_root=None):
+    """
+    Returns a finding dict if two branches in an If node have exactly the same implementation.
+    """
+    if not isinstance(node, dict) or node.get("node_type") != "If":
+        return False
+    # Compare 'body' and 'orelse' for duplication
+    body = node.get("body", [])
+    orelse = node.get("orelse", [])
+    # Only check if both branches exist and are non-empty
+    if body and orelse:
+        # Compare AST dumps (structure and content)
+        import json
+        def ast_dump(stmt_list):
+            return json.dumps(stmt_list, sort_keys=True)
+        if ast_dump(body) == ast_dump(orelse):
+            return {
+                'message': "Two branches in a conditional structure have the same implementation.",
+                'property_path': ["body", "orelse"],
+                'value': None
+            }
+    return False
+# Custom function: detects Assign nodes that are type aliases without a type statement
+def type_alias_without_type_statement_check(node, ast_root=None):
+    """
+    Returns a finding dict if an Assign node is a type alias (TypeVar) without a type annotation.
+    """
+    if not isinstance(node, dict) or node.get("node_type") != "Assign":
+        return False
+    # Check if value is a call to TypeVar
+    value = node.get("value")
+    if isinstance(value, dict) and value.get("node_type") == "Call":
+        func = value.get("func")
+        if isinstance(func, dict) and func.get("id") == "TypeVar":
+            # Check if there is no annotation (type statement)
+            targets = node.get("targets", [])
+            for target in targets:
+                if not target.get("annotation"):
+                    return {
+                        'message': "Global type alias declaration without type statement.",
+                        'property_path': ["targets", target.get("id", target.get("name", "")), "annotation"],
+                        'value': None
+                    }
+    return False
+# Custom function: detects if any argument in a function has type 'Any'
+def argument_type_any_check(node, ast_root=None):
+    """
+    Returns a finding dict if any argument in a FunctionDef node has annotation 'Any'.
+    """
+    if not isinstance(node, dict) or node.get("node_type") != "FunctionDef":
+        return False
+    args = node.get("args", {}).get("args", [])
+    for arg in args:
+        annotation = arg.get("annotation")
+        arg_name = arg.get("arg")
+        arg_type = None
+        if isinstance(annotation, dict):
+            if annotation.get("id"):
+                arg_type = annotation["id"]
+            elif annotation.get("attr"):
+                arg_type = annotation["attr"]
+            elif annotation.get("value") and annotation["value"].get("id"):
+                arg_type = annotation["value"]["id"]
+        if arg_type == "Any":
+            return {
+                'message': f"Argument '{arg_name}' has type 'Any' (confusing type check)",
+                'property_path': ["args", arg_name, "annotation"],
+                'value': arg_type
+            }
+    return False
 # Custom function to detect commented-out code sections
 import re
 def commented_out_code_section_check(node, ast_root=None, source_lines=None):
@@ -720,9 +791,9 @@ def dictcomp_static_key_check(node):
     if isinstance(key_node, dict) and key_node.get('node_type') == 'Constant':
         return True
     return False
-from logging_basicConfig_debug_check import logging_basicConfig_debug_check
-from deprecated_numpy_alias_check import deprecated_numpy_alias_check
-from dictcomp_static_key_check import dictcomp_static_key_check
+from .logging_basicConfig_debug_check import logging_basicConfig_debug_check
+from .deprecated_numpy_alias_check import deprecated_numpy_alias_check
+from .dictcomp_static_key_check import dictcomp_static_key_check
 def pandas_to_datetime_forbidden_format(node, ast_root=None):
     """
     Returns True if pd.to_datetime is called with a forbidden date format as the first argument and dayfirst/yearfirst is set.
@@ -1832,7 +1903,6 @@ def check_test_skip_without_reason(node):
     return False
 # Auto-generated function for metadata creation
 # Importing check_test_skip_without_reason from logic_implementationsv2
-from prework.logic_implementationsv2 import check_test_skip_without_reason
 def check_field_class_name_conflict(node):
     """
     Check if a field name duplicates its containing class name.

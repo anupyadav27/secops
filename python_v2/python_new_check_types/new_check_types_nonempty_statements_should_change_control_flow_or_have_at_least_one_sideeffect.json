@@ -1,5 +1,0 @@
-{
-  "rule_id": "nonempty_statements_should_change_control_flow_or_have_at_least_one_sideeffect",
-  "new_check_type": "property_comparison",
-  "description": "Check if the AST node type is either 'ClassDef' or 'FunctionDef' to represent old-style class definitions."
-}

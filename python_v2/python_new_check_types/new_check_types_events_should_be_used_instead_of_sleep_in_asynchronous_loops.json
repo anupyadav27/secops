@@ -1,5 +1,0 @@
-{
-  "rule_id": "events_should_be_used_instead_of_sleep_in_asynchronous_loops",
-  "new_check_type": "property_comparison",
-  "description": "Check if the left value of a comparison is numpy.nan"
-}

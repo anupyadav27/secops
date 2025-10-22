@@ -2,11 +2,11 @@ import sys
 import os
 import ast
 import json
-from python_generic_rule import PythonGenericRule
+from .python_generic_rule import PythonGenericRule
 import inspect
 import traceback
 
-# Step 1: Input Handling (scan test folder for .py files)
+# Step1 : Input Handling (scan test folder for .py files)
 test_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test")
 if not os.path.isdir(test_folder):
     print(f"Test folder '{test_folder}' not found.")
@@ -311,18 +311,33 @@ def clean_for_json(obj, depth=0, max_depth=10):
     else:
         return obj
 
+
+# API entry point for plugin system
+def run_scan(file_path):
+    """Scan a single Python file and return findings as a list of dicts."""
+    metadata_map = load_rule_metadata()
+    rules = load_rules(metadata_map)
+    results = scan_file(file_path, rules)
+    cleaned_results = []
+    for finding in results:
+        if isinstance(finding, dict):
+            for key in ['file', 'node', '__parent__']:
+                if key in finding:
+                    del finding[key]
+        cleaned_finding = clean_for_json(finding, max_depth=10)
+        cleaned_results.append(cleaned_finding)
+    return cleaned_results
+
 # Step 8: Reporting
 if __name__ == "__main__":
     metadata_map = load_rule_metadata()
     print(f"\nNumber of rule metadata files loaded: {len(metadata_map)}")
     rules = load_rules(metadata_map)
     results = scan_file(py_file, rules)
-    
     # Clean up findings for JSON serialization
     cleaned_results = []
     for finding in results:
         if isinstance(finding, dict):
-            # Remove fields that may contain cyclic references
             for key in ['file', 'node', '__parent__']:
                 if key in finding:
                     del finding[key]

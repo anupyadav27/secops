@@ -1,5 +1,0 @@
-{
-  "rule_id": "nonexistent_operators_like_should_not_be_used",
-  "new_check_type": "property_comparison",
-  "description": "Check if the AST node type is either 'ClassDef' or 'FunctionDef' to represent old-style class definitions."
-}

@@ -1,5 +1,0 @@
-{
-  "rule_id": "passing_a_reversed_iterable_to_set_sorted_or_reversed_should_be_avoided",
-  "new_check_type": "pattern",
-  "description": "Checks if the expression value is of type GeneratorExpression"
-}

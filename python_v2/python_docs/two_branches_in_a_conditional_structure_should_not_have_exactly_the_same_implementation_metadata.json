@@ -45,8 +45,14 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "custom_function",
-    "function": "check_identical_branches"
+    "node_types": ["If"],
+    "checks": [
+      {
+        "type": "custom_function",
+        "function": "duplicate_conditional_branch_check",
+        "message": "Two branches in a conditional structure have the same implementation."
+      }
+    ]
   },
   "metadata": {
     "filename": "two_branches_in_a_conditional_structure_should_not_have_exactly_the_same_implementation.json",

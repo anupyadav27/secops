@@ -53,6 +53,7 @@
       {
         "property_path": ["args", 0, "node_type"],
         "forbidden_values": ["Constant"],
+        
         "property_path_2": ["args", 0, "value"],
         "pattern": "(?=.*\\(\\?=([^)]+)\\).*\\(\\?!\\1\\))|(?=.*\\(\\?!([^)]+)\\).*\\(\\?=\\2\\))"
       }

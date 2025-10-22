@@ -6,7 +6,7 @@
       "rule_id": "allowing_public_acls_or_policies_on_a_s3_bucket_is_security_sensitive",
       "message": "Value public-read equals forbidden public-read",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "acl"
       ],
@@ -17,7 +17,7 @@
       "rule_id": "aws_tag_keys_should_comply_with_a_naming_convention",
       "message": "Tag key 'Name' does not comply with naming convention (lowercase, hyphens, no spaces/special chars, no leading numbers)",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "tags",
         "Name"
@@ -29,7 +29,7 @@
       "rule_id": "aws_tag_keys_should_comply_with_a_naming_convention",
       "message": "Tag key 'Environment' does not comply with naming convention (lowercase, hyphens, no spaces/special chars, no leading numbers)",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "tags",
         "Environment"
@@ -41,7 +41,7 @@
       "rule_id": "creating_dns_zones_without_dnssec_enabled_is_security_sensitive",
       "message": "Value [{'state': 'off'}] not in required_values ['on']",
       "resource": "google_dns_managed_zone.bad_example",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "dnssec_config"
       ],
@@ -56,7 +56,7 @@
       "rule_id": "disabling_logging_is_security_sensitive",
       "message": "Required property missing",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "logging"
       ],
@@ -67,7 +67,7 @@
       "rule_id": "disabling_logging_is_security_sensitive",
       "message": "Required property missing",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "logging.0"
       ],
@@ -78,7 +78,7 @@
       "rule_id": "disabling_logging_is_security_sensitive",
       "message": "Required property missing",
       "resource": "aws_s3_bucket.public_bucket",
-      "file": "d:/task9/test/git2\\main.tf",
+      "file": "d:/scanner/terraform_v2/test_rules/git2\\main.tf",
       "property_path": [
         "logging_config"
       ],

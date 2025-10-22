@@ -1,5 +1,0 @@
-{
-  "rule_id": "reluctant_quantifiers_in_regular_expressions_should_be_followed_by_an_expression_that_cant_match_the_empty_string",
-  "new_check_type": "pattern",
-  "description": "This check type matches regular expressions containing contradictory lookahead assertions."
-}

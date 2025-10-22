@@ -1,5 +1,0 @@
-{
-  "rule_id": "npnonzero_should_be_preferred_over_npwhere_when_only_the_condition_parameter_is_set",
-  "new_check_type": "pattern",
-  "description": "Checks for the use of the 'like' operator with nonexistent operator."
-}

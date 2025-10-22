@@ -1,5 +1,0 @@
-{
-  "rule_id": "nulltrue_should_not_be_used_on_stringbased_fields_in_django_models",
-  "new_check_type": "pattern",
-  "description": "Checks for the use of the 'like' operator with nonexistent operator."
-}

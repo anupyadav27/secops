@@ -1,5 +1,0 @@
-{
-  "rule_id": "the_number_and_name_of_arguments_passed_to_a_function_should_match_its_parameters",
-  "new_check_type": "property_comparison",
-  "description": "Checks if the function arguments match the defined parameters based on number and names."
-}
