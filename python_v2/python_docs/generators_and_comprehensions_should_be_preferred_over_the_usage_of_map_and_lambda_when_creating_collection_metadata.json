@@ -50,19 +50,21 @@
     "OWASP": ""
   },
   "logic": {
-    "check_type": "pattern",
-    "property_path": [
-      "expression",
-      "value",
-      "body",
-      "value",
-      "expression_type"
-    ],
-    "forbidden_values": [
-      "map",
-      "lambda"
-    ],
-    "logic.new_check_type_doc": "Checks if the given expression is a map or lambda function."
+    "node_types": ["Call"],
+    "checks": [
+      {
+        "type": "pattern",
+        "property_path": ["func", "id"],
+        "forbidden_values": ["map"],
+        "message": "Prefer using generators and comprehensions to create collections instead of map."
+      },
+      {
+        "type": "pattern",
+        "property_path": ["args", "*", "node_type"],
+        "forbidden_values": ["Lambda"],
+        "message": "Prefer using generators and comprehensions to create collections instead of lambda."
+      }
+    ]
   },
   "function_code": "def check_map_or_lambda(node):\n    return node['expression_type'] in ['map', 'lambda']",
   "metadata": {
