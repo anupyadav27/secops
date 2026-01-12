@@ -1,0 +1,135 @@
+{
+  "rule_id": "variables_should_not_be_selfassigned",
+  "title": "Variables should not be self-assigned",
+  "type": "BUG",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "MEDIUM"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Self-assignment occurs when a variable is assigned to itself, such as `x = x` or `self.attribute = self.attribute`. This is almost always a mistake and indicates dead code, a copy-paste error, or incomplete refactoring. Self-assignments have no effect on program execution and should be removed or corrected to assign the intended value.",
+  "message": "Remove or correct this self-assignment of variable '{{variable_name}}'.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "3min"
+  },
+  "tags": [
+    "convention",
+    "confusing",
+    "dead-code",
+    "bug-prone"
+  ],
+  "impact": {
+    "reliability": "Medium impact as self-assignments indicate logical errors and dead code that should be removed",
+    "maintainability": "High impact on code clarity as self-assignments confuse readers and indicate incomplete implementation"
+  },
+  "recommendation": "Remove the self-assignment statement entirely if it serves no purpose, or correct it to assign the intended value from a different source.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Variables should not be self-assigned",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1656"
+    },
+    {
+      "title": "Python Assignment Statements",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#assignment-statements"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Simple variable self-assignment",
+        "code": "x = 5\nx = x  # Self-assignment has no effect\nprint(x)"
+      },
+      {
+        "description": "Attribute self-assignment in method",
+        "code": "class MyClass:\n    def __init__(self):\n        self.value = 10\n    \n    def update_value(self, new_value):\n        self.value = self.value  # Mistake: should assign new_value\n        # Intended: self.value = new_value"
+      },
+      {
+        "description": "List element self-assignment",
+        "code": "numbers = [1, 2, 3, 4, 5]\nnumbers[2] = numbers[2]  # No effect\nprint(numbers)"
+      },
+      {
+        "description": "Dictionary value self-assignment",
+        "code": "config = {'timeout': 30, 'retries': 3}\nconfig['timeout'] = config['timeout']  # Useless assignment"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Proper variable assignment with different source",
+        "code": "x = 5\ny = x  # Assigning to different variable\nprint(y)"
+      },
+      {
+        "description": "Proper attribute assignment from parameter",
+        "code": "class MyClass:\n    def __init__(self):\n        self.value = 10\n    \n    def update_value(self, new_value):\n        self.value = new_value  # Correct assignment from parameter"
+      },
+      {
+        "description": "Proper list element modification",
+        "code": "numbers = [1, 2, 3, 4, 5]\nnumbers[2] = 99  # Assigning new value\nprint(numbers)"
+      },
+      {
+        "description": "Proper dictionary value update",
+        "code": "config = {'timeout': 30, 'retries': 3}\nconfig['timeout'] = 60  # Updating with new value"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "None",
+    "automation": "High - Can be automatically detected through AST analysis",
+    "compliance": "Medium - Improves code quality and prevents logical errors"
+  },
+  "why_is_this_an_issue": "Self-assignments are statements where a variable is assigned to itself, which has no computational effect. These typically occur due to copy-paste errors, incomplete refactoring, or misunderstanding of the assignment operation. Such statements waste processing time (though minimally) and more importantly indicate incomplete or incorrect code logic. They make the codebase confusing for maintainers who may spend time trying to understand the purpose of a seemingly meaningless operation.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify the self-assignment statement in your code"
+    },
+    {
+      "step": 2,
+      "description": "Determine if the statement serves any purpose - most self-assignments are mistakes"
+    },
+    {
+      "step": 3,
+      "description": "If it's a mistake, remove the self-assignment statement entirely"
+    },
+    {
+      "step": 4,
+      "description": "If it was meant to assign a different value, correct the right-hand side to use the intended source"
+    },
+    {
+      "step": 5,
+      "description": "Review surrounding code to ensure the fix doesn't break intended logic"
+    },
+    {
+      "step": 6,
+      "description": "Test the code to verify the change works as expected"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-1656",
+  "scope": "Main",
+  "securityStandards": {},
+  "quickfix": "feasible",
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Assign"
+      },
+      {
+        "comment": "Check if target and value have same identifier - simple variable case",
+        "check_type": "equals",
+        "property_path": ["targets", "0", "id"],
+        "other_property_path": ["value", "id"]
+      }
+    ]
+  }
+}

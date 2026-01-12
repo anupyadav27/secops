@@ -1,0 +1,108 @@
+{
+  "rule_id": "async_with_should_be_used_for_asynchronous_resource_management",
+  "title": "Async context managers should be used with 'async with' for asynchronous resource management",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when synchronous context managers (using 'with') are incorrectly used with asynchronous resources that should be managed with 'async with'. Asynchronous resources like database connections, HTTP clients, or file operations that implement the async context manager protocol (__aenter__/__aexit__) must be managed using 'async with' to ensure proper asynchronous resource handling and cleanup. Using a regular 'with' statement in these cases can lead to resource leaks, deadlocks, or unexpected behavior in asynchronous code.",
+  "message": "Use 'async with' instead of 'with' when working with asynchronous context managers. The resource '{0}' implements async context management but is being used synchronously.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "best-practice",
+    "python",
+    "async",
+    "resource-management",
+    "correctness"
+  ],
+  "impact": "Using synchronous 'with' statements with asynchronous resources can cause several problems: 1) Resources may not be properly released, leading to leaks; 2) The __aexit__ method won't be called correctly, potentially leaving connections open; 3) In asyncio applications, this can cause event loop stalls or deadlocks; 4) Error handling may not work as expected since exceptions won't be properly propagated through the async context manager protocol.",
+  "recommendation": "Always use 'async with' when working with objects that implement the asynchronous context manager protocol (__aenter__ and __aexit__ methods). This ensures proper resource management in asynchronous code and maintains the expected behavior of async/await patterns.",
+  "references": [
+    {
+      "title": "Python Documentation: Asynchronous Context Managers",
+      "url": "https://docs.python.org/3/reference/datamodel.html#asynchronous-context-managers"
+    },
+    {
+      "title": "PEP 492 -- Coroutines with async and await syntax",
+      "url": "https://peps.python.org/pep-0492/"
+    },
+    {
+      "title": "asyncio - Asynchronous I/O",
+      "url": "https://docs.python.org/3/library/asyncio.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import aiohttp\n\nasync def fetch_data():\n    async with aiohttp.ClientSession() as session:\n        async with session.get('https://api.example.com/data') as response:\n            return await response.json()",
+        "description": "Correct usage of 'async with' for asynchronous HTTP client session and response"
+      },
+      {
+        "code": "import asyncpg\n\nasync def db_operation():\n    async with asyncpg.create_pool(user='user', password='password') as pool:\n        async with pool.acquire() as connection:\n            return await connection.fetch('SELECT * FROM table')",
+        "description": "Proper async context management for database connection pool and connection"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import aiohttp\n\nasync def fetch_data():\n    with aiohttp.ClientSession() as session:  # Wrong: using 'with' instead of 'async with'\n        async with session.get('https://api.example.com/data') as response:\n            return await response.json()",
+        "description": "Incorrect usage of synchronous 'with' for asynchronous ClientSession"
+      },
+      {
+        "code": "import asyncpg\n\nasync def db_operation():\n    with asyncpg.create_pool(user='user', password='password') as pool:  # Wrong\n        async with pool.acquire() as connection:\n            return await connection.fetch('SELECT * FROM table')",
+        "description": "Improper synchronous context management for async database pool"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stage": "development"
+  },
+  "why_is_this_an_issue": "Asynchronous context managers are designed to work with Python's async/await syntax and the event loop. When you use a regular 'with' statement with an async context manager, several problems can occur:\n\n1. The __aenter__ method (which should be awaited) is called synchronously, which may not work as expected or could raise exceptions.\n\n2. The __aexit__ method won't be properly awaited during cleanup, potentially leaving resources in an undefined state.\n\n3. Exception handling through the context manager won't work correctly since async exception propagation differs from synchronous code.\n\n4. In asyncio applications, this can lead to event loop stalls if the context manager performs I/O operations that need to yield control to the event loop.\n\n5. Resource leaks may occur if the async cleanup code in __aexit__ isn't properly executed.\n\nThis issue is particularly problematic because it often doesn't cause immediate, obvious failures but can lead to subtle bugs that are difficult to diagnose, especially under load or in production environments.",
+  "how_to_fix": {
+    "description": "To fix this issue, replace all synchronous 'with' statements with 'async with' when working with asynchronous context managers.",
+    "steps": [
+      "Identify all 'with' statements in your asynchronous code that manage resources implementing __aenter__/__aexit__",
+      "Replace each 'with' with 'async with'",
+      "Ensure the containing function is declared with 'async def'",
+      "If you're mixing synchronous and asynchronous code, consider restructuring to separate concerns",
+      "Test the modified code to ensure proper resource management and error handling",
+      "For libraries that provide both sync and async APIs (like aiohttp vs requests), ensure you're using the async version consistently"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-774",
+        "description": "Allocation of File Descriptors or Handles Without Limits or Throttling"
+      },
+      {
+        "id": "CWE-404",
+        "description": "Improper Resource Shutdown or Release"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CERT-PY MTH02-J",
+        "description": "Ensure proper cleanup when working with resources"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {"check_type": "node_type", "value": "With"},
+      {"check_type": "equals", "property_path": ["items", 0, "context_expr", "attr"], "value": "ClientSession"},
+      {"check_type": "equals", "property_path": ["items", 0, "context_expr", "value", "id"], "value": "aiohttp"}
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "file_scanned": "d:\\task8\\test\\terraform13.tf",
+  "vulnerabilities_found": 2,
+  "findings": [
+    {
+      "rule_id": "assigning_high_privileges_azure_resource_manager_built_in_roles_is_security_sensitive",
+      "message": "Assigning high privileges Azure Resource Manager built-in roles is security-sensitive",
+      "resource": "azurerm_role_assignment.bad_example",
+      "property_path": [
+        "role_definition_name"
+      ],
+      "value": "Owner",
+      "status": "violation"
+    },
+    {
+      "rule_id": "azure_role_assignments_that_grant_access_to_all_resources_of_a_subscription_are_security_sensitive",
+      "message": "Azure role assignments that grant access to all resources of a subscription are security-sensitive",
+      "resource": "azurerm_role_assignment.bad_example",
+      "property_path": [
+        "scope"
+      ],
+      "value": "${azurerm_resource_group.example.id}",
+      "status": "violation"
+    }
+  ]
+}

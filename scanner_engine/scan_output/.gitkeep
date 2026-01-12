@@ -1,0 +1,4 @@
+# This folder stores scan results
+# Scanner API saves results here, Jenkins reads from here
+# Each project gets a subfolder: {project_name}/scan_results_latest.json
+

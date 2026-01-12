@@ -1,0 +1,122 @@
+{
+  "rule_id": "async_functions_should_not_contain_synchronous_subprocess_calls",
+  "title": "Async functions should not contain synchronous subprocess calls",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asynchronous Python functions contain synchronous subprocess calls (like `subprocess.run()`, `subprocess.call()`, etc.). Mixing synchronous blocking calls with async code can lead to performance bottlenecks, deadlocks, or unexpected behavior in asynchronous applications. Async functions should use async-compatible alternatives like `asyncio.create_subprocess_exec()` instead.",
+  "message": "Replace this synchronous subprocess call with an async alternative (e.g., 'asyncio.create_subprocess_exec()').",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "async",
+    "performance",
+    "blocking",
+    "subprocess",
+    "concurrency",
+    "python3",
+    "best-practice"
+  ],
+  "impact": "Using synchronous subprocess calls in async functions blocks the event loop, negating the benefits of asynchronous programming. This can lead to: 1) Reduced throughput as the event loop stalls waiting for I/O, 2) Potential deadlocks if the subprocess itself uses the same event loop, 3) Unpredictable behavior when mixing sync/async code, and 4) Difficulty in debugging performance issues.",
+  "recommendation": "Replace synchronous subprocess calls with their async equivalents from the `asyncio` module. For example, use `asyncio.create_subprocess_exec()` instead of `subprocess.run()`. This maintains non-blocking behavior and proper integration with the async event loop.",
+  "references": [
+    {
+      "title": "Python asyncio subprocess documentation",
+      "url": "https://docs.python.org/3/library/asyncio-subprocess.html"
+    },
+    {
+      "title": "Python subprocess documentation",
+      "url": "https://docs.python.org/3/library/subprocess.html"
+    },
+    {
+      "title": "Mixing sync and async code in Python",
+      "url": "https://hynek.me/articles/mixing-async-and-sync/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\n\nasync def run_command():\n    # Correct: Using async subprocess call\n    proc = await asyncio.create_subprocess_exec(\n        'ls', '-l',\n        stdout=asyncio.subprocess.PIPE,\n        stderr=asyncio.subprocess.PIPE\n    )\n    stdout, stderr = await proc.communicate()\n    return stdout.decode()",
+        "description": "Uses asyncio.create_subprocess_exec() which properly integrates with the event loop"
+      },
+      {
+        "code": "import asyncio\n\nasync def check_system():\n    # Correct: Using async alternative\n    proc = await asyncio.create_subprocess_shell(\n        'echo \"Hello\"',\n        stdout=asyncio.subprocess.PIPE\n    )\n    return (await proc.communicate())[0].decode()",
+        "description": "Uses asyncio.create_subprocess_shell() for shell commands"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import subprocess\n\nasync def bad_example():\n    # Non-compliant: Synchronous subprocess call in async function\n    result = subprocess.run(['ls', '-l'], capture_output=True, text=True)\n    return result.stdout",
+        "description": "Uses blocking subprocess.run() which will stall the event loop"
+      },
+      {
+        "code": "import subprocess\n\nasync def another_bad_example():\n    # Non-compliant: Multiple synchronous calls\n    subprocess.call(['echo', 'starting'])\n    output = subprocess.check_output(['ls', '-la'])\n    return output.decode()",
+        "description": "Contains multiple blocking subprocess calls that defeat the purpose of async"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "performance-anti-pattern",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    }
+  },
+  "why_is_this_an_issue": "Asynchronous functions are designed to be non-blocking, allowing other tasks to run while waiting for I/O operations. When synchronous subprocess calls are used within async functions, they block the entire event loop, preventing other coroutines from executing. This creates several problems:\n\n1. **Performance Degradation**: The event loop stalls during subprocess execution, eliminating concurrency benefits.\n2. **Resource Wastage**: CPU cores remain idle while waiting for I/O that could be handled asynchronously.\n3. **Potential Deadlocks**: If the subprocess itself tries to interact with the event loop, it can cause deadlocks.\n4. **Unpredictable Behavior**: Mixing sync and async code makes the program's execution flow harder to reason about.\n5. **Scalability Issues**: The application cannot handle concurrent operations efficiently.\n\nAsync-compatible subprocess functions from asyncio properly yield control back to the event loop during I/O operations, maintaining the expected non-blocking behavior.",
+  "how_to_fix": {
+    "description": "Replace synchronous subprocess calls with their async equivalents from the asyncio module",
+    "steps": [
+      "1. Identify all synchronous subprocess calls (subprocess.run(), subprocess.call(), etc.) in async functions",
+      "2. Replace them with asyncio.create_subprocess_exec() or asyncio.create_subprocess_shell() as appropriate",
+      "3. Ensure proper await syntax is used with the async subprocess calls",
+      "4. Handle the subprocess communication asynchronously using await proc.communicate()",
+      "5. Update any error handling to work with the async subprocess API",
+      "6. Test the modified code to ensure it maintains the same functionality without blocking"
+    ],
+    "code_example": "Before:\nimport subprocess\n\nasync def get_files():\n    result = subprocess.run(['ls'], capture_output=True)\n    return result.stdout.decode()\n\nAfter:\nimport asyncio\n\nasync def get_files():\n    proc = await asyncio.create_subprocess_exec(\n        'ls',\n        stdout=asyncio.subprocess.PIPE\n    )\n    stdout, _ = await proc.communicate()\n    return stdout.decode()"
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-835",
+        "name": "Infinite Loop",
+        "description": "Blocking calls in async code can create loop starvation conditions"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CON52-J",
+        "name": "Do not allow asynchronous operations to block",
+        "description": "Prevent blocking operations in asynchronous contexts"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["func", "value", "id"],
+        "value": "subprocess"
+      },
+      {
+        "check_type": "any",
+        "property_path": ["func", "attr"],
+        "values": ["run", "call", "check_call", "check_output", "Popen"]
+      }
+    ]
+  }
+}

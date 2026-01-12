@@ -1,0 +1,175 @@
+{
+  "rule_id": "alternation_in_regular_expressions_should_not_contain_empty_alternatives",
+  "title": "Alternation in regular expressions should not contain empty alternatives",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "An empty alternative in a regular expression alternation (e.g., 'a||b') matches the empty string, which is almost always a mistake. This can lead to unexpected matches and bugs in the code using the regular expression.",
+  "message": "Remove this empty alternative from the regular expression",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "bug-prone",
+    "regex",
+    "suspicious"
+  ],
+  "impact": "Medium",
+  "recommendation": "Remove empty alternatives from regular expressions or replace them with intended patterns.",
+  "references": [
+    {
+      "name": "Python re module documentation",
+      "url": "https://docs.python.org/3/library/re.html"
+    },
+    {
+      "name": "Regular Expression HOWTO",
+      "url": "https://docs.python.org/3/howto/regex.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "description": "Regular expression with proper alternatives",
+        "code": "import re\n\n# Correct alternation without empty alternatives\npattern = r'a|b|c'\nresult = re.search(pattern, text)\n\n# Multiple character alternatives\npattern = r'cat|dog|bird'\nresult = re.match(pattern, animal)\n\n# Alternatives with special characters\npattern = r'[0-9]+|[a-z]+'\nresult = re.findall(pattern, text)"
+      },
+      {
+        "description": "Using optional groups instead of empty alternatives", 
+        "code": "import re\n\n# Use optional groups instead of empty alternatives\npattern = r'prefix(suffix)?'  # Instead of 'prefix|prefixsuffix'\nresult = re.search(pattern, text)\n\n# Use quantifiers for optional parts\npattern = r'https?://example\\.com'  # Instead of 'http://example.com|https://example.com'\nresult = re.match(pattern, url)"
+      }
+    ],
+    "noncompliant": [
+      {
+        "description": "Regular expression with empty alternative at the end",
+        "code": "import re\n\n# Empty alternative at the end\npattern = r'a|b|'  # Noncompliant: empty alternative\nresult = re.search(pattern, text)\n\n# Function call with empty alternative\nre.match(r'prefix|suffix|', text)  # Noncompliant"
+      },
+      {
+        "description": "Regular expression with empty alternative in the middle",
+        "code": "import re\n\n# Empty alternative in the middle\npattern = r'cat||dog'  # Noncompliant: empty alternative between cat and dog\nresult = re.findall(pattern, text)\n\n# Multiple empty alternatives\npattern = r'a||b||c'  # Noncompliant: multiple empty alternatives\nresult = re.compile(pattern)"
+      },
+      {
+        "description": "Empty alternative at the beginning",
+        "code": "import re\n\n# Empty alternative at the beginning\npattern = r'|start|end'  # Noncompliant: empty alternative at start\nresult = re.search(pattern, text)\n\n# Compiled pattern with empty alternative\ncompiled = re.compile(r'|option1|option2')  # Noncompliant"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "priority": "Medium",
+    "remediation_guidance": "Review regular expression patterns to ensure all alternatives contain meaningful patterns"
+  },
+  "why_is_this_an_issue": {
+    "summary": "Empty alternatives in regular expressions can cause unexpected matching behavior and indicate logical errors in the pattern.",
+    "detailed_explanation": "When a regular expression contains empty alternatives (consecutive pipe symbols like 'a||b' or trailing pipes like 'a|b|'), the empty string becomes a valid match. This almost always indicates a mistake in the regex pattern construction and can lead to:\n\n1. **Unexpected matches**: The regex will match empty strings when you likely intended to match specific patterns\n2. **Logic errors**: The presence of empty alternatives often indicates incomplete or incorrectly constructed regex patterns\n3. **Performance issues**: Empty alternatives can cause the regex engine to perform unnecessary work\n4. **Maintenance problems**: Code with empty alternatives is harder to understand and maintain\n\nCommon causes include:\n- Accidentally adding extra pipe characters\n- Removing alternatives without removing the corresponding pipes\n- Copy-paste errors when constructing complex patterns\n- Incomplete pattern construction during development"
+  },
+  "how_to_fix": {
+    "summary": "Remove empty alternatives from regular expression patterns or replace them with intended alternatives.",
+    "step_by_step": [
+      {
+        "step": 1,
+        "description": "Identify the empty alternative in your regex pattern (look for consecutive pipes '||' or trailing pipes ending with '|')"
+      },
+      {
+        "step": 2,
+        "description": "Determine if the empty alternative was intentional or accidental"
+      },
+      {
+        "step": 3,
+        "description": "If accidental, remove the extra pipe character to eliminate the empty alternative"
+      },
+      {
+        "step": 4,
+        "description": "If you need to match empty strings, consider using quantifiers (?, *, +) or optional groups instead"
+      },
+      {
+        "step": 5,
+        "description": "Test your regex pattern to ensure it matches the intended strings and doesn't match unintended empty strings"
+      }
+    ],
+    "examples": [
+      {
+        "before": "pattern = r'a|b|'",
+        "after": "pattern = r'a|b'",
+        "explanation": "Remove trailing empty alternative"
+      },
+      {
+        "before": "pattern = r'cat||dog'", 
+        "after": "pattern = r'cat|dog'",
+        "explanation": "Remove empty alternative between alternatives"
+      },
+      {
+        "before": "pattern = r'|start|end'",
+        "after": "pattern = r'start|end'",
+        "explanation": "Remove leading empty alternative"
+      }
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-185",
+        "name": "Incorrect Regular Expression",
+        "url": "https://cwe.mitre.org/data/definitions/185.html"
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "check_type": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "value", "id"],
+            "value": "re"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["func", "attr"],
+            "forbidden_values": ["compile", "search", "match", "findall", "finditer", "sub", "subn", "split"]
+          },
+          {
+            "check_type": "regex_match",
+            "property_path": ["args", "*", "value"],
+            "pattern": "\\|\\||\\|$|^\\|"
+          }
+        ]
+      },
+      {
+        "check_type": "and",
+        "conditions": [
+          {
+            "check_type": "node_type", 
+            "value": "Assign"
+          },
+          {
+            "check_type": "regex_match",
+            "property_path": ["value", "value"],
+            "pattern": "\\|\\||\\|$|^\\|"
+          }
+        ]
+      },
+      {
+        "check_type": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Constant"
+          },
+          {
+            "check_type": "regex_match",
+            "property_path": ["value"],
+            "pattern": "\\|\\||\\|$|^\\|"
+          }
+        ]
+      }
+    ]
+  }
+}

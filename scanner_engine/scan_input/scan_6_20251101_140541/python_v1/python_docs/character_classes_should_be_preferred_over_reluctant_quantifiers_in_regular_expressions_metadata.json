@@ -1,0 +1,169 @@
+{
+  "rule_id": "character_classes_should_be_preferred_over_reluctant_quantifiers_in_regular_expressions",
+  "title": "Character classes should be preferred over reluctant quantifiers in regular expressions",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects when reluctant quantifiers (`*?`, `+?`, `??`, `{n,m}?`) are used in regular expressions where character classes (`[...]`) would be more appropriate. Reluctant quantifiers can lead to less efficient pattern matching and reduced readability compared to explicit character classes. Character classes are generally preferred when you want to match specific sets of characters rather than using non-greedy quantifiers that may lead to unexpected matching behavior.",
+  "message": "Replace this reluctant quantifier with an explicit character class for better performance and clarity.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "performance",
+    "readability",
+    "regex",
+    "python"
+  ],
+  "impact": "Using reluctant quantifiers instead of character classes can lead to less efficient regular expression evaluation, particularly in complex patterns. This can result in slower pattern matching and reduced code maintainability due to less explicit intent. While not a critical issue, it represents a suboptimal coding practice that could affect performance in regex-heavy applications.",
+  "recommendation": "Replace reluctant quantifiers with explicit character classes when you need to match specific sets of characters. For example, use `[abc]` instead of `a?b?c?` when you want to match any of these characters exactly once. This makes the pattern's intent clearer and often improves matching performance.",
+  "references": [
+    {
+      "title": "Python Regular Expression HOWTO",
+      "url": "https://docs.python.org/3/howto/regex.html"
+    },
+    {
+      "title": "Regular Expression Performance",
+      "url": "https://www.regular-expressions.info/catastrophic.html"
+    },
+    {
+      "title": "Efficient Regex Patterns in Python",
+      "url": "https://realpython.com/regex-python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import re\n\npattern = re.compile(r'[abc]')  # Matches any single a, b, or c\ntext = 'apple banana cherry'\nmatches = pattern.findall(text)  # ['a', 'b', 'a', 'a', 'a', 'c']",
+        "description": "Uses a character class to explicitly match any of the characters a, b, or c. This is clearer and more efficient than using reluctant quantifiers."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'\\d{3}')  # Matches exactly 3 digits\ntext = '123-456-7890'\nmatches = pattern.findall(text)  # ['123', '456', '789']",
+        "description": "Uses a precise quantifier for digits rather than a reluctant quantifier, making the intent clear."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import re\n\npattern = re.compile(r'a?b?c?')  # Reluctant matching of a, b, or c\ntext = 'apple banana cherry'\nmatches = pattern.findall(text)  # Many empty matches due to reluctant quantifiers",
+        "description": "Uses reluctant quantifiers which can lead to unexpected matches (including empty strings) and is less clear about the intended matching behavior."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'.*?')  # Reluctant match of any character\ntext = 'hello world'\nmatches = pattern.findall(text)  # ['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']",
+        "description": "Uses a reluctant quantifier that matches one character at a time, which is inefficient compared to more specific patterns."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linter": true,
+      "ide_plugin": true
+    }
+  },
+  "why_is_this_an_issue": "Reluctant quantifiers in regular expressions can lead to several problems:\n\n1. **Performance Issues**: Reluctant quantifiers often require more backtracking during pattern matching, which can significantly slow down regex evaluation, especially with complex patterns or large input texts.\n\n2. **Readability Problems**: Patterns using reluctant quantifiers are often less clear about their intended matching behavior compared to explicit character classes. This makes the code harder to understand and maintain.\n\n3. **Unexpected Matches**: Reluctant quantifiers can sometimes match in ways that weren't intended, particularly when combined with other regex features, leading to subtle bugs.\n\n4. **Maintenance Challenges**: When patterns need to be modified later, patterns using character classes are generally easier to update correctly than those using reluctant quantifiers.\n\nWhile reluctant quantifiers have their place in regular expressions (particularly when you need non-greedy matching), they should not be used as a substitute for character classes when matching specific sets of characters.",
+  "how_to_fix": {
+    "description": "To fix violations of this rule, follow these steps to replace reluctant quantifiers with more appropriate character classes:",
+    "steps": [
+      "1. **Identify the characters you actually want to match**: Look at the pattern and determine which specific characters should be matched at each position.",
+      "2. **Replace reluctant quantifiers with character classes**: For example, change `a?b?c?` to `[abc]` if you want to match any single occurrence of a, b, or c.",
+      "3. **Use precise quantifiers when needed**: If you need to match a specific number of characters, use explicit quantifiers like `{3}` instead of reluctant quantifiers like `???`.",
+      "4. **Test the new pattern**: Verify that your new pattern matches exactly what you intended and doesn't introduce any new issues.",
+      "5. **Consider adding pattern comments**: For complex patterns, add comments explaining what each part of the pattern is intended to match."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "func",
+          "attr"
+        ],
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "equals",
+              "value": "compile"
+            },
+            {
+              "check_type": "equals",
+              "value": "match"
+            },
+            {
+              "check_type": "equals",
+              "value": "search"
+            },
+            {
+              "check_type": "equals",
+              "value": "fullmatch"
+            },
+            {
+              "check_type": "equals",
+              "value": "findall"
+            },
+            {
+              "check_type": "equals",
+              "value": "finditer"
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "func",
+          "value",
+          "id"
+        ],
+        "condition": {
+          "check_type": "equals",
+          "value": "re"
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "check_type": "regex_match",
+          "pattern": ".*[?*+]{1,2}\\?.*",
+          "description": "Matches strings containing reluctant quantifiers (? after *, +, or ?)"
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "check_type": "not",
+          "sub_condition": {
+            "check_type": "regex_match",
+            "pattern": ".*\\[.*\\].*",
+            "description": "Excludes patterns that already contain character classes"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "rule_id": "wildcard_imports_should_not_be_used",
+  "title": "Wildcard imports should not be used",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Wildcard imports (using `from module import *`) introduce all exported symbols from a module into the current namespace without explicit declaration. This practice makes code less readable, harder to maintain, and can lead to naming conflicts, debugging difficulties, and unexpected behavior. It becomes unclear which symbols come from which modules, making it harder to understand dependencies and track the source of functions, classes, or variables.",
+  "message": "Do not use wildcard imports.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "pitfall",
+    "bad-practice",
+    "readability",
+    "maintainability",
+    "namespace"
+  ],
+  "impact": "Wildcard imports reduce code readability and maintainability by polluting the namespace with potentially hundreds of symbols. This can lead to naming conflicts where imported symbols accidentally override local variables or functions, making debugging extremely difficult. It also makes static analysis tools less effective and can cause issues with IDE features like auto-completion and refactoring.",
+  "recommendation": "Replace wildcard imports with explicit imports of only the symbols you need. Use qualified imports (import module) when importing many symbols, or import specific symbols explicitly (from module import symbol1, symbol2). This makes dependencies clear and prevents namespace pollution.",
+  "references": [
+    {
+      "title": "PEP 8 - Style Guide for Python Code - Imports",
+      "url": "https://peps.python.org/pep-0008/#imports"
+    },
+    {
+      "title": "SonarSource - Python Rules - S2208",
+      "url": "https://rules.sonarsource.com/python/RSPEC-2208/"
+    },
+    {
+      "title": "Python Documentation - Import Statement",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#the-import-statement"
+    },
+    {
+      "title": "Real Python - Python Import System",
+      "url": "https://realpython.com/python-import/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# Wildcard imports pollute the namespace\nfrom os import *\nfrom sys import *\nfrom math import *\nfrom datetime import *\n\n# It's unclear where these functions come from\nresult = sqrt(16)  # From math?\npath_exists = exists('/tmp')  # From os.path?\ncurrent_time = datetime.now()  # From datetime?\n\n# Potential naming conflicts\nfrom collections import *\nfrom typing import *\n# Both modules have 'Counter' - which one is used?\ncounter = Counter()",
+        "description": "Wildcard imports make it unclear where symbols originate and can cause naming conflicts when multiple modules export symbols with the same name."
+      },
+      {
+        "code": "# Relative wildcard imports are also problematic\nfrom . import *\nfrom ..parent_module import *\nfrom .sibling_module import *\n\n# Makes code structure and dependencies unclear\nresult = some_function()  # Where is this defined?",
+        "description": "Relative wildcard imports make the module structure and internal dependencies unclear, hindering code understanding and maintenance."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# Explicit imports make dependencies clear\nfrom os import getcwd, listdir, path\nfrom sys import argv, exit\nfrom math import sqrt, pi\nfrom datetime import datetime, timedelta\n\n# Clear origin of each function\nresult = sqrt(16)  # Clearly from math module\npath_exists = path.exists('/tmp')  # Clearly from os.path\ncurrent_time = datetime.now()  # Clearly from datetime module\n\n# No naming conflicts\nfrom collections import Counter as CollectionsCounter\nfrom typing import Counter as TypingCounter\n# Clear which Counter is being used\ncounter = CollectionsCounter()",
+        "description": "Explicit imports make it clear where each symbol comes from, preventing naming conflicts and improving code readability."
+      },
+      {
+        "code": "# Qualified imports for better namespace management\nimport os\nimport sys\nimport math\nimport datetime\n\n# Very clear module origins\nresult = math.sqrt(16)\npath_exists = os.path.exists('/tmp')\ncurrent_time = datetime.datetime.now()\n\n# When importing many symbols, use qualified imports\nimport collections\nimport typing\ncounter = collections.Counter()\ntype_counter = typing.Counter",
+        "description": "Qualified imports provide clear namespace separation and make the origin of all symbols explicit, improving code maintainability."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "Low - Mainly affects maintainability rather than security",
+    "automation": "High - Can be automatically detected through AST analysis",
+    "compliance": "Medium - Follows Python coding standards and best practices"
+  },
+  "why_is_this_an_issue": "Wildcard imports violate the Python principle of explicit being better than implicit. They introduce several problems: namespace pollution (importing potentially hundreds of symbols), naming conflicts (imported symbols can override local variables), debugging difficulties (unclear symbol origins), reduced IDE effectiveness (auto-completion and refactoring become unreliable), and maintenance challenges (difficult to track dependencies). Code becomes less readable and more error-prone when it's unclear where symbols are defined.",
+  "how_to_fix": "1. Replace wildcard imports with explicit imports of specific symbols you need. 2. Use qualified imports (import module) when you need many symbols from a module. 3. Use import aliases to resolve naming conflicts (from module import symbol as alias). 4. Group related imports and organize them according to PEP 8 guidelines. 5. Use tools like isort to automatically organize imports. 6. For relative imports, be explicit about what you're importing from each module. 7. Consider refactoring code that requires too many imports from a single module.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ImportFrom"
+      },
+      {
+        "check_type": "regex",
+        "property_path": ["names", "*", "name"],
+        "regex": "^\\*$"
+      }
+    ]
+  }
+}

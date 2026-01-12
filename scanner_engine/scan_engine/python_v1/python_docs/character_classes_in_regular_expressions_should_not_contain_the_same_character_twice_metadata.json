@@ -1,0 +1,159 @@
+{
+  "rule_id": "character_classes_in_regular_expressions_should_not_contain_the_same_character_twice",
+  "title": "Character classes in regular expressions should not contain the same character twice",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects when a regular expression character class (e.g., `[abc]`) contains duplicate characters. While syntactically valid, duplicate characters in character classes are redundant and can make the regex harder to maintain. They don't affect functionality but represent unnecessary clutter in the codebase.",
+  "message": "Remove the duplicate character '{0}' from this character class.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "2min"
+  },
+  "tags": [
+    "convention",
+    "readability",
+    "regex",
+    "python",
+    "best-practice",
+    "clean-code"
+  ],
+  "impact": "Duplicate characters in regex character classes don't affect runtime behavior but reduce code readability and maintainability. They may confuse developers who review or modify the regex later, potentially leading to errors during maintenance. While the impact is primarily on code quality rather than functionality, consistent regex patterns improve overall codebase health.",
+  "recommendation": "Remove duplicate characters from regex character classes. For example, change `[a-zA-Z0-90-9]` to `[a-zA-Z0-9]` to eliminate the redundant `0-9` range.",
+  "references": [
+    {
+      "title": "Python Regular Expression HOWTO",
+      "url": "https://docs.python.org/3/howto/regex.html"
+    },
+    {
+      "title": "Regular-Expressions.info - Character Classes",
+      "url": "https://www.regular-expressions.info/charclass.html"
+    },
+    {
+      "title": "SonarSource Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import re\n\npattern = re.compile(r'[a-zA-Z0-9]')  # Clean character class without duplicates\nmatch = pattern.search('Test123')",
+        "description": "This character class contains each character/range only once, making it clean and maintainable."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'[abc]')  # Simple character class without duplicates\nmatch = pattern.search('apple')",
+        "description": "Each character in the class appears exactly once."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import re\n\npattern = re.compile(r'[a-zA-Z0-90-9]')  # Contains duplicate '0-9' range\nmatch = pattern.search('Test123')",
+        "description": "The character class contains the `0-9` range twice, which is redundant."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'[aabbcc]')  # Contains duplicate characters\nmatch = pattern.search('banana')",
+        "description": "Each character 'a', 'b', and 'c' appears twice in the character class."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'[a-zA-Za-z]')  # Contains duplicate 'a-z' range\nmatch = pattern.search('HelloWorld')",
+        "description": "The lowercase 'a-z' range appears twice in the character class."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-quality",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linter": true,
+      "can_be_autofixed": true
+    }
+  },
+  "why_is_this_an_issue": "Duplicate characters in regex character classes serve no functional purpose but create several problems:\n\n1. **Reduced Readability**: Extra characters make the pattern harder to understand at a glance.\n2. **Maintenance Risk**: Developers might overlook actual issues when scanning through verbose patterns.\n3. **Potential for Errors**: During future modifications, duplicates might lead to confusion about which instance should be changed.\n4. **Inconsistent Style**: Clean code principles recommend eliminating all forms of redundancy.\n5. **Performance Myth**: While modern regex engines optimize this, some developers might mistakenly believe duplicates affect performance.\n\nThe rule enforces consistent, clean regex patterns that follow Python's emphasis on readability.",
+  "how_to_fix": {
+    "description": "To fix this issue, remove all duplicate characters or ranges from the character class while preserving its intended matching behavior.",
+    "steps": [
+      "1. Identify all duplicate characters or ranges in the character class (e.g., `[a-zA-Za-z]` has duplicate `a-z`).",
+      "2. Remove the duplicates while ensuring the remaining pattern still matches all intended characters.",
+      "3. For ranges, ensure you're not accidentally changing the character set (e.g., `[0-9a-z]` is different from `[0-9a-zA-Z]`).",
+      "4. Test the modified regex to verify it still works as intended.",
+      "5. Consider using regex visualizers or testers to confirm the pattern matches exactly what you need."
+    ],
+    "autofix_capable": true,
+    "autofix_description": "Most static analysis tools can automatically remove duplicate characters from character classes without changing the regex's matching behavior."
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "note": "This rule is primarily about code quality rather than security, so no security framework mappings apply."
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "func",
+          "attr"
+        ],
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "equals",
+              "value": "compile"
+            },
+            {
+              "check_type": "equals",
+              "value": "match"
+            },
+            {
+              "check_type": "equals",
+              "value": "search"
+            },
+            {
+              "check_type": "equals",
+              "value": "fullmatch"
+            },
+            {
+              "check_type": "equals",
+              "value": "findall"
+            },
+            {
+              "check_type": "equals",
+              "value": "finditer"
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "regex_match",
+              "pattern": "\\[.*[^\\\\]\\[.*\\]",
+              "description": "Matches string literals containing character classes"
+            },
+            {
+              "check_type": "custom",
+              "function": "has_duplicate_chars_in_character_class",
+              "description": "Checks if any character class contains duplicate characters (case-sensitive)"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

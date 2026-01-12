@@ -1,0 +1,102 @@
+{
+  "rule_id": "when_iterating_over_an_iterable_object_using_list_should_be_avoided",
+  "title": "When iterating over an iterable object, using list() should be avoided",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "Converting an iterable to a list using list() constructor when only iteration is needed creates unnecessary memory overhead and reduces performance. Direct iteration over the iterable is more memory-efficient and faster.",
+  "message": "Avoid using list() when iterating over an iterable; iterate directly instead.",
+  "remediation": {
+    "func": "Linear",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "performance",
+    "memory-usage",
+    "best-practice",
+    "python"
+  ],
+  "impact": "Converting iterables to lists unnecessarily consumes memory and degrades performance, especially with large datasets. This can lead to memory exhaustion and slower execution times.",
+  "recommendation": "Remove the list() conversion and iterate directly over the iterable object.",
+  "references": [
+    {
+      "title": "Python Performance Tips",
+      "url": "https://wiki.python.org/moin/PythonSpeed/PerformanceTips"
+    },
+    {
+      "title": "Effective Python - Item 27: Use Comprehensions Instead of map and filter",
+      "url": "https://effectivepython.com/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# Noncompliant: unnecessary conversion to list\nfor item in list(range(100)):\n    print(item)",
+        "description": "Converting range() to list creates unnecessary memory overhead"
+      },
+      {
+        "code": "# Noncompliant: converting generator to list for iteration\ndef get_items():\n    yield from range(10)\n\nfor item in list(get_items()):\n    process(item)",
+        "description": "Converting a generator to list defeats the purpose of lazy evaluation"
+      },
+      {
+        "code": "# Noncompliant: converting dict.keys() to list for iteration\nmy_dict = {'a': 1, 'b': 2}\nfor key in list(my_dict.keys()):\n    print(key)",
+        "description": "dict.keys() is already iterable, no need to convert to list"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# Compliant: direct iteration over range\nfor item in range(100):\n    print(item)",
+        "description": "Direct iteration is memory-efficient"
+      },
+      {
+        "code": "# Compliant: direct iteration over generator\ndef get_items():\n    yield from range(10)\n\nfor item in get_items():\n    process(item)",
+        "description": "Preserves the lazy evaluation benefits of generators"
+      },
+      {
+        "code": "# Compliant: direct iteration over dict keys\nmy_dict = {'a': 1, 'b': 2}\nfor key in my_dict.keys():\n    print(key)",
+        "description": "Direct iteration over dict view objects"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Performance",
+    "subcategory": "Memory Management",
+    "priority": "Medium"
+  },
+  "why_is_this_an_issue": "Converting iterables to lists when only iteration is needed creates unnecessary memory allocation. This is particularly problematic with large datasets or generators that are designed for lazy evaluation. The list() constructor forces evaluation of the entire sequence into memory, which can cause performance degradation and memory exhaustion. Python's iteration protocol is designed to work efficiently with various iterable types without requiring conversion to lists.",
+  "how_to_fix": [
+    "Remove the list() constructor call and iterate directly over the iterable object",
+    "If you need to modify the iterable during iteration, consider using a different approach like iterating over a copy or using list comprehensions",
+    "For generators and other lazy iterables, preserve their lazy nature by avoiding conversion to lists",
+    "Use appropriate data structures based on actual needs - lists only when random access or mutability is required"
+  ],
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "For"
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["iter", "node_type"],
+        "required_values": ["Call"]
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["iter", "func", "node_type"],
+        "required_values": ["Name"]
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["iter", "func", "id"],
+        "required_values": ["list"]
+      }
+    ]
+  }
+}

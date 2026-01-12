@@ -1,0 +1,118 @@
+{
+  "rule_id": "boolean_checks_should_not_be_inverted",
+  "title": "Boolean checks should not be inverted",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects cases where boolean expressions are unnecessarily inverted (e.g., `if not x == y` instead of `if x != y` or `if not is_valid()` instead of `if not is_valid()`). Inverted boolean checks reduce code readability and can make the logic harder to understand at a glance. The rule encourages using direct boolean expressions where possible to improve code clarity and maintainability.",
+  "message": "Refactor this code to avoid inverting this boolean check.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "readability",
+    "best-practice",
+    "python",
+    "boolean-logic",
+    "clean-code"
+  ],
+  "impact": "Inverted boolean checks make the code less intuitive and can lead to cognitive overhead when reading or maintaining the code. While functionally equivalent, direct boolean expressions are generally easier to understand and align with common Python idioms. This improves code readability and reduces the chance of logical errors during future modifications.",
+  "recommendation": "Replace inverted boolean checks with their direct equivalents. For example, use `if x != y` instead of `if not x == y`, or `if not is_valid()` instead of `if is_valid() == False`. This makes the intent clearer and follows Python's style guidelines.",
+  "references": [
+    {
+      "title": "Python PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource: Boolean checks should not be inverted",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1940"
+    },
+    {
+      "title": "Python Clean Code Tips: Boolean Expressions",
+      "url": "https://realpython.com/python-pep8/#boolean-expressions"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "if x != y:\n    do_something()",
+        "description": "Direct comparison is clearer and more idiomatic."
+      },
+      {
+        "code": "if not is_valid():\n    raise ValueError(\"Invalid input\")",
+        "description": "Direct negation of a function call is acceptable and clear."
+      },
+      {
+        "code": "while not queue.empty():\n    process_item(queue.get())",
+        "description": "Direct negation in a loop condition is fine when it reads naturally."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "if not x == y:\n    do_something()",
+        "description": "Inverted comparison is less readable than `x != y`."
+      },
+      {
+        "code": "if is_valid() == False:\n    raise ValueError(\"Invalid input\")",
+        "description": "Explicit `== False` is redundant; use `not is_valid()` instead."
+      },
+      {
+        "code": "if not (x > 0 and y < 10):\n    handle_edge_case()",
+        "description": "Inverting a complex condition can be confusing; consider De Morgan's laws or restructuring."
+      },
+      {
+        "code": "if not (value in allowed_values):\n    reject_value()",
+        "description": "Use `value not in allowed_values` for better readability."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonarpython"
+      ],
+      "fixable": true
+    }
+  },
+  "why_is_this_an_issue": "Inverted boolean checks introduce unnecessary cognitive load for developers reading the code. When a boolean expression is inverted (e.g., `not x == y`), the reader must mentally parse the negation and the underlying comparison, which slows down comprehension. This is particularly problematic in complex conditions or nested logic, where the inversion can obscure the true intent of the code. Direct boolean expressions (e.g., `x != y`) are more intuitive because they align with natural language and common programming idioms. Additionally, inverted checks can sometimes lead to subtle bugs if the negation is overlooked during refactoring or maintenance. While the compiler or interpreter treats both forms equivalently, the direct form is universally recognized as more maintainable and less error-prone in the Python community.",
+  "how_to_fix": {
+    "description": "To fix this issue, replace inverted boolean checks with their direct equivalents. The steps depend on the type of inversion, but the general approach is to simplify the expression while preserving its logical meaning.",
+    "steps": [
+      "Identify the inverted boolean check (e.g., `not x == y`, `is_valid() == False`).",
+      "Replace the inversion with a direct boolean expression:",
+      "- For `not x == y`, use `x != y`.",
+      "- For `not x > y`, use `x <= y`.",
+      "- For `is_valid() == False`, use `not is_valid()`.",
+      "- For `not (x in y)`, use `x not in y`.",
+      "For complex conditions (e.g., `not (x and y)`), apply De Morgan's laws to simplify: `not x or not y`.",
+      "Test the refactored code to ensure the logic remains correct.",
+      "Consider adding a comment if the direct expression might still be ambiguous to future readers."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "notes": "This rule is primarily about code readability and maintainability, not security. However, clearer code can indirectly reduce the risk of logical errors that might lead to security vulnerabilities."
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "UnaryOp"
+      },
+      {
+        "check_type": "node_type",
+        "value": "Compare"
+      }
+    ]
+  }
+}

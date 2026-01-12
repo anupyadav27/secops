@@ -1,0 +1,376 @@
+{
+  "rule_id": "aws_iam_policies_should_limit_the_scope_of_permissions_given",
+  "title": "AWS IAM policies should limit the scope of permissions given",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "This rule detects AWS IAM policies that grant overly permissive access by using wildcards ('*') in resource ARNs or actions. Such policies violate the principle of least privilege and can lead to security vulnerabilities by granting unnecessary permissions. The rule checks for IAM policy documents in Python code (typically in AWS CDK, Troposphere, or similar infrastructure-as-code tools) that define overly broad permissions.",
+  "message": "This IAM policy grants overly permissive access. Resource '{{resource}}' and/or action '{{action}}' use wildcards ('*') which violates the principle of least privilege. Consider specifying exact ARNs and required actions only.",
+  "remediation": {
+    "func": "Linear",
+    "constantCost": "15min",
+    "perOccurrenceCost": "10min"
+  },
+  "tags": [
+    "security",
+    "aws",
+    "iam",
+    "infra-as-code",
+    "least-privilege",
+    "cloud",
+    "external"
+  ],
+  "impact": "Overly permissive IAM policies can lead to security breaches by allowing attackers to access or modify resources beyond what is necessary for the application to function. This increases the attack surface and potential blast radius of compromised credentials. In severe cases, it could lead to complete account compromise if combined with privilege escalation techniques.",
+  "recommendation": "Replace wildcard permissions ('*') with specific ARNs and only the minimum required actions. Follow AWS IAM best practices by scoping permissions to the exact resources needed and using condition keys where appropriate to further restrict access.",
+  "references": [
+    {
+      "title": "AWS IAM Best Practices",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"
+    },
+    {
+      "title": "Principle of Least Privilege",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_min-perms.html"
+    },
+    {
+      "title": "AWS CDK IAM Policy Examples",
+      "url": "https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_iam.PolicyDocument.html"
+    },
+    {
+      "title": "CIS AWS Foundations Benchmark - IAM",
+      "url": "https://www.cisecurity.org/benchmark/amazon_web_services/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from aws_cdk import aws_iam as iam\n\n# Good: Policy scoped to specific S3 bucket and actions\npolicy = iam.PolicyStatement(\n    actions=[\"s3:GetObject\", \"s3:ListBucket\"],\n    resources=[\n        \"arn:aws:s3:::my-specific-bucket\",\n        \"arn:aws:s3:::my-specific-bucket/*\"\n    ]\n)",
+        "description": "This policy grants only the necessary S3 permissions to a specific bucket, following the principle of least privilege."
+      },
+      {
+        "code": "from troposphere import iam\n\n# Good: Policy with specific DynamoDB table permissions\nddb_policy = iam.Policy(\n    PolicyName=\"DynamoDBAccess\",\n    PolicyDocument={\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [{\n            \"Effect\": \"Allow\",\n            \"Action\": [\n                \"dynamodb:GetItem\",\n                \"dynamodb:Query\",\n                \"dynamodb:Scan\"\n            ],\n            \"Resource\": \"arn:aws:dynamodb:us-east-1:123456789012:table/MyTable\"\n        }]\n    }\n)",
+        "description": "This policy restricts DynamoDB access to only the required actions on a specific table."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from aws_cdk import aws_iam as iam\n\n# Bad: Policy with wildcard resource\npolicy = iam.PolicyStatement(\n    actions=[\"s3:*\"],\n    resources=[\"*\"]\n)",
+        "description": "This policy grants all S3 permissions to all resources, which is excessively permissive."
+      },
+      {
+        "code": "from troposphere import iam\n\n# Bad: Policy with wildcard actions\nbad_policy = iam.Policy(\n    PolicyName=\"OverlyPermissive\",\n    PolicyDocument={\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [{\n            \"Effect\": \"Allow\",\n            \"Action\": [\"*\"],\n            \"Resource\": [\"arn:aws:s3:::my-bucket\"]\n        }]\n    }\n)",
+        "description": "This policy grants all possible actions on the S3 bucket, violating least privilege."
+      },
+      {
+        "code": "# Bad: Policy with wildcard in resource path\npolicy_doc = {\n    \"Version\": \"2012-10-17\",\n    \"Statement\": [{\n        \"Effect\": \"Allow\",\n        \"Action\": [\"s3:GetObject\"],\n        \"Resource\": \"arn:aws:s3:::my-bucket/*\"  # Wildcard in path is often too permissive\n    }]\n}",
+        "description": "While sometimes necessary, wildcard paths in resources should be carefully reviewed and scoped as tightly as possible."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "infrastructure-security",
+    "priority": "high",
+    "automation": {
+      "detect": "static-analysis",
+      "prevent": "code-review",
+      "respond": "automated-remediation"
+    },
+    "lifecycle": [
+      "develop",
+      "deploy"
+    ],
+    "tools": [
+      "checkov",
+      "cfn-nag",
+      "cdk-nag",
+      "sonarqube"
+    ]
+  },
+  "why_is_this_an_issue": "Overly permissive IAM policies are a common security anti-pattern that violates the principle of least privilege. When policies use wildcards ('*') in either the resource ARN or the action list, they grant permissions that go beyond what the application actually needs to function. This creates several security risks:\n\n1. **Increased Attack Surface**: Broad permissions make it easier for attackers to move laterally within your AWS environment if credentials are compromised.\n\n2. **Potential for Privilege Escalation**: Wildcard permissions might inadvertently grant access to services that could be used to escalate privileges.\n\n3. **Difficult Audit Trails**: Overly permissive policies make it harder to track exactly what actions a principal can perform, complicating security audits.\n\n4. **Accidental Data Exposure**: Broad resource access might allow access to sensitive data that wasn't intended to be accessible.\n\n5. **Compliance Violations**: Many security standards and compliance frameworks (like CIS, NIST, ISO 27001) explicitly require least privilege access controls.\n\nThe rule helps identify these issues early in the development process when they're easiest and cheapest to fix, rather than discovering them during a security incident or compliance audit.",
+  "how_to_fix": {
+    "description": "To fix overly permissive IAM policies, follow these steps to apply the principle of least privilege:",
+    "steps": [
+      "1. **Identify the exact AWS services** your application needs to interact with (e.g., S3, DynamoDB, SQS).",
+      "2. **List the specific API actions** required for each service (e.g., s3:GetObject instead of s3:*).",
+      "3. **Determine the exact resources** that need to be accessed (specific ARNs instead of *).",
+      "4. **Replace wildcards with specific values** in both the Action and Resource fields of your IAM policy.",
+      "5. **Use IAM Condition keys** where appropriate to further restrict access (e.g., aws:SourceIp, aws:RequestTag).",
+      "6. **Test the updated policy** to ensure your application still functions correctly with the more restrictive permissions.",
+      "7. **Consider using AWS Managed Policies** where possible, as these are designed following best practices.",
+      "8. **Implement policy versioning** so you can roll back if the new policy is too restrictive.",
+      "9. **Use tools like IAM Access Analyzer** to validate that your policies grant only the intended access.",
+      "10. **Document the justification** for each permission to make future reviews easier."
+    ],
+    "additional_tips": [
+      "For AWS CDK users, consider using the 'cdk-nag' tool which includes checks for least privilege violations.",
+      "Use the AWS Policy Generator to help create properly scoped policies: https://awspolicygen.s3.amazonaws.com/policygen.html",
+      "Regularly review and update policies as your application's requirements change.",
+      "Consider implementing permission boundaries for additional protection."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-250",
+        "name": "Execution with Unnecessary Privileges",
+        "description": "The software performs an operation at a privilege level that is higher than the minimum level required, which creates new weaknesses or amplifies the consequences of other weaknesses."
+      },
+      {
+        "id": "CWE-269",
+        "name": "Improper Privilege Management",
+        "description": "The software does not properly assign, modify, track, or check privileges for an actor, creating an unintended sphere of control for that actor."
+      },
+      {
+        "id": "CWE-284",
+        "name": "Improper Access Control",
+        "description": "The software does not restrict or incorrectly restricts access to a resource from an unauthorized actor."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC61-J",
+        "name": "Do not use insecure or weak cryptographic algorithms",
+        "description": "While primarily about cryptography, the principle of using strong, well-defined security controls applies equally to IAM permissions."
+      }
+    ],
+    "owasp": [
+      {
+        "id": "API1:2023",
+        "name": "Broken Object Level Authorization",
+        "description": "Overly permissive IAM policies can lead to broken object level authorization by granting access to more resources than intended."
+      },
+      {
+        "id": "API4:2023",
+        "name": "Unrestricted Resource Consumption",
+        "description": "Broad permissions might allow excessive resource consumption or denial of service attacks."
+      },
+      {
+        "id": "A01:2021",
+        "name": "Broken Access Control",
+        "description": "Access control enforces policy such that users cannot act outside of their intended permissions, which is violated by overly permissive IAM policies."
+      }
+    ],
+    "aws_well_architected": [
+      {
+        "id": "SEC2",
+        "name": "Apply the principle of least privilege",
+        "description": "Grant only the permissions that are required to perform a task."
+      },
+      {
+        "id": "SEC5",
+        "name": "Define and enforce security requirements for all layers",
+        "description": "Include IAM policies in your security requirements and enforcement mechanisms."
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "func",
+                  "attr"
+                ]
+              },
+              {
+                "check_type": "regex_match",
+                "property_path": [
+                  "func",
+                  "attr"
+                ],
+                "value": "^(PolicyStatement|Policy)$",
+                "flags": "i"
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "keys"
+                ]
+              },
+              {
+                "check_type": "contains",
+                "property_path": [
+                  "keys"
+                ],
+                "value": "PolicyDocument"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "args",
+                  "0",
+                  "actions"
+                ]
+              },
+              {
+                "check_type": "contains",
+                "property_path": [
+                  "args",
+                  "0",
+                  "actions"
+                ],
+                "value": "*"
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "args",
+                  "0",
+                  "resources"
+                ]
+              },
+              {
+                "check_type": "contains",
+                "property_path": [
+                  "args",
+                  "0",
+                  "resources"
+                ],
+                "value": "*"
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "keys"
+                ]
+              },
+              {
+                "check_type": "contains",
+                "property_path": [
+                  "keys"
+                ],
+                "value": "Statement"
+              },
+              {
+                "operator": "or",
+                "conditions": [
+                  {
+                    "check_type": "property_exists",
+                    "property_path": [
+                      "values",
+                      "0",
+                      "Statement",
+                      "0",
+                      "Action"
+                    ]
+                  },
+                  {
+                    "check_type": "property_exists",
+                    "property_path": [
+                      "values",
+                      "0",
+                      "Statement",
+                      "0",
+                      "Resource"
+                    ]
+                  }
+                ]
+              },
+              {
+                "operator": "or",
+                "conditions": [
+                  {
+                    "operator": "and",
+                    "conditions": [
+                      {
+                        "check_type": "property_exists",
+                        "property_path": [
+                          "values",
+                          "0",
+                          "Statement",
+                          "0",
+                          "Action"
+                        ]
+                      },
+                      {
+                        "check_type": "contains",
+                        "property_path": [
+                          "values",
+                          "0",
+                          "Statement",
+                          "0",
+                          "Action"
+                        ],
+                        "value": "*"
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "and",
+                    "conditions": [
+                      {
+                        "check_type": "property_exists",
+                        "property_path": [
+                          "values",
+                          "0",
+                          "Statement",
+                          "0",
+                          "Resource"
+                        ]
+                      },
+                      {
+                        "check_type": "contains",
+                        "property_path": [
+                          "values",
+                          "0",
+                          "Statement",
+                          "0",
+                          "Resource"
+                        ],
+                        "value": "*"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

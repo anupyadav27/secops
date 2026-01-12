@@ -1,0 +1,115 @@
+{
+  "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
+  "title": "Boto3 operations that support pagination should use paginators or manual pagination handling",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when AWS Boto3 API calls that support pagination are made without using Boto3's built-in paginators or proper manual pagination handling. Many AWS services return truncated results by default, requiring pagination to retrieve all items. Failing to handle pagination can lead to incomplete data processing, missed records, and potential application errors.",
+  "message": "This Boto3 operation supports pagination but doesn't use a paginator or manual pagination handling. Consider using 'client.get_paginator()' or implementing manual pagination with 'NextToken'/'Marker' parameters to ensure all results are processed.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "aws",
+    "boto3",
+    "pagination",
+    "best-practice",
+    "data-completeness",
+    "convention",
+    "python"
+  ],
+  "impact": "Failing to handle pagination in Boto3 operations can result in: 1) Incomplete data processing where only the first page of results is handled, 2) Silent data loss where the application appears to work but misses records, 3) Difficult-to-debug issues when processing large datasets, 4) Potential performance problems from repeated partial processing of data.",
+  "recommendation": "Always use Boto3's built-in paginators when available, or implement proper manual pagination handling using the service's pagination tokens (typically 'NextToken', 'Marker', or similar parameters). The paginator approach is preferred as it handles most pagination logic automatically.",
+  "references": [
+    {
+      "title": "Boto3 Pagination Documentation",
+      "url": "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html"
+    },
+    {
+      "title": "AWS SDK for Python Pagination Examples",
+      "url": "https://docs.aws.amazon.com/code-samples/latest/catalog/python-boto3-pagination.py.html"
+    },
+    {
+      "title": "Common AWS Pagination Patterns",
+      "url": "https://aws.amazon.com/blogs/developer/handling-pagination-in-aws-sdk-for-python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import boto3\n\n# Using built-in paginator (recommended approach)\ns3 = boto3.client('s3')\npaginator = s3.get_paginator('list_objects_v2')\nfor page in paginator.paginate(Bucket='my-bucket'):\n    for obj in page.get('Contents', []):\n        print(obj['Key'])",
+        "description": "Proper usage of Boto3's built-in paginator to handle all pages of results automatically."
+      },
+      {
+        "code": "import boto3\n\n# Manual pagination handling\ndynamodb = boto3.client('dynamodb')\nresponse = dynamodb.scan(TableName='my-table')\nitems = response['Items']\n\nwhile 'LastEvaluatedKey' in response:\n    response = dynamodb.scan(\n        TableName='my-table',\n        ExclusiveStartKey=response['LastEvaluatedKey']\n    )\n    items.extend(response['Items'])",
+        "description": "Manual pagination handling using the service's pagination token ('LastEvaluatedKey' in this case)."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\n\n# Missing pagination handling\ns3 = boto3.client('s3')\nresponse = s3.list_objects_v2(Bucket='my-bucket')\nfor obj in response.get('Contents', []):\n    print(obj['Key'])  # Only processes first page of results",
+        "description": "Fails to handle pagination, only processing the first page of results (default 1000 objects in S3)."
+      },
+      {
+        "code": "import boto3\n\n# Incorrect assumption about complete results\ndynamodb = boto3.client('dynamodb')\nresponse = dynamodb.scan(TableName='my-table')\n# Processes only first 1MB of data (DynamoDB limit)\nfor item in response['Items']:\n    process_item(item)",
+        "description": "Assumes all items are returned in a single call, but DynamoDB limits responses to 1MB of data."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    },
+    "impact": {
+      "reliability": "high",
+      "security": "low",
+      "performance": "medium"
+    }
+  },
+  "why_is_this_an_issue": "Many AWS services return truncated results by default to improve performance and reduce response sizes. For example:\n\n1. Amazon S3's list_objects_v2 returns a maximum of 1000 objects per call\n2. Amazon DynamoDB's scan/query operations return a maximum of 1MB of data per call\n3. AWS Lambda's list_functions returns a maximum of 50 functions per call\n\nWhen applications don't handle pagination properly, they silently process only a subset of the available data. This can lead to:\n- Incomplete data processing (e.g., only analyzing the first 1000 S3 objects)\n- Missed records in data pipelines\n- Incorrect analytics and reporting\n- Difficult-to-diagnose bugs that only appear with large datasets\n\nThe issue is particularly problematic because:\n- It often doesn't fail visibly (the API call succeeds)\n- The problem only manifests with larger datasets\n- It can cause data consistency issues between different parts of an application",
+  "how_to_fix": {
+    "description": "Convert non-paginated Boto3 calls to use either built-in paginators or proper manual pagination handling.",
+    "steps": [
+      "1. Identify which Boto3 operations in your code might return paginated results (check the AWS service documentation)",
+      "2. For operations that support pagination, replace direct client calls with paginator usage:\n   - Get the paginator: `paginator = client.get_paginator('operation_name')`\n   - Use the paginator: `for page in paginator.paginate(**params):`",
+      "3. For services that don't support built-in paginators, implement manual pagination:\n   - Check the response for pagination tokens (common names: NextToken, Marker, NextMarker, LastEvaluatedKey)\n   - Make subsequent calls with the pagination token until no more tokens are returned",
+      "4. Update your data processing logic to handle the paginated responses",
+      "5. Test with datasets larger than the service's default page size to verify complete processing",
+      "6. Consider adding logging to track pagination progress for large datasets"
+    ],
+    "additional_considerations": [
+      "Some AWS operations have different pagination mechanisms - always check the service-specific documentation",
+      "For very large datasets, consider using parallel processing with pagination",
+      "Be aware of API rate limits when implementing manual pagination"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-770",
+        "name": "Allocation of Resources Without Limits or Throttling",
+        "description": "While not a direct security vulnerability, improper pagination handling can lead to resource exhaustion when processing large datasets"
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "node_type",
+        "value": "Attribute"
+      }
+    ]
+  }
+}

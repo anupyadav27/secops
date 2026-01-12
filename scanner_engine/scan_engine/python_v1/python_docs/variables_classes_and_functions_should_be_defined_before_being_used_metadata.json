@@ -1,0 +1,150 @@
+{
+  "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+  "title": "Variables, classes and functions should be defined before being used",
+  "type": "BUG",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "HIGH"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "In Python, variables, classes, and functions must be defined before they are used in the execution flow to avoid NameError exceptions. While functions and classes can be defined after their usage in some contexts due to Python's late binding, variables must always be assigned before being referenced. Using identifiers before they are defined in the execution order can lead to runtime errors and unpredictable behavior.",
+  "message": "Define '{{identifier}}' before using it in the execution flow.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "pitfall",
+    "bug-prone",
+    "python3",
+    "reliability"
+  ],
+  "impact": {
+    "reliability": "High impact as using undefined identifiers causes NameError exceptions at runtime",
+    "maintainability": "Medium impact as proper ordering improves code readability and reduces confusion"
+  },
+  "recommendation": "Ensure variables are assigned before being referenced, and consider moving function and class definitions before their usage for better code clarity.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Variables, classes and functions should be defined before being used",
+      "url": "https://rules.sonarsource.com/python/RSPEC-3827"
+    },
+    {
+      "title": "Python Execution Model",
+      "url": "https://docs.python.org/3/reference/executionmodel.html"
+    },
+    {
+      "title": "Python Built-in Exceptions - NameError",
+      "url": "https://docs.python.org/3/library/exceptions.html#NameError"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Variable used before assignment",
+        "code": "def calculate():\n    result = value + 10  # NameError: 'value' used before assignment\n    value = 5\n    return result"
+      },
+      {
+        "description": "Function called before definition in sequential execution",
+        "code": "# This will fail if executed as a script\nresult = helper_function()  # NameError: helper_function not defined yet\n\ndef helper_function():\n    return 42"
+      },
+      {
+        "description": "Class instantiated before definition in sequential execution",
+        "code": "# This will fail if executed as a script\nobj = MyClass()  # NameError: MyClass not defined yet\n\nclass MyClass:\n    pass"
+      },
+      {
+        "description": "Variable referenced in loop before first assignment",
+        "code": "for i in range(5):\n    if i > 0:\n        print(previous)  # NameError on first iteration\n    previous = i"
+      },
+      {
+        "description": "Conditional variable usage before assignment",
+        "code": "import random\n\nif random.random() > 0.5:\n    print(message)  # NameError if condition is true\n    \nmessage = \"Hello World\""
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Variable assigned before usage",
+        "code": "def calculate():\n    value = 5\n    result = value + 10  # Variable is assigned before use\n    return result"
+      },
+      {
+        "description": "Function defined before being called",
+        "code": "def helper_function():\n    return 42\n\n# Function is defined before use\nresult = helper_function()"
+      },
+      {
+        "description": "Class defined before instantiation",
+        "code": "class MyClass:\n    pass\n\n# Class is defined before use\nobj = MyClass()"
+      },
+      {
+        "description": "Function calls within functions (late binding)",
+        "code": "def main():\n    return helper_function()  # OK: resolved when main() is called\n\ndef helper_function():\n    return 42\n\n# Both functions defined before main() is called\nresult = main()"
+      },
+      {
+        "description": "Variable initialized before loop",
+        "code": "previous = None\nfor i in range(5):\n    if previous is not None:\n        print(f\"Previous: {previous}\")\n    previous = i"
+      },
+      {
+        "description": "Variable assigned in all execution paths",
+        "code": "import random\n\nmessage = \"Default message\"\nif random.random() > 0.5:\n    message = \"Random message\"\n    \nprint(message)  # Variable is always assigned"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "None",
+    "automation": "Medium - Requires control flow analysis to detect all execution paths",
+    "compliance": "High - Improves code reliability and prevents runtime errors"
+  },
+  "why_is_this_an_issue": "Using variables, classes, or functions before they are defined in the execution flow can lead to NameError exceptions at runtime. While Python allows forward references in some contexts (like function definitions within functions), variables must always be assigned before being referenced. This issue commonly occurs due to incorrect code ordering, conditional assignments, or misunderstanding of Python's execution model. Such errors make code unreliable and can cause program crashes.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify the identifier that is being used before definition"
+    },
+    {
+      "step": 2,
+      "description": "For variables: Move the assignment statement before the first usage"
+    },
+    {
+      "step": 3,
+      "description": "For functions: Move the function definition before its first call, or restructure code to use proper function ordering"
+    },
+    {
+      "step": 4,
+      "description": "For classes: Move the class definition before its first instantiation"
+    },
+    {
+      "step": 5,
+      "description": "For conditional assignments: Ensure the variable is initialized in all possible execution paths"
+    },
+    {
+      "step": 6,
+      "description": "Consider using default values or None initialization for variables that might not be set in some code paths"
+    },
+    {
+      "step": 7,
+      "description": "Test all code paths to ensure the fix resolves the issue"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-3827",
+  "scope": "Main",
+  "securityStandards": {},
+  "quickfix": "feasible",
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "comment": "Check for Name nodes (variables, functions, classes) being referenced - simplified logic for now",
+        "check_type": "node_type",
+        "value": "Name"
+      }
+    ]
+  }
+}

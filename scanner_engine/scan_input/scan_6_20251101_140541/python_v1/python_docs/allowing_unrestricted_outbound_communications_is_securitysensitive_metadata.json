@@ -1,0 +1,318 @@
+{
+  "rule_id": "allowing_unrestricted_outbound_communications_is_securitysensitive",
+  "title": "Allowing unrestricted outbound communications is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Allowing unrestricted outbound communications from cloud resources can enable data exfiltration, command and control, and other malicious activities. Outbound traffic should be restricted to only necessary destinations to reduce the risk of compromise and data loss.",
+  "message": "Make sure that allowing unrestricted outbound communications is safe here.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "security",
+    "cloud",
+    "network",
+    "outbound",
+    "egress",
+    "aws",
+    "azure",
+    "gcp"
+  ],
+  "impact": "Unrestricted outbound communications can allow attackers to exfiltrate data, establish command and control channels, download malicious payloads, and perform lateral movement within networks.",
+  "recommendation": "Restrict outbound traffic to only necessary destinations by implementing egress filtering, using specific IP ranges or domain allowlists, and monitoring outbound connections for suspicious activity.",
+  "references": [
+    {
+      "title": "AWS VPC Egress-only Internet Gateway",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/egress-only-internet-gateway.html"
+    },
+    {
+      "title": "Azure Network Security Groups - Outbound Rules",
+      "url": "https://docs.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview#outbound-security-rules"
+    },
+    {
+      "title": "GCP Firewall Rules - Egress",
+      "url": "https://cloud.google.com/vpc/docs/firewalls#egress-rules"
+    },
+    {
+      "title": "NIST Cybersecurity Framework - Network Segmentation",
+      "url": "https://www.nist.gov/cyberframework"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# AWS Security Group allowing all outbound traffic\nimport boto3\n\nec2 = boto3.client('ec2')\nresponse = ec2.authorize_security_group_egress(\n    GroupId='sg-12345678',\n    IpPermissions=[\n        {\n            'IpProtocol': '-1',  # All protocols\n            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Noncompliant: allows egress to anywhere\n        }\n    ]\n)",
+        "description": "Allowing egress to any destination on any protocol is dangerous"
+      },
+      {
+        "code": "# Azure NSG rule allowing unrestricted outbound\nfrom azure.mgmt.network import NetworkManagementClient\n\nnetwork_client = NetworkManagementClient(credentials, subscription_id)\n\nsecurity_rule = {\n    'name': 'AllowAllOutbound',\n    'protocol': '*',  # All protocols\n    'source_address_prefix': '*',\n    'source_port_range': '*',\n    'destination_address_prefix': '*',  # Noncompliant: allows access to anywhere\n    'destination_port_range': '*',  # Noncompliant: allows access to any port\n    'access': 'Allow',\n    'priority': 1000,\n    'direction': 'Outbound'\n}",
+        "description": "Wildcard destination addresses and ports allow unrestricted outbound access"
+      },
+      {
+        "code": "# GCP Firewall rule with unrestricted egress\nfrom googleapiclient import discovery\n\ncompute = discovery.build('compute', 'v1')\n\nfirewall_rule = {\n    'name': 'allow-all-egress',\n    'allowed': [{\n        'IPProtocol': 'all'  # Noncompliant: allows all protocols\n    }],\n    'destinationRanges': ['0.0.0.0/0'],  # Noncompliant: allows egress to anywhere\n    'direction': 'EGRESS'\n}",
+        "description": "Allowing egress to all destinations with all protocols enabled"
+      },
+      {
+        "code": "# Application configuration allowing unrestricted outbound\nimport requests\n\n# Configuration allowing connections to any destination\nproxy_config = {\n    'allowed_hosts': ['*'],  # Noncompliant: wildcard allows any destination\n    'timeout': 30\n}\n\n# Making requests without destination validation\ndef fetch_data(url):\n    # Noncompliant: no validation of destination URL\n    response = requests.get(url, proxies=proxy_config)\n    return response.json()",
+        "description": "Application code allowing connections to arbitrary destinations"
+      },
+      {
+        "code": "# Database with unrestricted outbound replication\nimport pymongo\n\n# MongoDB configuration with unrestricted replication targets\nconfig = {\n    'replication': {\n        'allowed_hosts': ['0.0.0.0/0'],  # Noncompliant: allows replication to anywhere\n        'port_range': '0-65535'  # Noncompliant: allows any port\n    }\n}",
+        "description": "Database replication allowing connections to any destination"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# AWS Security Group with restricted outbound traffic\nimport boto3\n\nec2 = boto3.client('ec2')\nresponse = ec2.authorize_security_group_egress(\n    GroupId='sg-12345678',\n    IpPermissions=[\n        {\n            'IpProtocol': 'tcp',\n            'FromPort': 443,\n            'ToPort': 443,\n            'IpRanges': [{'CidrIp': '10.0.0.0/8'}]  # Compliant: restricted to private network\n        }\n    ]\n)",
+        "description": "Restricting egress to specific protocols, ports, and destinations"
+      },
+      {
+        "code": "# Azure NSG with specific outbound rules\nfrom azure.mgmt.network import NetworkManagementClient\n\nnetwork_client = NetworkManagementClient(credentials, subscription_id)\n\nsecurity_rule = {\n    'name': 'AllowHTTPSToAPI',\n    'protocol': 'Tcp',\n    'source_address_prefix': '*',\n    'source_port_range': '*',\n    'destination_address_prefix': '52.168.1.100',  # Compliant: specific API server\n    'destination_port_range': '443',  # Compliant: specific port\n    'access': 'Allow',\n    'priority': 1000,\n    'direction': 'Outbound'\n}",
+        "description": "Allowing outbound access only to specific destinations and ports"
+      },
+      {
+        "code": "# GCP Firewall with restricted egress targets\nfrom googleapiclient import discovery\n\ncompute = discovery.build('compute', 'v1')\n\nfirewall_rule = {\n    'name': 'allow-api-egress',\n    'allowed': [{\n        'IPProtocol': 'tcp',\n        'ports': ['443']\n    }],\n    'destinationRanges': ['172.16.0.0/12'],  # Compliant: restricted to internal range\n    'direction': 'EGRESS'\n}",
+        "description": "Limiting egress to specific internal IP ranges and ports"
+      },
+      {
+        "code": "# Application with validated outbound connections\nimport requests\nfrom urllib.parse import urlparse\n\n# Allowlist of approved destinations\nALLOWED_DOMAINS = ['api.example.com', 'secure.partner.com']\n\ndef fetch_data(url):\n    parsed_url = urlparse(url)\n    if parsed_url.hostname not in ALLOWED_DOMAINS:  # Compliant: destination validation\n        raise ValueError(f\"Destination {parsed_url.hostname} not allowed\")\n    \n    response = requests.get(url, timeout=30)\n    return response.json()",
+        "description": "Validating destination URLs against an allowlist before making connections"
+      }
+    ]
+  },
+  "devsecops": {
+    "shift_left": "Infrastructure as Code validation",
+    "automation": "Automated egress rule auditing",
+    "monitoring": "Outbound traffic monitoring and alerting"
+  },
+  "why_is_this_an_issue": "Unrestricted outbound communications create significant security risks by providing attackers with multiple attack vectors. When applications or infrastructure can communicate with any external destination, it enables data exfiltration where sensitive information can be transmitted to attacker-controlled servers. It also facilitates command and control communications, allowing malware to receive instructions and updates from external sources. Additionally, unrestricted egress can be used for downloading additional malicious payloads, establishing backdoors, and performing reconnaissance on external networks. Even in cases where the primary security controls prevent initial compromise, unrestricted outbound access significantly amplifies the potential impact of any successful breach.",
+  "how_to_fix": {
+    "description": "Implement comprehensive egress filtering and monitoring to restrict outbound communications to only necessary destinations",
+    "steps": [
+      "Inventory all legitimate outbound communication requirements for your applications and services",
+      "Replace wildcard destination addresses (0.0.0.0/0, *, any) with specific IP ranges or addresses",
+      "Restrict destination ports to only those required for business functionality",
+      "Implement application-level destination validation using allowlists of approved domains or IP addresses",
+      "Use egress-only gateways or NAT gateways with specific routing rules for controlled internet access",
+      "Configure network security groups or firewalls to deny by default and explicitly allow only necessary egress traffic",
+      "Implement DNS filtering to block access to known malicious domains",
+      "Monitor and log all outbound connections for security analysis and incident response",
+      "Regularly review and audit egress rules to ensure they remain necessary and appropriate",
+      "Consider using application-layer proxies for additional control and monitoring of outbound traffic"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-284",
+        "name": "Improper Access Control"
+      },
+      {
+        "id": "CWE-923",
+        "name": "Improper Restriction of Communication Channel to Intended Endpoints"
+      },
+      {
+        "id": "CWE-200",
+        "name": "Exposure of Sensitive Information to an Unauthorized Actor"
+      }
+    ],
+    "owasp_top_10": [
+      {
+        "category": "A01:2021",
+        "name": "Broken Access Control"
+      },
+      {
+        "category": "A05:2021",
+        "name": "Security Misconfiguration"
+      }
+    ],
+    "sans_top_25": [
+      {
+        "rank": 3,
+        "name": "CWE-284: Improper Access Control"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "value": "authorize_security_group_egress"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["keywords", "*", "value", "*", "values", "*", "value"],
+                "forbidden_values": ["0.0.0.0/0", "::/0"]
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["keywords", "*", "value", "*", "values", "*", "value"],
+                "value": "-1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["destination_address_prefix", "destinationRanges", "allowed_hosts"]
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["values", "*", "value"],
+                "forbidden_values": ["*", "0.0.0.0/0", "::/0", "any", "all"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["values", "*", "elts", "*", "value"],
+                "forbidden_values": ["*", "0.0.0.0/0", "::/0"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["direction"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["values", "*", "value"],
+            "value": "Outbound"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["values", "*", "value"],
+                "forbidden_values": ["*"]
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["values", "*", "value"],
+                "value": "0-65535"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["direction"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["values", "*", "value"],
+            "value": "EGRESS"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["values", "*", "elts", "*", "values", "*", "value"],
+                "forbidden_values": ["all", "-1"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["values", "*", "elts", "*", "value"],
+                "forbidden_values": ["0.0.0.0/0", "::/0"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "equals",
+                "property_path": ["targets", "0", "id"],
+                "value": "destination_address_prefix"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["targets", "0", "id"],
+                "value": "destinationRanges"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["targets", "0", "id"],
+                "value": "allowed_hosts"
+              }
+            ]
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "equals",
+                "property_path": ["value", "value"],
+                "value": "*"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["value", "value"],
+                "value": "0.0.0.0/0"
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["value", "elts", "*", "value"],
+                "forbidden_values": ["*", "0.0.0.0/0", "::/0"]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

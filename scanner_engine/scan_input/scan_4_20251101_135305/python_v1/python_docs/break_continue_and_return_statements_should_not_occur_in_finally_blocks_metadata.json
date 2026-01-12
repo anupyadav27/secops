@@ -1,0 +1,157 @@
+{
+  "rule_id": "break_continue_and_return_statements_should_not_occur_in_finally_blocks",
+  "title": "'break', 'continue', and 'return' statements should not occur in 'finally' blocks",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when control flow statements (`break`, `continue`, or `return`) are used within a `finally` block. The `finally` block is intended for cleanup operations that must execute regardless of whether an exception was thrown or not. Using control flow statements in a `finally` block can lead to unexpected behavior, as they may interfere with the normal execution flow of exception handling, making the code harder to reason about and potentially introducing subtle bugs.",
+  "message": "Remove this '{{statement_type}}' statement from the 'finally' block; control flow statements should not be used here.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "convention",
+    "error-handling",
+    "best-practice",
+    "python",
+    "control-flow",
+    "maintainability"
+  ],
+  "impact": {
+    "maintainability": "Using control flow statements in `finally` blocks makes the code harder to understand and maintain, as it violates the expected behavior of exception handling. This can lead to confusion during debugging and increase the likelihood of introducing bugs during future modifications.",
+    "correctness": "Such statements can interfere with the proper execution of cleanup logic, potentially leaving resources in an inconsistent state or causing exceptions to be masked or improperly handled."
+  },
+  "recommendation": "Refactor the code to move control flow logic outside of the `finally` block. If you need to influence control flow based on conditions that occur in the `try` or `except` blocks, use variables to capture state and make decisions after the `try-finally` or `try-except-finally` construct completes.",
+  "references": [
+    {
+      "title": "Python Documentation: The try statement",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-try-statement"
+    },
+    {
+      "title": "PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource: Why finally blocks shouldn't contain control flow statements",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1143"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def process_data(data):\n    resource = None\n    try:\n        resource = open('file.txt', 'r')\n        # Process data here\n        return data.process()\n    except Exception as e:\n        print(f\"Error occurred: {e}\")\n        return None\n    finally:\n        if resource:\n            resource.close()  # Cleanup without control flow",
+        "description": "The `finally` block is used only for cleanup (closing the resource), with no control flow statements. This is the correct and expected usage."
+      },
+      {
+        "code": "def find_item(items, target):\n    for item in items:\n        try:\n            if item.match(target):\n                return item\n        finally:\n            log_search_attempt(item)  # No control flow, just logging\n    return None",
+        "description": "The `finally` block performs logging without altering control flow, which is safe and maintainable."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def read_config():\n    file = None\n    try:\n        file = open('config.json', 'r')\n        return json.load(file)\n    finally:\n        if file:\n            file.close()\n            return None  # ❌ 'return' in finally block",
+        "description": "The `return` statement in the `finally` block will override any `return` from the `try` block, leading to unexpected behavior where the function always returns `None` even if the `try` block succeeds."
+      },
+      {
+        "code": "def process_items(items):\n    for item in items:\n        try:\n            if item.is_valid():\n                continue  # This continue is fine\n        finally:\n            if not item.is_clean():\n                break  # ❌ 'break' in finally block",
+        "description": "The `break` statement in the `finally` block disrupts the loop's natural flow, making it unclear when the loop will terminate. This can lead to logic errors that are difficult to debug."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonarpython"
+      ],
+      "ide_support": [
+        "VSCode",
+        "PyCharm",
+        "Sublime Text"
+      ]
+    }
+  },
+  "why_is_this_an_issue": {
+    "behavioral_impact": "Control flow statements in `finally` blocks can override the intended behavior of `try`/`except` blocks. For example, a `return` in `finally` will execute regardless of whether an exception was raised, potentially masking the exception or returning an unintended value. Similarly, `break` or `continue` can disrupt loop logic in ways that are not immediately obvious.",
+    "maintainability_impact": "Code with control flow in `finally` blocks is harder to read and reason about. Developers expect `finally` blocks to contain only cleanup logic, so violating this expectation increases cognitive load and the risk of introducing bugs during maintenance.",
+    "debugging_difficulty": "When control flow statements are used in `finally` blocks, debugging becomes more challenging because the actual execution path may not match the apparent logic. This can lead to subtle bugs that are difficult to reproduce and fix."
+  },
+  "how_to_fix": {
+    "description": "To fix this issue, refactor the code to move control flow logic outside of the `finally` block. Use variables or flags to capture state within the `try` or `except` blocks, and then make control flow decisions after the `try-finally` construct.",
+    "steps": [
+      "Identify the control flow statement (`break`, `continue`, or `return`) in the `finally` block.",
+      "Determine what condition or state the control flow statement is responding to.",
+      "Move the condition check to the `try` or `except` block, and use a variable to record the result if needed.",
+      "Replace the control flow statement in the `finally` block with cleanup logic only.",
+      "After the `try-finally` or `try-except-finally` block, use the recorded state to make control flow decisions (e.g., `return` a value or `break` from a loop)."
+    ],
+    "example_refactor": {
+      "before": "def example():\n    try:\n        if some_condition():\n            return 'success'\n    finally:\n        cleanup()\n        return 'failed'  # ❌ Bad",
+      "after": "def example():\n    result = None\n    try:\n        if some_condition():\n            result = 'success'\n    finally:\n        cleanup()\n    return result if result is not None else 'failed'  # ✅ Good"
+    }
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-390",
+        "name": "Detection of Error Condition Without Action",
+        "description": "While not directly a security issue, improper use of `finally` blocks can lead to error conditions being improperly handled, which may contribute to broader security weaknesses."
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "name": "Prefer exceptions to returning error values",
+        "description": "Though Java-focused, the principle of proper error handling applies. Misusing `finally` blocks can violate this principle."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Try"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type_in_property",
+            "property_path": [
+              "finalbody"
+            ],
+            "value": "Break"
+          },
+          {
+            "check_type": "node_type_in_property",
+            "property_path": [
+              "finalbody"
+            ],
+            "value": "Continue"
+          },
+          {
+            "check_type": "node_type_in_property",
+            "property_path": [
+              "finalbody"
+            ],
+            "value": "Return"
+          }
+        ]
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": [
+          "finalbody"
+        ],
+        "description": "Ensure the 'finally' block (finalbody) exists and is non-empty"
+      }
+    ]
+  }
+}

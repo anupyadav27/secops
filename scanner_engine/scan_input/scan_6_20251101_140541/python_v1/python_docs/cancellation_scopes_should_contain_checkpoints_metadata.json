@@ -1,0 +1,248 @@
+{
+  "rule_id": "cancellation_scopes_should_contain_checkpoints",
+  "title": "Cancellation scopes should contain checkpoint operations",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that cancellation scopes (typically implemented via context managers like `asyncio.TaskGroup` or custom cancellation scopes) contain proper checkpoint operations. Checkpoints are essential for ensuring that long-running operations can be safely interrupted and resources properly cleaned up when cancellation occurs. Without checkpoints, cancellation may leave operations in an inconsistent state or fail to release critical resources.",
+  "message": "Add checkpoint operations within this cancellation scope to ensure proper cleanup during cancellation. Consider using 'try-finally' blocks or context managers that implement cancellation checkpoints.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "concurrency",
+    "async",
+    "resource-management",
+    "best-practice",
+    "python",
+    "cancellation",
+    "cleanup"
+  ],
+  "impact": "Missing checkpoints in cancellation scopes can lead to resource leaks, inconsistent program states, or incomplete cleanup when tasks are cancelled. This particularly affects long-running operations in asynchronous code where proper cancellation handling is critical for system stability. The impact ranges from minor resource leaks to complete system failures in resource-constrained environments.",
+  "recommendation": "Always include checkpoint operations in cancellation scopes. Use context managers that implement proper cancellation handling (like `asyncio.TaskGroup`), or explicitly add `try-finally` blocks with cancellation checks. For custom cancellation scopes, ensure they implement the context manager protocol with proper `__aenter__` and `__aexit__` methods that handle cancellation signals.",
+  "references": [
+    {
+      "title": "Python asyncio Task Groups",
+      "url": "https://docs.python.org/3/library/asyncio-task.html#task-groups"
+    },
+    {
+      "title": "Structured Concurrency in Python",
+      "url": "https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/"
+    },
+    {
+      "title": "PEP 684 – A Per-Interpreter GIL",
+      "url": "https://peps.python.org/pep-0684/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "async def process_items(items):\n    async with asyncio.TaskGroup() as tg:\n        for item in items:\n            tg.create_task(process_item(item))  # TaskGroup handles cancellation checkpoints",
+        "description": "Using asyncio.TaskGroup which automatically handles cancellation checkpoints for all child tasks"
+      },
+      {
+        "code": "class CancellationScope:\n    def __enter__(self):\n        return self\n    \n    def __exit__(self, exc_type, exc_val, exc_tb):\n        if exc_type is not None and issubclass(exc_type, CancelledError):\n            self.cleanup()\n        return False\n\nwith CancellationScope():\n    # Operations here will have cleanup on cancellation",
+        "description": "Custom cancellation scope that implements proper checkpoint in __exit__"
+      },
+      {
+        "code": "async def safe_operation():\n    try:\n        await long_running_task()\n    finally:\n        if not task.cancelled():\n            await cleanup_resources()",
+        "description": "Explicit try-finally block with cancellation check"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def unsafe_operation():\n    task = asyncio.create_task(long_running_task())\n    # No cancellation checkpoint\n    await task",
+        "description": "Task creation without proper cancellation handling - resources may leak if cancelled"
+      },
+      {
+        "code": "class BadScope:\n    def __enter__(self):\n        return self\n    \n    def __exit__(self, *args):\n        pass  # No cancellation handling\n\nwith BadScope():\n    # Operations here won't clean up properly on cancellation",
+        "description": "Custom scope that doesn't handle cancellation in __exit__"
+      },
+      {
+        "code": "async def no_checkpoint():\n    await acquire_resource()\n    try:\n        await process_data()\n    except CancelledError:\n        raise  # No cleanup before re-raising",
+        "description": "Cancellation caught but no resource cleanup performed"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stage": [
+      "development",
+      "code-review"
+    ]
+  },
+  "why_is_this_an_issue": "Cancellation scopes without checkpoints create several risks: 1) Resource leaks when tasks are cancelled before completing cleanup operations; 2) Inconsistent program state when operations are partially completed; 3) Difficult-to-debug issues in production when cancellation behavior differs from normal completion; 4) Potential deadlocks when cancelled tasks hold locks that other tasks depend on. Proper checkpoints ensure that cancellation follows the same resource management discipline as normal completion, making the code more robust and predictable.",
+  "how_to_fix": {
+    "description": "To fix this issue, ensure all cancellation scopes include proper checkpoint operations:",
+    "steps": [
+      "1. Identify all cancellation scopes in your code (context managers that may raise CancellationError, asyncio tasks, etc.)",
+      "2. For each scope, determine what resources need cleanup during cancellation",
+      "3. Implement checkpoint operations using one of these approaches:",
+      "   a. Use built-in context managers like asyncio.TaskGroup that handle cancellation properly",
+      "   b. Add try-finally blocks that check for cancellation and perform cleanup",
+      "   c. Create custom context managers with proper __exit__ methods that handle CancellationError",
+      "4. Test cancellation scenarios to verify resources are properly cleaned up",
+      "5. Document the cancellation behavior for maintainers"
+    ],
+    "code_template": "async def with_checkpoint():\n    try:\n        # Main operation\n        await do_work()\n    finally:\n        if not task.cancelled():\n            await cleanup()\n        else:\n            await emergency_cleanup()"
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-772",
+        "name": "Missing Release of Resource after Effective Lifetime",
+        "description": "Cancellation without proper cleanup can lead to resource leaks"
+      },
+      {
+        "id": "CWE-459",
+        "name": "Incomplete Cleanup",
+        "description": "Incomplete cleanup during cancellation can leave sensitive data exposed"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CON54-J",
+        "name": "Do not assume that interrupting a thread will terminate the thread",
+        "description": "Similar principles apply to task cancellation in async contexts"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "With"
+          },
+          {
+            "check_type": "node_type",
+            "value": "AsyncWith"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Call",
+            "property_check": {
+              "property_path": [
+                "func",
+                "attr"
+              ],
+              "check_type": "equals",
+              "value": "create_task"
+            }
+          },
+          {
+            "check_type": "node_type",
+            "value": "Call",
+            "property_check": {
+              "property_path": [
+                "func",
+                "attr"
+              ],
+              "check_type": "equals",
+              "value": "ensure_future"
+            }
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "node_type_in_parent",
+                "value": "Try",
+                "property_check": {
+                  "property_path": [
+                    "handlers"
+                  ],
+                  "check_type": "exists",
+                  "condition": {
+                    "check_type": "node_type",
+                    "value": "ExceptHandler",
+                    "property_check": {
+                      "property_path": [
+                        "type",
+                        "id"
+                      ],
+                      "check_type": "equals",
+                      "value": "CancelledError"
+                    }
+                  }
+                }
+              },
+              {
+                "check_type": "node_type_in_parent",
+                "value": "Try",
+                "property_check": {
+                  "property_path": [
+                    "finalbody"
+                  ],
+                  "check_type": "exists"
+                }
+              },
+              {
+                "check_type": "node_type",
+                "value": "With",
+                "property_check": {
+                  "property_path": [
+                    "items",
+                    0,
+                    "context_expr",
+                    "func",
+                    "attr"
+                  ],
+                  "check_type": "in",
+                  "value": [
+                    "TaskGroup",
+                    "taskgroup"
+                  ]
+                }
+              },
+              {
+                "check_type": "node_type",
+                "value": "AsyncWith",
+                "property_check": {
+                  "property_path": [
+                    "items",
+                    0,
+                    "context_expr",
+                    "func",
+                    "attr"
+                  ],
+                  "check_type": "in",
+                  "value": [
+                    "TaskGroup",
+                    "taskgroup"
+                  ]
+                }
+              },
+              {
+                "check_type": "matches",
+                "property_path": [
+                  "value",
+                  "func",
+                  "attr"
+                ],
+                "value": ".*cleanup|.*close|.*release|.*shutdown",
+                "description": "Check for common cleanup method names in called functions"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

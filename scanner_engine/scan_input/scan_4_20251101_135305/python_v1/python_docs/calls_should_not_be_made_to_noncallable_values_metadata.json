@@ -1,0 +1,221 @@
+{
+  "rule_id": "calls_should_not_be_made_to_noncallable_values",
+  "title": "Calls should not be made to non-callable values",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when code attempts to call a value that is not callable (i.e., not a function, method, class, or object with a `__call__` method). Such calls will raise a `TypeError` at runtime, making them potential bugs that should be caught during static analysis. The rule helps prevent runtime errors by identifying these problematic calls early in the development process.",
+  "message": "Remove this call to '{{value}}'; it is not a callable object.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "bug",
+    "error-handling",
+    "python",
+    "runtime-error",
+    "type-safety"
+  ],
+  "impact": "Calling a non-callable value will result in a `TypeError` at runtime, potentially crashing the application or causing unexpected behavior. This can lead to production failures, debugging overhead, and reduced reliability of the software. In some cases, it may also expose security vulnerabilities if the error occurs in security-critical code paths.",
+  "recommendation": "Ensure that all called values are indeed callable (functions, methods, classes, or objects with `__call__`). If the intention was to use a callable, correct the reference. If the value is meant to be non-callable, remove the call syntax (parentheses).",
+  "references": [
+    {
+      "title": "Python Documentation: Callable Types",
+      "url": "https://docs.python.org/3/library/functions.html#callable"
+    },
+    {
+      "title": "Python `__call__` Method",
+      "url": "https://docs.python.org/3/reference/datamodel.html#object.__call__"
+    },
+    {
+      "title": "SonarSource Python Rules: Non-callable Calls",
+      "url": "https://rules.sonarsource.com/python/RSPEC-XXXX"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def greet(name):\n    return f\"Hello, {name}!\"\n\n# Correct: Calling a function\nresult = greet(\"Alice\")",
+        "description": "The `greet` function is properly defined and called."
+      },
+      {
+        "code": "class Adder:\n    def __call__(self, a, b):\n        return a + b\n\nadder = Adder()\n# Correct: Calling an object with __call__\nsum_result = adder(2, 3)",
+        "description": "The `Adder` instance is callable because it implements `__call__`."
+      },
+      {
+        "code": "import math\n\n# Correct: Calling a built-in function\nsqrt_value = math.sqrt(16)",
+        "description": "The `math.sqrt` function is a built-in callable."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "x = 42\n# Incorrect: Attempting to call a non-callable integer\nresult = x()",
+        "description": "The integer `42` is not callable, so `x()` will raise a `TypeError`."
+      },
+      {
+        "code": "my_list = [1, 2, 3]\n# Incorrect: Attempting to call a list\nmy_list()",
+        "description": "Lists are not callable, so this will fail at runtime."
+      },
+      {
+        "code": "class MyClass:\n    pass\n\nobj = MyClass()\n# Incorrect: Attempting to call an instance without __call__\nobj()",
+        "description": "The `MyClass` instance does not implement `__call__`, so calling it will raise an error."
+      },
+      {
+        "code": "def get_value():\n    return 10\n\nvalue = get_value\n# Incorrect: Forgetting to call the function but using parentheses\nresult = value()  # This is fine if `value` is the function, but not if it's the result\n\n# Wait, this is actually compliant if `value` is the function. Better example:\nvalue = get_value()  # Now `value` is 10\nresult = value()  # This is the actual violation",
+        "description": "The variable `value` holds the integer `10`, which is not callable. The second `value()` call is invalid."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-reliability",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": "Calling a non-callable value is a type-related error that will always fail at runtime. Unlike some other types of bugs, this issue cannot be handled gracefully without explicit checks (e.g., using `callable()`). It often arises from typos, incorrect variable assignments, or misunderstandings of Python's callable types. Since Python is dynamically typed, such errors are not caught by the interpreter until the code is executed, making static analysis critical for early detection. These errors can cause crashes, unexpected behavior, or security vulnerabilities if they occur in critical paths (e.g., authentication, input validation).",
+  "how_to_fix": {
+    "description": "To fix this issue, ensure the value being called is indeed callable. This can be done by verifying the type or using Python's built-in `callable()` function for dynamic checks.",
+    "steps": [
+      "1. **Identify the non-callable value**: Check the type of the value being called (e.g., integer, string, list, etc.).",
+      "2. **Determine the intended callable**: If the call was intended, replace the non-callable value with the correct function, method, or callable object.",
+      "3. **Remove unnecessary calls**: If the call was unintended (e.g., a typo), remove the parentheses.",
+      "4. **Add type checks (optional)**: For dynamic cases, use `callable(value)` to verify before calling, or add type hints to catch issues earlier.",
+      "5. **Test the fix**: Run the code to ensure the call now works as expected or that the call was correctly removed."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-682",
+        "name": "Incorrect Calculation",
+        "description": "While not a direct match, this CWE covers incorrect operations, which includes calling non-callable values."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC03-C",
+        "name": "Do not call noncallable objects",
+        "description": "This CERT rule explicitly warns against calling non-callable objects, which aligns with this rule."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "func",
+              "id"
+            ],
+            "condition": {
+              "check_type": "not",
+              "condition": {
+                "check_type": "is_callable",
+                "scope": "local"
+              }
+            }
+          },
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "func",
+              "attr"
+            ],
+            "condition": {
+              "check_type": "not",
+              "condition": {
+                "check_type": "is_callable",
+                "scope": "local"
+              }
+            }
+          },
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "func",
+              "value"
+            ],
+            "condition": {
+              "check_type": "not",
+              "condition": {
+                "check_type": "is_callable",
+                "scope": "local"
+              }
+            }
+          },
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "func"
+            ],
+            "condition": {
+              "check_type": "node_type",
+              "value": [
+                "Name",
+                "Attribute",
+                "Subscript",
+                "Tuple",
+                "List",
+                "Dict",
+                "Set",
+                "Num",
+                "Str",
+                "Bytes",
+                "NameConstant",
+                "BinOp",
+                "UnaryOp",
+                "IfExp",
+                "Lambda"
+              ],
+              "exclude": true
+            }
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "property_check",
+          "property_path": [
+            "func"
+          ],
+          "condition": {
+            "check_type": "node_type",
+            "value": [
+              "FunctionDef",
+              "ClassDef",
+              "Lambda"
+            ]
+          }
+        }
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "property_check",
+          "property_path": [
+            "func",
+            "value",
+            "func"
+          ],
+          "condition": {
+            "check_type": "exists"
+          }
+        }
+      }
+    ]
+  }
+}

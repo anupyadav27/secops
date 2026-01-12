@@ -1,0 +1,275 @@
+{
+  "rule_id": "arguments_given_to_functions_should_be_of_an_expected_type",
+  "title": "Function arguments should match expected parameter types",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that arguments passed to function calls match the expected parameter types as defined in the function signature. Type mismatches can lead to runtime errors, unexpected behavior, or silent failures that are difficult to debug. The rule helps enforce type safety by verifying that argument types are compatible with parameter annotations (type hints) when they are provided.",
+  "message": "Argument of type '{{actual_type}}' is not compatible with expected parameter type '{{expected_type}}' for parameter '{{parameter_name}}'.",
+  "remediation": {
+    "func": "Linear",
+    "constantCost": "5min",
+    "offset": "1min",
+    "coefficient": "1min"
+  },
+  "tags": [
+    "bug",
+    "type-safety",
+    "python3",
+    "reliability",
+    "maintainability",
+    "mypy",
+    "type-hints"
+  ],
+  "impact": "Type mismatches between function arguments and parameters can cause runtime errors (TypeError, AttributeError) or silent logical errors that propagate through the system. This reduces code reliability and makes debugging more difficult. In statically-typed contexts or when using type checkers like mypy, these issues would be caught earlier, but Python's dynamic nature means they often surface only at runtime.",
+  "recommendation": "Always ensure that arguments passed to functions match the expected parameter types as indicated by type hints. Use static type checkers like mypy during development to catch these issues early. When type hints are not available, document expected types clearly in docstrings and validate types at runtime if necessary.",
+  "references": [
+    {
+      "title": "Python Type Hints (PEP 484)",
+      "url": "https://peps.python.org/pep-0484/"
+    },
+    {
+      "title": "mypy: Optional Static Typing for Python",
+      "url": "https://mypy.readthedocs.io/en/stable/"
+    },
+    {
+      "title": "Python Documentation: Typing",
+      "url": "https://docs.python.org/3/library/typing.html"
+    },
+    {
+      "title": "SonarSource: Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from typing import List\n\ndef process_items(items: List[str]) -> None:\n    for item in items:\n        print(item.upper())\n\n# Correct: passing a list of strings\nprocess_items(['apple', 'banana', 'cherry'])",
+        "description": "The argument matches the expected type (List[str]) as specified in the function signature."
+      },
+      {
+        "code": "def calculate_area(length: float, width: float) -> float:\n    return length * width\n\n# Correct: both arguments are floats\nresult = calculate_area(5.0, 3.2)",
+        "description": "Both arguments are of the expected float type, matching the parameter annotations."
+      },
+      {
+        "code": "from typing import Union\n\ndef format_value(value: Union[str, int]) -> str:\n    return str(value)\n\n# Correct: can pass either string or integer\nformat_value('hello')\nformat_value(42)",
+        "description": "Both calls are valid as they match the Union type hint (either str or int)."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from typing import List\n\ndef process_items(items: List[str]) -> None:\n    for item in items:\n        print(item.upper())\n\n# Incorrect: passing a list of integers\nprocess_items([1, 2, 3])  # This will raise AttributeError at runtime",
+        "description": "The argument is List[int] but the parameter expects List[str], causing a runtime error when calling .upper() on integers."
+      },
+      {
+        "code": "def calculate_area(length: float, width: float) -> float:\n    return length * width\n\n# Incorrect: passing an integer where float is expected\nresult = calculate_area(5, 3.2)  # 5 is int, not float",
+        "description": "While Python may coerce the int to float in this case, it violates the type contract and could cause issues in stricter contexts."
+      },
+      {
+        "code": "from typing import Dict\n\ndef get_value(data: Dict[str, int], key: str) -> int:\n    return data[key]\n\n# Incorrect: dictionary has wrong value type\nget_value({'a': '1', 'b': '2'}, 'a')  # Returns str, not int",
+        "description": "The dictionary values are strings, but the function expects them to be integers, which could cause type-related bugs."
+      },
+      {
+        "code": "def concatenate(a: str, b: str) -> str:\n    return a + b\n\n# Incorrect: passing None where string is expected\nconcatenate(None, 'world')  # Will raise TypeError",
+        "description": "None is not compatible with the expected str type, causing a runtime error."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-quality",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "tools": [
+      "sonarqube",
+      "mypy",
+      "pylint",
+      "pyright"
+    ],
+    "stage": "development"
+  },
+  "why_is_this_an_issue": "Python's dynamic typing allows functions to be called with arguments of any type, but this flexibility comes at the cost of potential runtime errors when type assumptions are violated. When a function expects a parameter of a specific type (as indicated by type hints), passing an incompatible type can lead to:\n\n1. **Runtime Errors**: Operations that are valid for the expected type may fail for the actual type (e.g., calling .upper() on an integer).\n2. **Logical Errors**: The function may execute without raising an exception but produce incorrect results (e.g., concatenating a string with None).\n3. **Maintenance Issues**: Code becomes harder to understand and modify when type contracts are not enforced.\n4. **Tooling Limitations**: Static analysis tools and IDEs rely on type hints to provide accurate suggestions and warnings.\n\nType mismatches violate the principle of least surprise and make code less predictable. They are particularly problematic in larger codebases where functions may be called from many different places, making it difficult to track down the source of type-related bugs.",
+  "how_to_fix": {
+    "description": "To fix type mismatch issues, ensure that arguments passed to functions match the expected parameter types as specified in the function signature. Here's how to approach this:",
+    "steps": [
+      "1. **Check the function signature**: Look at the type hints for the parameters to understand what types are expected.",
+      "2. **Verify argument types**: Ensure the values you're passing match the expected types. Use isinstance() checks if you need to validate types at runtime.",
+      "3. **Convert types if necessary**: If your data is in a different but compatible format (e.g., int vs float), explicitly convert it before passing it to the function.",
+      "4. **Add type hints if missing**: If the function lacks type hints, consider adding them to make the expected types clear to all callers.",
+      "5. **Use static type checkers**: Run tools like mypy during development to catch type mismatches early.",
+      "6. **Document edge cases**: If a function can accept multiple types, use Union types in the type hints and document the behavior for each case.",
+      "7. **Refactor if needed**: If you frequently pass incompatible types, consider whether the function's interface needs to be more flexible or if the calling code needs to be adjusted."
+    ],
+    "additional_tips": [
+      "For complex types (like nested dictionaries or custom classes), consider using Python's typing module features like TypedDict or Protocol for more precise type specifications.",
+      "When working with legacy code that lacks type hints, gradually add them starting with the most critical functions.",
+      "Use Python 3.9+'s built-in type hinting syntax (like list[str] instead of List[str]) for cleaner code if you're targeting newer Python versions."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-843",
+        "name": "Access of Resource Using Incompatible Type ('Type Confusion')",
+        "description": "The rule helps prevent type confusion issues where operations are performed on objects of an unexpected type."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC50-CPP",
+        "name": "Do not use incompatible types for memory allocation and access",
+        "description": "While this CERT rule is C++ specific, the principle of type safety applies to Python as well."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "func",
+                  "args"
+                ]
+              },
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "func",
+                  "args",
+                  "args"
+                ]
+              },
+              {
+                "operator": "for_each",
+                "property_path": [
+                  "func",
+                  "args",
+                  "args"
+                ],
+                "conditions": {
+                  "operator": "and",
+                  "conditions": [
+                    {
+                      "check_type": "property_exists",
+                      "property_path": [
+                        "annotation"
+                      ]
+                    },
+                    {
+                      "check_type": "not_equals",
+                      "property_path": [
+                        "annotation",
+                        "id"
+                      ],
+                      "value": "Any"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "func",
+                  "value",
+                  "args"
+                ]
+              },
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "func",
+                  "value",
+                  "args",
+                  "args"
+                ]
+              },
+              {
+                "operator": "for_each",
+                "property_path": [
+                  "func",
+                  "value",
+                  "args",
+                  "args"
+                ],
+                "conditions": {
+                  "operator": "and",
+                  "conditions": [
+                    {
+                      "check_type": "property_exists",
+                      "property_path": [
+                        "annotation"
+                      ]
+                    },
+                    {
+                      "check_type": "not_equals",
+                      "property_path": [
+                        "annotation",
+                        "id"
+                      ],
+                      "value": "Any"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "for_each",
+        "property_path": [
+          "args"
+        ],
+        "conditions": {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "property_exists",
+              "property_path": [
+                "func",
+                "args",
+                "args",
+                "{index}",
+                "annotation"
+              ]
+            },
+            {
+              "check_type": "type_incompatibility",
+              "property_path": [
+                "{self}"
+              ],
+              "expected_type_path": [
+                "func",
+                "args",
+                "args",
+                "{index}",
+                "annotation"
+              ],
+              "strict": false
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

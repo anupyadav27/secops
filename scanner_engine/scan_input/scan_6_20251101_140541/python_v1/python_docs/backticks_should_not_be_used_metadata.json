@@ -1,0 +1,108 @@
+{
+  "rule_id": "backticks_should_not_be_used",
+  "title": "Backticks should not be used for string conversion",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects the use of backticks (`` `expression` ``) for string conversion, which was a deprecated feature in Python 2. Backticks were removed in Python 3, and their use in modern Python code (even in Python 2) is considered poor practice. The preferred alternatives are `str()` or `repr()` functions, which are more explicit and maintainable.",
+  "message": "Replace backticks with 'str()' or 'repr()' for string conversion.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "python2-compatibility",
+    "deprecated",
+    "best-practice",
+    "python"
+  ],
+  "impact": "Using backticks reduces code readability and maintainability. It also creates compatibility issues with Python 3, where backticks are no longer supported. This can lead to syntax errors when migrating codebases from Python 2 to Python 3.",
+  "recommendation": "Replace all instances of backticks with explicit calls to `str()` or `repr()` depending on the desired behavior. Use `str()` when you want a human-readable string representation and `repr()` when you need a developer-friendly representation that could be used to recreate the object.",
+  "references": [
+    {
+      "title": "Python 2 Documentation: Backticks",
+      "url": "https://docs.python.org/2.0/ref/backticks.html"
+    },
+    {
+      "title": "Python 3: What's New - Removed Syntax",
+      "url": "https://docs.python.org/3.0/whatsnew/3.0.html#removed-syntax"
+    },
+    {
+      "title": "PEP 8 - Python Style Guide",
+      "url": "https://peps.python.org/pep-0008/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "# Using str() for string conversion\nvalue = 42\nstring_value = str(value)\n\n# Using repr() for debug representation\ndebug_info = repr(some_object)",
+        "description": "Explicit string conversion using str() or repr() is clear and maintainable."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "# Using backticks for string conversion\nvalue = 42\nstring_value = `value`",
+        "description": "Backticks are deprecated and removed in Python 3, causing compatibility issues."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonar"
+      ]
+    }
+  },
+  "why_is_this_an_issue": "Backticks were a Python 2 feature that provided a shorthand for calling repr(). However, this syntax was ambiguous and made code harder to understand. The feature was deprecated because it encouraged implicit behavior rather than explicit, readable code. In Python 3, backticks were completely removed, causing any code using them to fail with a SyntaxError. This creates technical debt and migration challenges for codebases that need to support both Python 2 and 3 or transition to Python 3.",
+  "how_to_fix": {
+    "description": "Replace all backtick usage with explicit function calls to either str() or repr().",
+    "steps": [
+      "1. Identify all instances of backticks in the codebase (search for backtick characters).",
+      "2. For each instance, determine whether the intended behavior was string conversion (use str()) or debug representation (use repr()).",
+      "3. Replace the backticks with the appropriate function call.",
+      "4. Test the changes to ensure the behavior remains the same.",
+      "5. Consider adding this rule to your static analysis configuration to prevent future occurrences."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "UnaryOp"
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "op"
+        ],
+        "condition": {
+          "check_type": "node_type",
+          "value": "Invert"
+        }
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": "operand"
+      },
+      {
+        "check_type": "context_check",
+        "condition": {
+          "check_type": "python_version",
+          "version": "any"
+        }
+      }
+    ]
+  }
+}

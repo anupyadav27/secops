@@ -1,0 +1,132 @@
+{
+  "rule_id": "administration_services_access_should_be_restricted_to_specific_ip_addresses",
+  "title": "Administration services access should be restricted to specific IP addresses",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Administration interfaces should only be accessible from trusted IP addresses. Exposing these services to the public internet increases the risk of unauthorized access and potential compromise. This rule detects when administration services are configured to accept connections from any IP address (0.0.0.0, *, any) instead of being restricted to specific trusted addresses.",
+  "message": "Restrict administration service access to specific IP addresses instead of allowing connections from any address.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "security",
+    "network",
+    "administration",
+    "access-control",
+    "cwe-284"
+  ],
+  "impact": "High - Unrestricted administration access can lead to complete system compromise, data breaches, and unauthorized configuration changes.",
+  "recommendation": "Configure administration services to only accept connections from specific trusted IP addresses or IP ranges. Use allowlists instead of denylists for better security.",
+  "references": [
+    {
+      "name": "OWASP - Security Misconfiguration",
+      "url": "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
+    },
+    {
+      "name": "CWE-284: Improper Access Control",
+      "url": "https://cwe.mitre.org/data/definitions/284.html"
+    },
+    {
+      "name": "NIST Cybersecurity Framework",
+      "url": "https://www.nist.gov/cyberframework"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# Django settings - allowing admin access from anywhere\nALLOWED_HOSTS = ['*']\nADMIN_URL = 'admin/'\n\n# Flask admin configuration\napp.config['ADMIN_HOST'] = '0.0.0.0'\napp.config['ADMIN_PORT'] = 8080",
+        "description": "Administration interfaces configured to accept connections from any IP address"
+      },
+      {
+        "code": "# Database administration\ndb_config = {\n    'host': '0.0.0.0',\n    'port': 3306,\n    'admin_interface': True\n}\n\n# SSH configuration\nssh_config = {'bind_address': '*', 'admin_access': True}",
+        "description": "Database and SSH administration services bound to all interfaces"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# Django settings - restricting admin access\nALLOWED_HOSTS = ['192.168.1.100', '10.0.0.50']\nADMIN_URL = 'admin/'\n\n# Flask admin configuration\napp.config['ADMIN_HOST'] = '192.168.1.100'\napp.config['ADMIN_PORT'] = 8080",
+        "description": "Administration interfaces configured to accept connections only from specific trusted IP addresses"
+      },
+      {
+        "code": "# Database administration\ndb_config = {\n    'host': '127.0.0.1',\n    'port': 3306,\n    'admin_interface': True,\n    'allowed_ips': ['192.168.1.0/24']\n}\n\n# SSH configuration\nssh_config = {'bind_address': '10.0.0.1', 'admin_access': True}",
+        "description": "Database and SSH administration services restricted to specific IP addresses"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Infrastructure Security",
+    "priority": "High",
+    "automation": "Scannable"
+  },
+  "why_is_this_an_issue": "When administration services are configured to accept connections from any IP address (0.0.0.0, *, any), they become accessible to attackers on the internet. This creates a significant security vulnerability because:\n\n1. **Increased Attack Surface**: Exposing admin interfaces publicly makes them discoverable by automated scanners and attackers\n2. **Brute Force Attacks**: Attackers can attempt to brute force credentials without network-level restrictions\n3. **Zero-Day Exploitation**: If vulnerabilities exist in the admin interface, they can be exploited remotely\n4. **Credential Stuffing**: Stolen credentials from other breaches can be tested against the exposed interface\n5. **Social Engineering**: Attackers may use exposed admin interfaces as part of social engineering attacks",
+  "how_to_fix": "1. **Identify Admin Services**: Review your application configuration to identify all administration interfaces\n2. **Define Trusted Networks**: Determine which IP addresses or network ranges should have administrative access\n3. **Update Configuration**: Modify service configurations to bind only to specific IP addresses:\n   - Use specific IP addresses instead of 0.0.0.0 or *\n   - Configure allowlists in application settings\n   - Use firewall rules as an additional layer of protection\n4. **Network Segmentation**: Place administration services on separate network segments\n5. **VPN Access**: Consider requiring VPN access for administrative functions\n6. **Regular Audits**: Periodically review and audit administrative access configurations",
+  "security_mappings": {
+    "cwe": [
+      "CWE-284: Improper Access Control",
+      "CWE-346: Origin Validation Error",
+      "CWE-863: Incorrect Authorization"
+    ],
+    "owasp": [
+      "A01:2021 - Broken Access Control",
+      "A05:2021 - Security Misconfiguration"
+    ],
+    "cert": [
+      "SEC06-J: Do not rely on the default automatic signature verification provided by URLClassLoader"
+    ]
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["targets", "*", "id"],
+            "forbidden_values": ["ALLOWED_HOSTS"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["value", "elts", "*", "value"],
+            "forbidden_values": ["*"]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["value", "node_type"],
+            "required_values": ["Dict"]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["value", "keys", "*", "value"],
+                "forbidden_values": ["host", "bind_address", "listen_address"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["value", "values", "*", "value"],
+                "forbidden_values": ["0.0.0.0", "*", "any"]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

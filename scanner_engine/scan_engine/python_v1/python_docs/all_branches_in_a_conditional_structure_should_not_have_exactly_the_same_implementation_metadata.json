@@ -1,0 +1,115 @@
+{
+  "rule_id": "all_branches_in_a_conditional_structure_should_not_have_exactly_the_same_implementation",
+  "title": "All branches in a conditional structure should not have exactly the same implementation",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Having all branches of a conditional structure (such as if/elif/else, match/case) with exactly the same implementation is almost always a mistake. It usually means that the developer intended to implement different logic for each branch, but either copy-pasted code or forgot to update the implementation. This makes the code harder to understand and maintain, and can hide real bugs.",
+  "message": "Merge this if statement with the identical one on line {line}.",
+  "remediation": {
+    "func": "Constant/Issue", 
+    "constantCost": "5min"
+  },
+  "tags": [
+    "confusing",
+    "unused",
+    "design",
+    "suspicious"
+  ],
+  "impact": "Medium - Makes code confusing and may hide implementation bugs. Can indicate copy-paste errors or incomplete refactoring.",
+  "recommendation": "Remove redundant branches or implement the intended different logic for each branch. Consider using a single conditional statement if the same action should be taken regardless of the condition.",
+  "references": [
+    {
+      "name": "SonarSource - All branches in a conditional structure should not have exactly the same implementation",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1871"
+    },
+    {
+      "name": "Clean Code - Avoid Duplication",
+      "url": "https://www.oreilly.com/library/view/clean-code-a/9780136083238/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "if condition1:\n    do_something()\n    print('Done')\nelif condition2:\n    do_something()\n    print('Done')\nelse:\n    do_something()\n    print('Done')",
+        "description": "All branches have identical implementations"
+      },
+      {
+        "code": "if x > 0:\n    result = process_positive(x)\nelse:\n    result = process_positive(x)  # Same as if branch",
+        "description": "If and else branches are identical"
+      },
+      {
+        "code": "match value:\n    case 'A':\n        return default_action()\n    case 'B':\n        return default_action()\n    case _:\n        return default_action()",
+        "description": "All match cases have the same implementation"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "if condition1:\n    do_something()\n    print('Done with condition1')\nelif condition2:\n    do_something()\n    print('Done with condition2')\nelse:\n    do_nothing()\n    print('No conditions met')",
+        "description": "Each branch has different implementation details"
+      },
+      {
+        "code": "if x > 0:\n    result = process_positive(x)\nelse:\n    result = process_negative(x)",
+        "description": "If and else branches have different logic"
+      },
+      {
+        "code": "# When all branches should do the same thing, simplify:\nif condition1 or condition2:\n    do_something()\n    print('Done')",
+        "description": "Simplified conditional when same action is intended"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "priority": "Medium",
+    "automation": "Scannable"
+  },
+  "why_is_this_an_issue": "When all branches of a conditional structure have identical implementations, it creates several problems:\n\n1. **Code Duplication**: Violates the DRY (Don't Repeat Yourself) principle, making maintenance harder\n2. **Potential Bugs**: Often indicates copy-paste errors where the developer forgot to implement different logic\n3. **Misleading Code**: Suggests that different conditions should lead to different outcomes, but they don't\n4. **Maintenance Issues**: Changes need to be made in multiple places, increasing the risk of inconsistencies\n5. **Code Complexity**: Unnecessary complexity that makes the code harder to understand and reason about\n6. **Logic Errors**: May hide incomplete implementation or incorrect conditional logic",
+  "how_to_fix": "1. **Analyze Intent**: Determine if the identical implementations are intentional or a mistake\n2. **Remove Redundancy**: If all branches should do the same thing, simplify to a single statement\n3. **Implement Differences**: If branches should behave differently, implement the correct logic for each\n4. **Extract Common Logic**: Move identical code to before/after the conditional structure\n5. **Use Logical Operators**: Replace multiple identical branches with combined conditions using `or`/`and`\n6. **Refactor to Functions**: Extract common functionality into helper functions if the logic is complex\n7. **Review Logic**: Ensure the conditional structure is actually needed",
+  "security_mappings": {
+    "cwe": [
+      "CWE-561: Dead Code",
+      "CWE-571: Expression is Always True",
+      "CWE-570: Expression is Always False"
+    ],
+    "owasp": [],
+    "cert": []
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "If"
+          },
+          {
+            "check_type": "identical_content",
+            "property_path": ["body"],
+            "other_property_path": ["orelse"]
+          }
+        ]
+      },
+      {
+        "operator": "and", 
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "If"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["orelse", "*", "node_type"],
+            "required_values": ["If"]
+          },
+          {
+            "check_type": "identical_content",
+            "property_path": ["body"],
+            "other_property_path": ["orelse", "*", "body"]
+          }
+        ]
+      }
+    ]
+  }
+}

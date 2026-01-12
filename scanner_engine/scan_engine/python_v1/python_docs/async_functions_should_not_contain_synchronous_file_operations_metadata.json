@@ -1,0 +1,112 @@
+{
+  "rule_id": "async_functions_should_not_contain_synchronous_file_operations",
+  "title": "Async functions should not contain synchronous file operations",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asynchronous functions (defined with `async def`) contain synchronous file operations like `open()`, `read()`, `write()`, etc. Mixing synchronous I/O operations in async functions can block the event loop, negating the performance benefits of async programming and potentially causing application hangs or timeouts. Async functions should use their asynchronous counterparts (`aiofiles` or similar libraries) for file operations.",
+  "message": "Replace this synchronous file operation with an asynchronous alternative (e.g., 'aiofiles.open()') to avoid blocking the event loop.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "async",
+    "performance",
+    "convention",
+    "best-practice",
+    "python",
+    "io",
+    "event-loop"
+  ],
+  "impact": "Blocking synchronous file operations in async functions can degrade application performance by stalling the event loop. This leads to poor scalability, potential timeouts, and reduced throughput in I/O-bound applications. In severe cases, it may cause complete application unresponsiveness under load.",
+  "recommendation": "Use asynchronous file I/O libraries like `aiofiles` instead of built-in synchronous file operations. For example, replace `open()` with `aiofiles.open()` and use `await` with the resulting file operations.",
+  "references": [
+    {
+      "title": "Python Asyncio Documentation - Synchronous vs Asynchronous",
+      "url": "https://docs.python.org/3/library/asyncio.html#synchronous-vs-asynchronous"
+    },
+    {
+      "title": "aiofiles - Async file I/O for Python",
+      "url": "https://github.com/Tinche/aiofiles"
+    },
+    {
+      "title": "SonarSource: Why blocking calls are bad in async code",
+      "url": "https://rules.sonarsource.com/python/RSPEC-5542"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import aiofiles\n\nasync def read_file_async(path):\n    async with aiofiles.open(path, mode='r') as f:\n        contents = await f.read()\n    return contents",
+        "description": "Uses `aiofiles.open()` with `await` for non-blocking file I/O in an async function."
+      },
+      {
+        "code": "async def process_data(data):\n    # Pure computation - no I/O\n    return data.upper()",
+        "description": "Async function performs CPU-bound work without any file I/O operations."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def read_file_sync(path):\n    with open(path, 'r') as f:  # Violates rule\n        return f.read()",
+        "description": "Uses synchronous `open()` inside an async function, which blocks the event loop."
+      },
+      {
+        "code": "async def write_config(config):\n    with open('config.json', 'w') as f:  # Violates rule\n        f.write(config)\n    return True",
+        "description": "Synchronous file write operation in an async function."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": "Async functions are designed to enable concurrent execution by yielding control back to the event loop during I/O operations. When synchronous file operations (which are inherently blocking) are used inside async functions, they prevent the event loop from processing other tasks during the I/O wait time. This defeats the purpose of async programming and can lead to:\n\n1. **Performance degradation**: The application loses its ability to handle multiple requests concurrently.\n2. **Resource starvation**: Other coroutines may be delayed indefinitely.\n3. **Timeouts**: Long-running synchronous operations may exceed time limits in async contexts.\n4. **Unpredictable behavior**: The mixing of sync/async I/O can lead to race conditions or deadlocks.\n\nAsynchronous file I/O libraries like `aiofiles` are specifically designed to integrate with the asyncio event loop and should be used instead.",
+  "how_to_fix": {
+    "description": "Replace synchronous file operations with their asynchronous equivalents and ensure proper `await` usage.",
+    "steps": [
+      "1. **Identify synchronous file operations**: Locate all `open()`, `read()`, `write()`, etc. calls in async functions.",
+      "2. **Install an async file I/O library**: Add `aiofiles` to your project (`pip install aiofiles`).",
+      "3. **Replace synchronous calls**: Change `open()` to `aiofiles.open()` and add `await` where needed.",
+      "4. **Update context managers**: Replace `with open(...)` with `async with aiofiles.open(...)`.",
+      "5. **Test thoroughly**: Verify the async behavior works as expected, especially under load.",
+      "6. **Consider error handling**: Async file operations may raise different exceptions than their sync counterparts."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-835",
+        "name": "Infinite Loop",
+        "description": "Blocking operations in async code can create loop-like stalls in the event loop."
+      }
+    ],
+    "cert": [
+      {
+        "id": "CERT-CON54-J",
+        "name": "Do not use asynchronous calls for synchronous operations",
+        "description": "Mixing sync/async operations can lead to unpredictable behavior."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+    { "check_type": "node_type", "value": "AsyncFunctionDef" },
+    { "operator": "for_each", "property_path": ["body"], "conditions": {
+      "operator": "and",
+      "conditions": [
+        { "check_type": "node_type", "value": "With" },
+        { "check_type": "node_type", "property_path": ["items", "0", "context_expr"], "value": "Call" },
+        { "check_type": "equals", "property_path": ["items", "0", "context_expr", "func", "id"], "required_values": ["open"] }
+      ]
+    }}
+    ]
+  }
+}

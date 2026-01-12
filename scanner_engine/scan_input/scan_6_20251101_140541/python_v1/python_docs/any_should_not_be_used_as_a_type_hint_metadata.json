@@ -1,0 +1,221 @@
+{
+  "rule_id": "any_should_not_be_used_as_a_type_hint",
+  "title": "Type hints should not use 'Any' when a more specific type is possible",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Using `typing.Any` as a type hint defeats the purpose of static type checking by allowing any type to be passed. This reduces code clarity, makes refactoring harder, and prevents type checkers from catching potential bugs. The rule detects when `Any` is used as a type annotation where a more specific type could be used instead.",
+  "message": "Replace this 'Any' type hint with a more specific type to improve type safety and code clarity.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "convention",
+    "type-hint",
+    "best-practice",
+    "python",
+    "maintainability",
+    "readability"
+  ],
+  "impact": "Using `Any` as a type hint reduces the effectiveness of static type checking, which can lead to runtime errors that could have been caught during development. It also makes the code harder to understand and maintain, as the expected types of variables and parameters are not clearly documented.",
+  "recommendation": "Always use the most specific type possible in type hints. If the type is truly dynamic or unknown, consider using `Union` types, `TypeVar`, or `Protocol` to better express the expected behavior. If `Any` is unavoidable, document why it is necessary with a clear comment.",
+  "references": [
+    {
+      "title": "Python typing — Support for type hints",
+      "url": "https://docs.python.org/3/library/typing.html"
+    },
+    {
+      "title": "Google Python Style Guide - Type Annotations",
+      "url": "https://google.github.io/styleguide/pyguide.html#319-type-annotations"
+    },
+    {
+      "title": "mypy documentation - Any and object",
+      "url": "https://mypy.readthedocs.io/en/stable/kinds_of_types.html#any-and-object"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from typing import Union\n\ndef process_data(data: Union[str, bytes]) -> str:\n    if isinstance(data, str):\n        return data.upper()\n    return data.decode('utf-8').upper()",
+        "description": "Uses a `Union` type to explicitly state that either `str` or `bytes` is acceptable, providing better type safety than `Any`."
+      },
+      {
+        "code": "from typing import List, Dict\n\ndef get_items() -> List[Dict[str, int]]:\n    return [{'count': 1}, {'count': 2}]",
+        "description": "Uses specific collection types (`List`, `Dict`) with concrete type parameters for better type checking."
+      },
+      {
+        "code": "from typing import TypeVar, Generic\n\nT = TypeVar('T')\n\nclass Container(Generic[T]):\n    def __init__(self, value: T) -> None:\n        self.value = value",
+        "description": "Uses `TypeVar` and `Generic` to create a flexible yet type-safe container class."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from typing import Any\n\ndef process_data(data: Any) -> str:\n    return str(data).upper()",
+        "description": "Uses `Any` as a parameter type, which provides no type safety and defeats the purpose of type hints."
+      },
+      {
+        "code": "from typing import Any, List\n\ndef get_items() -> List[Any]:\n    return [{'count': 1}, {'count': 2}]",
+        "description": "Uses `Any` as a type parameter in a `List`, which hides the actual structure of the list items."
+      },
+      {
+        "code": "from typing import Any, Dict\n\nclass DataProcessor:\n    def __init__(self, config: Dict[str, Any]) -> None:\n        self.config = config",
+        "description": "Uses `Any` as a value type in a `Dict`, making it unclear what types are expected in the dictionary values."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "mypy",
+        "pylint",
+        "pyright"
+      ],
+      "ide_support": true
+    }
+  },
+  "why_is_this_an_issue": {
+    "short": "Using `Any` as a type hint disables static type checking for that variable or parameter, which can lead to undetected bugs and reduces code maintainability.",
+    "detailed": "Static type checking is a powerful tool for catching bugs early and improving code quality. When `Any` is used as a type hint, the type checker treats the annotated variable or parameter as having no type constraints, effectively disabling type checking for that part of the code. This can lead to several problems:\n\n1. **Undetected Bugs**: Type-related errors (e.g., calling a method that doesn’t exist on a value) won’t be caught by the type checker.\n2. **Reduced Maintainability**: The code becomes harder to understand and refactor because the expected types are not clearly documented.\n3. **Poor IDE Support**: IDEs rely on type hints for features like autocompletion and inline documentation. `Any` reduces the effectiveness of these features.\n4. **Technical Debt**: Overuse of `Any` can make it harder to adopt stricter type checking in the future.\n\nWhile `Any` has legitimate uses (e.g., when interfacing with dynamically typed code or libraries), it should be avoided when a more specific type can be used."
+  },
+  "how_to_fix": {
+    "description": "Replace `Any` with a more specific type or a combination of types (e.g., `Union`, `Optional`, `TypeVar`) that accurately describes the expected values.",
+    "steps": [
+      "1. **Identify the actual types** used in the variable or parameter. Look at how the value is used in the code to determine what types are expected.",
+      "2. **Replace `Any` with a specific type** if only one type is used. For example, replace `Any` with `str` if the value is always a string.",
+      "3. **Use `Union` for multiple types** if the value can be one of several types. For example, use `Union[str, int]` if the value can be either a string or an integer.",
+      "4. **Use `Optional` for nullable values** if the value can be `None`. For example, use `Optional[str]` instead of `Union[str, None]`.",
+      "5. **Use `TypeVar` or `Generic` for generic code** if the type depends on another type (e.g., in container classes or functions).",
+      "6. **Document the reason** if `Any` is truly necessary (e.g., when working with dynamic data or third-party libraries that don’t provide type hints). Add a comment explaining why a more specific type cannot be used."
+    ],
+    "examples": {
+      "before": "from typing import Any\n\ndef parse_input(data: Any) -> Any:\n    if isinstance(data, str):\n        return data.strip()\n    elif isinstance(data, int):\n        return data * 2\n    return None",
+      "after": "from typing import Union, Optional\n\ndef parse_input(data: Union[str, int]) -> Optional[str]:\n    if isinstance(data, str):\n        return data.strip()\n    elif isinstance(data, int):\n        return str(data * 2)\n    return None"
+    }
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "description": "Improper Check or Handling of Exceptional Conditions (use of `Any` can lead to unchecked type-related errors)."
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "FunctionDef"
+          },
+          {
+            "check_type": "node_type",
+            "value": "AsyncFunctionDef"
+          },
+          {
+            "check_type": "node_type",
+            "value": "AnnAssign"
+          },
+          {
+            "check_type": "node_type",
+            "value": "arg"
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "annotation"
+            ]
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "returns"
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "pattern",
+            "property_path": [
+              "annotation",
+              "id"
+            ],
+            "pattern": "^Any$"
+          },
+          {
+            "check_type": "pattern",
+            "property_path": [
+              "annotation",
+              "attr",
+              "id"
+            ],
+            "pattern": "^Any$"
+          },
+          {
+            "check_type": "pattern",
+            "property_path": [
+              "returns",
+              "id"
+            ],
+            "pattern": "^Any$"
+          },
+          {
+            "check_type": "pattern",
+            "property_path": [
+              "returns",
+              "attr",
+              "id"
+            ],
+            "pattern": "^Any$"
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "pattern",
+              "property_path": [
+                "parent",
+                "decorator_list",
+                "*.",
+                "attr",
+                "id"
+              ],
+              "pattern": "^overload$"
+            },
+            {
+              "check_type": "property_exists",
+              "property_path": [
+                "parent",
+                "decorator_list",
+                "*.",
+                "func",
+                "id",
+                "typing_extensions.overload"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

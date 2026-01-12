@@ -1,0 +1,190 @@
+{
+  "rule_id": "cipher_algorithms_should_be_robust",
+  "title": "Cipher algorithms should be robust and use secure configurations",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "This rule detects the use of weak or insecure cipher algorithms in cryptographic operations. Cryptographic algorithms and configurations should follow current security best practices to prevent vulnerabilities like weak encryption, predictable randomness, or outdated protocols. The rule specifically checks for known insecure algorithms (e.g., DES, RC4, MD5, SHA1) and improper configurations (e.g., ECB mode, short key lengths).",
+  "message": "Replace this insecure cipher algorithm '{{algorithm}}' with a secure alternative (e.g., AES-256-GCM, ChaCha20-Poly1305). {{reason}}",
+  "remediation": {
+    "func": "Linear",
+    "constantCost": "20min",
+    "coefficient": "1min"
+  },
+  "tags": [
+    "security",
+    "cryptography",
+    "cwe-327",
+    "owasp-top-10",
+    "sensitive-data",
+    "insecure-configuration"
+  ],
+  "impact": "Using weak cipher algorithms can lead to complete compromise of encrypted data. Attackers may decrypt sensitive information, forge signatures, or bypass authentication mechanisms. This can result in data breaches, compliance violations (e.g., GDPR, HIPAA), and loss of customer trust. In regulated industries, this may also lead to significant financial penalties.",
+  "recommendation": "Always use modern, well-vetted cryptographic algorithms with secure configurations. For symmetric encryption, prefer AES-256-GCM or ChaCha20-Poly1305. For hashing, use SHA-256 or SHA-3. For key exchange, use ECDHE with strong curves like P-256 or X25519. Avoid ECB mode, short keys (<128 bits for symmetric, <2048 bits for RSA), and deprecated algorithms like DES, RC4, or MD5.",
+  "references": [
+    {
+      "title": "NIST Special Publication 800-131A (Transitioning the Use of Cryptographic Algorithms and Key Lengths)",
+      "url": "https://csrc.nist.gov/publications/detail/sp/800-131a/rev-2/final"
+    },
+    {
+      "title": "OWASP Cryptographic Storage Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
+    },
+    {
+      "title": "Python Cryptography Best Practices",
+      "url": "https://cryptography.io/en/latest/hazmat/primitives/"
+    },
+    {
+      "title": "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+      "url": "https://cwe.mitre.org/data/definitions/327.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes\nfrom cryptography.hazmat.backends import default_backend\nfrom os import urandom\n\n# Secure AES-256-GCM encryption\nkey = urandom(32)  # 256-bit key\niv = urandom(12)   # 96-bit IV for GCM\ncipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())",
+        "description": "Uses AES-256 in GCM mode with a properly sized key and IV. GCM provides both confidentiality and integrity."
+      },
+      {
+        "code": "import hashlib\n\n# Secure hashing with SHA-256\ndigest = hashlib.sha256(b'sensitive data').hexdigest()",
+        "description": "Uses SHA-256 which is currently considered secure for cryptographic hashing."
+      },
+      {
+        "code": "from cryptography.hazmat.primitives.asymmetric import rsa\nfrom cryptography.hazmat.primitives import serialization\n\n# Secure RSA key generation\nprivate_key = rsa.generate_private_key(\n    public_exponent=65537,\n    key_size=2048,\n)",
+        "description": "Generates an RSA key with 2048-bit length and standard public exponent (65537)."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from Crypto.Cipher import DES\nfrom Crypto.Random import get_random_bytes\n\n# Insecure DES encryption\nkey = get_random_bytes(8)\ncipher = DES.new(key, DES.MODE_ECB)",
+        "description": "Uses DES (56-bit key) in ECB mode. Both the algorithm and mode are insecure."
+      },
+      {
+        "code": "import hashlib\n\n# Insecure hashing with MD5\ndigest = hashlib.md5(b'sensitive data').hexdigest()",
+        "description": "Uses MD5 which is cryptographically broken and vulnerable to collision attacks."
+      },
+      {
+        "code": "from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes\nfrom cryptography.hazmat.backends import default_backend\n\n# Insecure AES configuration (ECB mode, 128-bit key)\nkey = b'16bytekey1234567'\ncipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())",
+        "description": "Uses ECB mode (which doesn't provide serious message confidentiality) and a 128-bit key which may be insufficient for some security requirements."
+      },
+      {
+        "code": "from Crypto.Cipher import ARC4\n\n# Insecure RC4 encryption\nkey = b'secretkey'\ncipher = ARC4.new(key)",
+        "description": "Uses RC4 which has multiple known vulnerabilities and should not be used."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "security-hardening",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "sast": true,
+      "dependency_scanning": false
+    },
+    "compliance": [
+      "GDPR:Article32",
+      "HIPAA:164.312",
+      "PCI_DSS:3.4",
+      "NIST_SP_800_53:SC-13"
+    ]
+  },
+  "why_is_this_an_issue": "Weak cryptographic algorithms and configurations can be exploited by attackers to break encryption, forge signatures, or recover sensitive information. Many older algorithms (like DES, RC4) can be broken with modern computing power, while others (like MD5, SHA1) have known collision vulnerabilities. Improper modes (like ECB) leak pattern information about the plaintext. Short keys can be brute-forced. These vulnerabilities can lead to complete compromise of systems relying on the cryptography for security, including authentication systems, data protection mechanisms, and secure communications.\n\nModern cryptanalysis techniques and increasing computational power (including quantum computing threats) make it essential to use only currently recommended algorithms with proper configurations. Security standards bodies like NIST regularly update their recommendations as new vulnerabilities are discovered or computational capabilities improve.",
+  "how_to_fix": {
+    "description": "Replace insecure cryptographic algorithms and configurations with secure alternatives following current best practices.",
+    "steps": [
+      "1. **Identify insecure algorithms**: Review all cryptographic operations in your codebase for use of deprecated algorithms (DES, RC4, 3DES, Blowfish) or weak configurations.",
+      "2. **Replace with modern alternatives**: \n   - For symmetric encryption: Use AES-256-GCM or ChaCha20-Poly1305\n   - For hashing: Use SHA-256, SHA-3, or BLAKE2\n   - For asymmetric encryption: Use RSA-2048+ or elliptic curve cryptography (ECC) with strong curves\n   - For key exchange: Use ECDHE with strong curves (P-256, X25519)",
+      "3. **Use proper modes**: \n   - For AES: Prefer GCM (authenticated encryption) or CBC with proper padding\n   - Avoid ECB mode entirely\n   - Always use unique, cryptographically secure IVs/nonces",
+      "4. **Key management**: \n   - Use proper key sizes (256-bit for symmetric, 2048-bit+ for RSA)\n   - Store keys securely (use key vaults or proper key derivation functions)\n   - Rotate keys periodically",
+      "5. **Use well-maintained libraries**: Prefer libraries like Python's `cryptography` or `PyNaCl` over older or less-maintained ones",
+      "6. **Stay updated**: Regularly check NIST, OWASP, and other security guidelines for updated recommendations",
+      "7. **Test thoroughly**: Verify that security properties (confidentiality, integrity) are maintained after changes"
+    ],
+    "additional_considerations": [
+      "For legacy systems that must interoperate with old protocols, consider wrapping the legacy cryptography with additional security layers",
+      "Document all cryptographic choices and their security rationale",
+      "Consider using TLS 1.2+ with modern cipher suites for transport security rather than implementing custom encryption",
+      "For password hashing, use dedicated functions like Argon2, PBKDF2, or bcrypt rather than general-purpose hash functions"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "327",
+        "name": "Use of a Broken or Risky Cryptographic Algorithm"
+      },
+      {
+        "id": "326",
+        "name": "Inadequate Encryption Strength"
+      },
+      {
+        "id": "330",
+        "name": "Use of Insufficiently Random Values"
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC61",
+        "name": "Beware of weak cryptographic primitives"
+      },
+      {
+        "id": "CRP00",
+        "name": "Use cryptographically strong random number generators"
+      }
+    ],
+    "owasp": [
+      {
+        "category": "A02:2021",
+        "name": "Cryptographic Failures",
+        "position": 2
+      },
+      {
+        "category": "A03:2017",
+        "name": "Sensitive Data Exposure",
+        "position": 3
+      }
+    ],
+    "iso27001": [
+      "A.10.1.1",
+      "A.10.1.2"
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "regex",
+            "property_path": ["func", "id"],
+            "regex": "^(DES|ARC4|Blowfish|IDEA|RC4|md5|sha1|generate_private_key)$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["func", "attr"],
+            "regex": "^(md5|sha1|new)$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["args", 1, "attr"],
+            "regex": "^(MODE_ECB)$",
+            "flags": "i"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["args", 0, "attr"],
+            "regex": "^(DES|RC4|Blowfish|IDEA|CAST5|AES)$",
+            "flags": "i"
+          }
+        ]
+      }
+    ]
+  }
+}

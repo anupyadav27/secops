@@ -1,0 +1,128 @@
+{
+  "rule_id": "bare_raise_statements_should_not_be_used_in_finally_blocks",
+  "title": "Bare 'raise' statements should not be used in 'finally' blocks",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects bare 'raise' statements (those without an explicit exception) inside 'finally' blocks. Using a bare 'raise' in a 'finally' block can lead to unexpected behavior because it will re-raise whatever exception was last active, which might not be the intended exception. This can mask the original exception and make debugging more difficult, especially when multiple exceptions could be in flight.",
+  "message": "Remove this bare 'raise' statement from the 'finally' block; it could re-raise an unintended exception.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "bug",
+    "error-handling",
+    "exception",
+    "python",
+    "reliability"
+  ],
+  "impact": "Using bare 'raise' in 'finally' blocks can lead to incorrect exception propagation, making it harder to diagnose the root cause of failures. This can result in production issues that are difficult to debug, potentially causing extended downtime or incorrect error handling.",
+  "recommendation": "Replace the bare 'raise' with either: 1) an explicit exception to raise, or 2) remove the 'raise' entirely if the 'finally' block should not propagate exceptions. Alternatively, restructure the code to avoid needing exception propagation in the 'finally' block.",
+  "references": [
+    {
+      "title": "Python Documentation: The try statement",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-try-statement"
+    },
+    {
+      "title": "PEP 341: Unifying try-except and try-finally",
+      "url": "https://peps.python.org/pep-0341/"
+    },
+    {
+      "title": "SonarSource: Exception Handling in Python",
+      "url": "https://rules.sonarsource.com/python/tag/error-handling/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "try:\n    do_something()\nexcept ValueError as e:\n    handle_error(e)\nfinally:\n    cleanup()  # No raise statement",
+        "description": "The 'finally' block performs cleanup without re-raising any exceptions, which is the expected behavior."
+      },
+      {
+        "code": "try:\n    do_something()\nexcept ValueError as e:\n    handle_error(e)\nfinally:\n    if some_condition:\n        raise RuntimeError(\"Explicit exception\")  # Explicit exception",
+        "description": "If an exception must be raised in the 'finally' block, it should be explicit about which exception to raise."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "try:\n    do_something()\nexcept ValueError as e:\n    handle_error(e)\nfinally:\n    raise  # Bare raise - BAD",
+        "description": "This bare 'raise' will re-raise whatever exception was last active, which could be unintended if the 'except' block handled an exception."
+      },
+      {
+        "code": "try:\n    do_something()\nfinally:\n    raise  # Bare raise in finally without except - BAD",
+        "description": "This bare 'raise' will raise a RuntimeError if no exception is active, or re-raise an unexpected exception if one is active."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-reliability",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": "Bare 'raise' statements in 'finally' blocks are problematic because they implicitly re-raise the last active exception. This can lead to several issues:\n\n1. **Masking Exceptions**: If an exception was caught and handled in an 'except' block, a bare 'raise' in the 'finally' block will re-raise it, effectively undoing the exception handling.\n\n2. **Unintended Exceptions**: If no exception is active (e.g., the 'try' block completed successfully), a bare 'raise' will raise a RuntimeError, which is likely not the intended behavior.\n\n3. **Debugging Difficulty**: The re-raised exception may not provide a clear stack trace or context, making it harder to diagnose the original issue.\n\n4. **Violation of Least Surprise**: Code readers typically expect 'finally' blocks to perform cleanup or finalization, not to propagate exceptions in an unpredictable manner.\n\nThis pattern violates Python's exception handling best practices and can introduce subtle bugs that are difficult to detect and fix.",
+  "how_to_fix": {
+    "description": "To fix this issue, follow these steps to ensure proper exception handling in 'finally' blocks:",
+    "steps": [
+      "1. **Identify the bare 'raise'**: Locate the bare 'raise' statement in the 'finally' block.",
+      "2. **Determine the intended behavior**: Decide whether the 'finally' block should:\n      - Not raise any exceptions (most common case for cleanup code)\n      - Raise a specific, explicit exception\n      - Only raise an exception under certain conditions",
+      "3. **Replace the bare 'raise'**:\n      - If no exception should be raised, simply remove the 'raise' statement.\n      - If a specific exception should be raised, replace the bare 'raise' with 'raise SpecificException(\"message\")'.\n      - If conditional raising is needed, use an 'if' statement with an explicit exception.",
+      "4. **Test the changes**: Ensure that the modified code behaves as expected, especially in edge cases where exceptions might occur in the 'try' or 'except' blocks.",
+      "5. **Review exception handling**: Consider whether the overall exception handling strategy is appropriate for the use case. Sometimes, restructuring the code to avoid needing exception propagation in 'finally' blocks is the best solution."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "name": "Improper Check or Handling of Exceptional Conditions",
+        "description": "The code does not properly anticipate or handle exceptional conditions that rarely occur during normal operation of the software."
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "name": "Prefer exceptions to returning error codes",
+        "description": "While this rule is Java-specific, the principle of proper exception handling applies. Bare 'raise' statements violate proper exception handling practices."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Raise"
+      },
+      {
+        "check_type": "parent_node_type",
+        "value": "Try",
+        "property_path": ["parent"]
+      },
+      {
+        "check_type": "property_in_parent_list",
+        "property_path": ["parent", "finalbody"],
+        "value": "self"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_missing",
+            "property_path": ["exc"]
+          },
+          {
+            "check_type": "property_equals",
+            "property_path": ["exc"],
+            "value": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "rule_id": "aws_waiters_should_be_used_instead_of_custom_polling_loops",
+  "title": "AWS waiters should be used instead of custom polling loops",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when developers implement custom polling loops to check AWS resource states instead of using AWS SDK waiters. AWS SDKs provide built-in waiters that handle polling, retries, and error conditions more efficiently and reliably than custom implementations. Custom polling loops can lead to inefficient resource usage, race conditions, and harder-to-maintain code.",
+  "message": "Use AWS SDK waiters (e.g., 'client.get_waiter()') instead of implementing custom polling loops for resource state checks. Found custom polling loop at line {{line}}.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "aws",
+    "best-practice",
+    "performance",
+    "reliability",
+    "cloud",
+    "convention",
+    "python"
+  ],
+  "impact": "Custom polling loops can cause unnecessary API calls, increased costs, and potential race conditions. They also require manual handling of retries, timeouts, and error conditions that AWS waiters handle automatically. This leads to less reliable code that's harder to maintain and more prone to failures in production environments.",
+  "recommendation": "Replace custom polling loops with AWS SDK waiters. Each AWS service client in boto3 provides a 'get_waiter()' method that returns a waiter object configured with appropriate polling intervals and success/failure conditions.",
+  "references": [
+    {
+      "title": "AWS SDK for Python (Boto3) Waiters Documentation",
+      "url": "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/waiters.html"
+    },
+    {
+      "title": "AWS Well-Architected Framework - Reliability Pillar",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html"
+    },
+    {
+      "title": "Boto3 Waiter Configuration Examples",
+      "url": "https://github.com/boto/boto3/tree/develop/boto3/data"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import boto3\n\n# Good: Using AWS waiter\nec2 = boto3.client('ec2')\ninstance = ec2.run_instances(ImageId='ami-123456', MinCount=1, MaxCount=1)\n\n# Use waiter to wait for instance running state\nwaiter = ec2.get_waiter('instance_running')\nwaiter.wait(InstanceIds=[instance['Instances'][0]['InstanceId']])\nprint('Instance is now running')",
+        "description": "Uses the built-in AWS waiter to efficiently poll for instance state changes with proper retry logic and error handling."
+      },
+      {
+        "code": "import boto3\n\n# Good: Using waiter with configuration\ndynamodb = boto3.client('dynamodb')\n\n# Create table\nresponse = dynamodb.create_table(\n    AttributeDefinitions=[{'AttributeName': 'id', 'AttributeType': 'S'}],\n    TableName='my-table',\n    KeySchema=[{'AttributeName': 'id', 'KeyType': 'HASH'}],\n    BillingMode='PAY_PER_REQUEST'\n)\n\n# Wait for table to be active\nwaiter = dynamodb.get_waiter('table_exists')\nwaiter.wait(TableName='my-table')\nprint('Table is ready')",
+        "description": "Demonstrates proper waiter usage with DynamoDB table creation, letting AWS handle the polling logic."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\nimport time\n\nec2 = boto3.client('ec2')\ninstance = ec2.run_instances(ImageId='ami-123456', MinCount=1, MaxCount=1)\ninstance_id = instance['Instances'][0]['InstanceId']\n\n# Bad: Custom polling loop\nwhile True:\n    response = ec2.describe_instances(InstanceIds=[instance_id])\n    state = response['Reservations'][0]['Instances'][0]['State']['Name']\n    if state == 'running':\n        break\n    time.sleep(5)\nprint('Instance is now running')",
+        "description": "Implements manual polling with fixed sleep intervals, no proper error handling, and no exponential backoff."
+      },
+      {
+        "code": "import boto3\nimport time\n\ndynamodb = boto3.client('dynamodb')\n\n# Create table\ndynamodb.create_table(\n    AttributeDefinitions=[{'AttributeName': 'id', 'AttributeType': 'S'}],\n    TableName='my-table',\n    KeySchema=[{'AttributeName': 'id', 'KeyType': 'HASH'}],\n    BillingMode='PAY_PER_REQUEST'\n)\n\n# Bad: Custom polling with arbitrary timeout\nmax_attempts = 20\nattempt = 0\nwhile attempt < max_attempts:\n    try:\n        dynamodb.describe_table(TableName='my-table')\n        break\n    except dynamodb.exceptions.ResourceNotFoundException:\n        time.sleep(3)\n        attempt += 1\nprint('Table is ready')",
+        "description": "Manual polling with arbitrary timeout values and basic exception handling that doesn't cover all possible error cases."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    },
+    "impact": {
+      "reliability": true,
+      "performance": true,
+      "cost": true,
+      "security": false
+    }
+  },
+  "why_is_this_an_issue": "Custom polling loops for AWS resource state checks are problematic for several reasons:\n\n1. **Inefficient Resource Usage**: Fixed sleep intervals may poll too frequently (wasting API calls) or too infrequently (slowing down operations).\n\n2. **No Exponential Backoff**: AWS SDK waiters implement exponential backoff for retries, which is more efficient than fixed intervals.\n\n3. **Error Handling**: Custom loops often miss edge cases and error conditions that AWS waiters handle automatically.\n\n4. **Race Conditions**: Poorly implemented loops can lead to race conditions where actions are taken before resources are truly ready.\n\n5. **Maintenance Burden**: Custom polling logic requires ongoing maintenance as AWS services evolve, while SDK waiters are maintained by AWS.\n\n6. **Cost Impact**: Excessive API calls from inefficient polling can increase AWS costs unnecessarily.\n\n7. **Reliability Issues**: Custom implementations may not handle network interruptions or throttling as robustly as SDK waiters.\n\nUsing AWS waiters provides a more reliable, efficient, and maintainable solution that follows AWS best practices.",
+  "how_to_fix": {
+    "description": "Replace custom polling loops with AWS SDK waiters by following these steps:",
+    "steps": [
+      "1. **Identify the AWS service and operation**: Determine which AWS service and specific operation you're polling for (e.g., EC2 instance state, DynamoDB table creation).",
+      "2. **Find the appropriate waiter**: Check the AWS SDK documentation for the service to find available waiters. Waiter names typically follow the pattern '{resource}_{state}' (e.g., 'instance_running', 'table_exists').",
+      "3. **Replace polling loop with waiter**: Use the client's 'get_waiter()' method to get the waiter object, then call its 'wait()' method with the appropriate parameters.",
+      "4. **Handle waiter configuration (if needed)**: For advanced use cases, you can configure waiter parameters like delay, max attempts, and backoff strategy.",
+      "5. **Add error handling**: While waiters handle many error cases automatically, you may want to add specific error handling for your use case.",
+      "6. **Test the implementation**: Verify that the waiter behaves as expected in your environment, especially with different network conditions and error scenarios.",
+      "7. **Remove old polling code**: Once verified, remove the custom polling loop and any associated helper functions."
+    ],
+    "additional_tips": [
+      "Use 'boto3.client('servicename').waiter_names' to list all available waiters for a service",
+      "For complex scenarios, you can create custom waiter configurations using the 'Waiter' class",
+      "Consider adding timeout parameters to waiters for production environments",
+      "Review AWS CloudTrail logs to verify reduced API calls after implementing waiters"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-770",
+        "name": "Allocation of Resources Without Limits or Throttling",
+        "description": "Custom polling loops without proper throttling can lead to resource exhaustion"
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "While"
+          },
+          {
+            "check_type": "node_type",
+            "value": "For"
+          }
+        ]
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "body"
+        ],
+        "condition": {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "contains",
+              "value": {
+                "check_type": "node_type",
+                "value": "Call"
+              },
+              "property_path": [
+                "value",
+                "func",
+                "attr"
+              ],
+              "condition": {
+                "operator": "regex_match",
+                "pattern": "^(describe|get|list)_.*",
+                "flags": "i"
+              }
+            },
+            {
+              "check_type": "contains",
+              "value": {
+                "check_type": "node_type",
+                "value": "Call"
+              },
+              "property_path": [
+                "value",
+                "func",
+                "value",
+                "id"
+              ],
+              "condition": {
+                "operator": "regex_match",
+                "pattern": "^boto3\\.client$"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "body"
+        ],
+        "condition": {
+          "check_type": "contains",
+          "value": {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          "property_path": [
+            "value",
+            "func",
+            "attr"
+          ],
+          "condition": {
+            "operator": "equals",
+            "value": "sleep"
+          }
+        }
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "property_check",
+          "property_path": [
+            "body"
+          ],
+          "condition": {
+            "check_type": "contains",
+            "value": {
+              "check_type": "node_type",
+              "value": "Call"
+            },
+            "property_path": [
+              "value",
+              "func",
+              "attr"
+            ],
+            "condition": {
+              "operator": "equals",
+              "value": "get_waiter"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

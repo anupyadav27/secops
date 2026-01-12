@@ -1,0 +1,4 @@
+# This folder is used by Jenkins to clone git repos for scanning
+# Jenkins clones repos here, scanner reads from here
+# Folder content is managed by Jenkins pipeline
+

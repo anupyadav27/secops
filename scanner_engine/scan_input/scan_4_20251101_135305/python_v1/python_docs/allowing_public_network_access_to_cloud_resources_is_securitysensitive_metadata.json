@@ -1,0 +1,240 @@
+{
+  "rule_id": "allowing_public_network_access_to_cloud_resources_is_securitysensitive",
+  "title": "Allowing public network access to cloud resources is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Allowing public network access to cloud resources (such as virtual machines, databases, or storage) exposes them to the internet and increases the risk of unauthorized access, data breaches, and attacks. Cloud resources should be protected by restricting network access to only trusted IP addresses or private networks.",
+  "message": "Make sure that allowing public network access is safe here.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "security",
+    "cloud",
+    "network",
+    "aws",
+    "azure",
+    "gcp"
+  ],
+  "impact": "Exposing cloud resources to public network access can lead to unauthorized access, data breaches, and security incidents. Attackers can exploit publicly accessible resources to gain entry into your infrastructure.",
+  "recommendation": "Restrict network access to cloud resources by configuring security groups, network ACLs, or firewall rules to allow access only from trusted IP addresses or private networks. Use private endpoints and VPN connections for secure access.",
+  "references": [
+    {
+      "title": "AWS Security Groups",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html"
+    },
+    {
+      "title": "Azure Network Security Groups",
+      "url": "https://docs.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview"
+    },
+    {
+      "title": "GCP Firewall Rules",
+      "url": "https://cloud.google.com/vpc/docs/firewalls"
+    },
+    {
+      "title": "OWASP Cloud Security",
+      "url": "https://owasp.org/www-project-cloud-security/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# AWS Security Group allowing all traffic\nimport boto3\n\nec2 = boto3.client('ec2')\nresponse = ec2.authorize_security_group_ingress(\n    GroupId='sg-12345678',\n    IpPermissions=[\n        {\n            'IpProtocol': 'tcp',\n            'FromPort': 22,\n            'ToPort': 22,\n            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Noncompliant: allows access from anywhere\n        }\n    ]\n)",
+        "description": "Allowing SSH access from any IP address (0.0.0.0/0) is dangerous"
+      },
+      {
+        "code": "# Azure Network Security Group rule\nfrom azure.mgmt.network import NetworkManagementClient\n\nnetwork_client = NetworkManagementClient(credentials, subscription_id)\n\nsecurity_rule = {\n    'name': 'AllowSSH',\n    'protocol': 'Tcp',\n    'source_address_prefix': '*',  # Noncompliant: allows access from anywhere\n    'source_port_range': '*',\n    'destination_address_prefix': '*',\n    'destination_port_range': '22',\n    'access': 'Allow',\n    'priority': 1000,\n    'direction': 'Inbound'\n}",
+        "description": "Using '*' as source address prefix allows unrestricted access"
+      },
+      {
+        "code": "# GCP Firewall rule\nfrom googleapiclient import discovery\n\ncompute = discovery.build('compute', 'v1')\n\nfirewall_rule = {\n    'name': 'allow-ssh',\n    'allowed': [{\n        'IPProtocol': 'tcp',\n        'ports': ['22']\n    }],\n    'sourceRanges': ['0.0.0.0/0'],  # Noncompliant: allows access from anywhere\n    'direction': 'INGRESS'\n}",
+        "description": "Specifying 0.0.0.0/0 as source range allows global access"
+      },
+      {
+        "code": "# Database with public access\nimport pymongo\n\n# Noncompliant: binding to all interfaces\nclient = pymongo.MongoClient(host='0.0.0.0', port=27017)",
+        "description": "Binding database to all interfaces (0.0.0.0) makes it publicly accessible"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# AWS Security Group with restricted access\nimport boto3\n\nec2 = boto3.client('ec2')\nresponse = ec2.authorize_security_group_ingress(\n    GroupId='sg-12345678',\n    IpPermissions=[\n        {\n            'IpProtocol': 'tcp',\n            'FromPort': 22,\n            'ToPort': 22,\n            'IpRanges': [{'CidrIp': '10.0.0.0/8'}]  # Compliant: restricted to private network\n        }\n    ]\n)",
+        "description": "Restricting access to private IP ranges"
+      },
+      {
+        "code": "# Azure Network Security Group with specific IP\nfrom azure.mgmt.network import NetworkManagementClient\n\nnetwork_client = NetworkManagementClient(credentials, subscription_id)\n\nsecurity_rule = {\n    'name': 'AllowSSH',\n    'protocol': 'Tcp',\n    'source_address_prefix': '192.168.1.100',  # Compliant: specific trusted IP\n    'source_port_range': '*',\n    'destination_address_prefix': '*',\n    'destination_port_range': '22',\n    'access': 'Allow',\n    'priority': 1000,\n    'direction': 'Inbound'\n}",
+        "description": "Allowing access only from a specific trusted IP address"
+      },
+      {
+        "code": "# GCP Firewall rule with restricted source\nfrom googleapiclient import discovery\n\ncompute = discovery.build('compute', 'v1')\n\nfirewall_rule = {\n    'name': 'allow-ssh',\n    'allowed': [{\n        'IPProtocol': 'tcp',\n        'ports': ['22']\n    }],\n    'sourceRanges': ['10.0.0.0/24'],  # Compliant: restricted to internal network\n    'direction': 'INGRESS'\n}",
+        "description": "Limiting access to internal network range"
+      },
+      {
+        "code": "# Database with localhost binding\nimport pymongo\n\n# Compliant: binding only to localhost\nclient = pymongo.MongoClient(host='127.0.0.1', port=27017)",
+        "description": "Binding database to localhost only"
+      }
+    ]
+  },
+  "devsecops": {
+    "shift_left": "Infrastructure as Code scanning",
+    "automation": "Automated security group validation",
+    "monitoring": "Network access monitoring and alerting"
+  },
+  "why_is_this_an_issue": "Allowing public network access to cloud resources creates significant security risks. When resources like databases, virtual machines, or storage services are accessible from the internet (0.0.0.0/0, ::0/0, or *), they become targets for attackers who can attempt unauthorized access, launch brute force attacks, or exploit vulnerabilities. This exposure can lead to data breaches, service disruption, and compliance violations. Even if additional authentication mechanisms are in place, reducing the attack surface by restricting network access is a fundamental security principle.",
+  "how_to_fix": {
+    "description": "Restrict network access to cloud resources by implementing proper network security controls",
+    "steps": [
+      "Replace broad CIDR blocks (0.0.0.0/0, ::0/0) with specific IP ranges or addresses",
+      "Use private IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) for internal access",
+      "Configure security groups to allow access only from trusted sources",
+      "Implement VPN or private endpoints for remote access",
+      "Use jump hosts or bastion servers for administrative access",
+      "Regularly review and audit network access rules",
+      "Consider using cloud-native security services like AWS VPC endpoints or Azure Private Link"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-284",
+        "name": "Improper Access Control"
+      },
+      {
+        "id": "CWE-668",
+        "name": "Exposure of Resource to Wrong Sphere"
+      },
+      {
+        "id": "CWE-15",
+        "name": "External Control of System or Configuration Setting"
+      }
+    ],
+    "owasp_top_10": [
+      {
+        "category": "A01:2021",
+        "name": "Broken Access Control"
+      },
+      {
+        "category": "A05:2021",
+        "name": "Security Misconfiguration"
+      }
+    ],
+    "sans_top_25": [
+      {
+        "rank": 3,
+        "name": "CWE-284: Improper Access Control"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["CidrIp"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["values", "*", "value"],
+            "forbidden_values": ["0.0.0.0/0"]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["CidrIpv6"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["values", "*", "value"],
+            "forbidden_values": ["::/0"]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "equals",
+                "property_path": ["targets", "0", "id"],
+                "value": "source_address_prefix"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["targets", "0", "id"],
+                "value": "sourceRanges"
+              },
+              {
+                "check_type": "equals", 
+                "property_path": ["targets", "0", "id"],
+                "value": "host"
+              }
+            ]
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "equals",
+                "property_path": ["value", "value"],
+                "value": "*"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["value", "value"],
+                "value": "0.0.0.0"
+              },
+              {
+                "check_type": "equals",
+                "property_path": ["value", "value"],
+                "value": "0.0.0.0/0"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Dict"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keys", "*", "value"],
+            "forbidden_values": ["source_address_prefix", "sourceRanges"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["values", "*", "value"],
+            "forbidden_values": ["0.0.0.0/0", "*"]
+          }
+        ]
+      }
+    ]
+  }
+}

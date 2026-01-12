@@ -1,0 +1,227 @@
+{
+  "rule_id": "aws_lambda_handlers_should_clean_up_temporary_files_in_tmp_directory",
+  "title": "AWS Lambda handlers should clean up temporary files in /tmp directory",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "AWS Lambda functions have access to a temporary directory at `/tmp` that persists between invocations of the same execution environment. Failing to clean up temporary files can lead to disk space exhaustion, performance degradation, or potential security issues if sensitive data is left in temporary files. This rule detects Lambda handlers that create files in `/tmp` but don't properly clean them up before the function completes.",
+  "message": "Clean up temporary files created in '/tmp' before this Lambda function completes. Found file creation at line {{line}} without corresponding cleanup.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "aws",
+    "lambda",
+    "best-practice",
+    "resource-leak",
+    "temporary-files",
+    "cleanup",
+    "serverless"
+  ],
+  "impact": "Uncleaned temporary files in Lambda's /tmp directory can accumulate across invocations, eventually filling the available 512MB of temporary storage. This can cause: 1) Function failures when no space remains for legitimate temporary files, 2) Performance degradation as the filesystem becomes fragmented, 3) Potential security risks if temporary files contain sensitive data that persists between invocations, and 4) Increased cold start frequency as Lambda may need to create new execution environments when existing ones become unusable.",
+  "recommendation": "Always clean up temporary files created in /tmp before your Lambda function completes. Use try-finally blocks or context managers to ensure cleanup happens even if errors occur. For Python, consider using tempfile module with proper cleanup or implementing a cleanup function that runs at the end of your handler.",
+  "references": [
+    {
+      "title": "AWS Lambda Execution Environment - Temporary Storage",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/runtimes-context.html#runtimes-context-tmp"
+    },
+    {
+      "title": "AWS Lambda Best Practices - Temporary Files",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html#function-code"
+    },
+    {
+      "title": "Python tempfile module documentation",
+      "url": "https://docs.python.org/3/library/tempfile.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import os\nimport tempfile\n\ndef lambda_handler(event, context):\n    # Using context manager for automatic cleanup\n    with tempfile.NamedTemporaryFile(dir='/tmp', delete=True) as tmp:\n        tmp.write(b'some data')\n        # File will be automatically deleted when context exits\n        process_file(tmp.name)\n    \n    # Alternative approach with explicit cleanup\n    temp_path = os.path.join('/tmp', 'manual_cleanup.txt')\n    try:\n        with open(temp_path, 'w') as f:\n            f.write('temporary data')\n        process_file(temp_path)\n    finally:\n        if os.path.exists(temp_path):\n            os.remove(temp_path)",
+        "description": "Both examples properly clean up temporary files - either using context managers or try-finally blocks with explicit removal."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import os\n\ndef lambda_handler(event, context):\n    # Creating temporary file without cleanup\n    temp_path = os.path.join('/tmp', 'uncleaned_file.txt')\n    with open(temp_path, 'w') as f:\n        f.write('temporary data')\n    \n    process_file(temp_path)\n    # File remains in /tmp after function completes",
+        "description": "This code creates a temporary file in /tmp but doesn't clean it up, which will persist between Lambda invocations."
+      },
+      {
+        "code": "import tempfile\n\ndef lambda_handler(event, context):\n    # Using tempfile but disabling automatic cleanup\n    tmp = tempfile.NamedTemporaryFile(dir='/tmp', delete=False)\n    tmp.write(b'some data')\n    tmp.close()\n    # File path is lost and won't be cleaned up",
+        "description": "While using tempfile module, the delete=False parameter prevents automatic cleanup, and the file path isn't stored for manual cleanup."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "resource-management",
+    "priority": "high",
+    "lifecycle": "development",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    }
+  },
+  "why_is_this_an_issue": "AWS Lambda's execution environment is reused across invocations for performance reasons. The /tmp directory (with 512MB storage) persists between these invocations. When temporary files aren't cleaned up: 1) Storage fills up over time, eventually causing failures when new temporary files can't be created, 2) Sensitive data in temporary files may be exposed to subsequent invocations (even from different users if Lambda reuse occurs), 3) The function may hit resource limits requiring cold starts more frequently, impacting performance. This becomes particularly problematic for frequently invoked functions or those that create large temporary files.",
+  "how_to_fix": {
+    "description": "Implement proper cleanup of all temporary files created in /tmp before your Lambda function completes.",
+    "steps": [
+      "1. Identify all locations where files are created in /tmp directory",
+      "2. For each file creation:",
+      "   a. Use Python's tempfile module with default cleanup (delete=True), OR",
+      "   b. Implement try-finally blocks to ensure cleanup happens even if errors occur",
+      "   c. Store all temporary file paths in a list and clean them up in a finally block",
+      "3. For existing code, add cleanup logic at the end of the handler function",
+      "4. Test the function to verify cleanup works in both success and error cases",
+      "5. Consider using context managers (with statements) for automatic resource cleanup",
+      "6. For complex cases, create a decorator or wrapper function that handles cleanup"
+    ],
+    "code_example": "def cleanup_temp_files(file_paths):\n    for path in file_paths:\n        try:\n            if os.path.exists(path):\n                os.remove(path)\n        except OSError:\n            pass  # Log error if needed\n\ndef lambda_handler(event, context):\n    temp_files = []\n    try:\n        # Create temporary files\n        temp_path1 = os.path.join('/tmp', 'file1.txt')\n        with open(temp_path1, 'w') as f:\n            f.write('data')\n        temp_files.append(temp_path1)\n        \n        # Process files...\n        \n    finally:\n        cleanup_temp_files(temp_files)"
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-379",
+        "name": "Creation of Temporary File in Directory with Insecure Permissions",
+        "description": "While not exactly the same, this CWE covers related issues with temporary file handling"
+      },
+      {
+        "id": "CWE-404",
+        "name": "Improper Resource Shutdown or Release",
+        "description": "Failing to clean up temporary files is a form of improper resource release"
+      }
+    ],
+    "cert": [
+      {
+        "id": "FIO42-C",
+        "name": "Ensure files are properly closed when they are no longer needed",
+        "description": "While CERT focuses on file closing, the principle applies to resource cleanup"
+      }
+    ],
+    "owasp": [
+      {
+        "category": "A05:2021 - Security Misconfiguration",
+        "description": "Improper cleanup of temporary files could be considered a form of security misconfiguration"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "FunctionDef",
+            "property_check": {
+              "property_path": [
+                "name"
+              ],
+              "check_type": "regex_match",
+              "value": "^(lambda_handler|handle|main)$"
+            }
+          },
+          {
+            "check_type": "decorator_check",
+            "decorator_name": "lambda_handler"
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "descendant_node_exists",
+            "node_type": "Call",
+            "property_check": {
+              "property_path": [
+                "func",
+                "attr"
+              ],
+              "check_type": "in",
+              "values": [
+                "open",
+                "NamedTemporaryFile",
+                "mkstemp",
+                "mktemp"
+              ]
+            }
+          },
+          {
+            "check_type": "descendant_node_exists",
+            "node_type": "Str",
+            "property_check": {
+              "property_path": [
+                "value"
+              ],
+              "check_type": "regex_match",
+              "value": "^/tmp/|^\\\\tmp\\\\"
+            }
+          },
+          {
+            "operator": "not",
+            "conditions": [
+              {
+                "check_type": "descendant_node_exists",
+                "node_type": "Call",
+                "property_check": {
+                  "property_path": [
+                    "func",
+                    "attr"
+                  ],
+                  "check_type": "in",
+                  "values": [
+                    "remove",
+                    "unlink",
+                    "close"
+                  ]
+                },
+                "ancestor_condition": {
+                  "check_type": "node_type",
+                  "value": "Try",
+                  "property_check": {
+                    "property_path": [
+                      "finalbody"
+                    ],
+                    "check_type": "exists"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "operator": "not",
+            "conditions": [
+              {
+                "check_type": "descendant_node_exists",
+                "node_type": "With",
+                "property_check": {
+                  "property_path": [
+                    "items"
+                  ],
+                  "check_type": "any",
+                  "conditions": [
+                    {
+                      "check_type": "node_type",
+                      "value": "Call",
+                      "property_check": {
+                        "property_path": [
+                          "func",
+                          "attr"
+                        ],
+                        "check_type": "equals",
+                        "value": "NamedTemporaryFile"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

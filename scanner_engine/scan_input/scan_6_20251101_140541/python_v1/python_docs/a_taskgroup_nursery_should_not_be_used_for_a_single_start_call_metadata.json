@@ -1,0 +1,15 @@
+{
+  "id": "a_taskgroup_nursery_should_not_be_used_for_a_single_start_call",
+  "title": "TaskGroup nursery should not be used for a single start call",
+  "description": "Detects cases where a TaskGroup is used as a nursery for only a single start_soon call, which is unnecessary.",
+  "logic": [
+    {
+      "type": "custom_function",
+      "function": "with_taskgroup_single_start_soon_check",
+      "node_types": ["With", "AsyncWith"]
+    }
+  ],
+  "severity": "MEDIUM",
+  "category": "Code Quality",
+  "enabled": true
+}

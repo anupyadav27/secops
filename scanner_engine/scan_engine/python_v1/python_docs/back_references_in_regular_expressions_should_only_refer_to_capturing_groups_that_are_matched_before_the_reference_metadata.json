@@ -1,0 +1,153 @@
+{
+  "rule_id": "S6437",
+  "title": "Back-references in regular expressions should only refer to capturing groups that are matched before the reference",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": {
+    "text": "In regular expressions, back-references (e.g., `\\1`, `\\2`) are used to match the same text previously matched by a capturing group. However, if a back-reference refers to a capturing group that hasn't been matched yet (due to conditional logic or lazy quantifiers), it will either fail to match or behave unexpectedly. This rule ensures that all back-references in a regular expression refer only to capturing groups that are guaranteed to have been matched before the reference is evaluated."
+  },
+  "message": {
+    "format": "Remove or correct this back-reference to group %s; it may refer to a capturing group that hasn't been matched yet.",
+    "note": "Back-references must only refer to capturing groups that are guaranteed to have been matched before the reference."
+  },
+  "remediation": {
+    "effort": "Medium",
+    "description": "Requires analyzing the regex pattern to ensure back-references are valid. May involve restructuring the regex or replacing back-references with explicit patterns."
+  },
+  "tags": [
+    "regex",
+    "correctness",
+    "bug",
+    "unpredictable",
+    "pattern-matching"
+  ],
+  "impact": {
+    "short": "May cause regex matching to fail silently or produce incorrect results.",
+    "long": "Invalid back-references can lead to:\n- Silent matching failures (regex fails to match when it should)\n- Incorrect matches (regex matches unintended patterns)\n- Performance degradation (backtracking due to invalid references)\n- Security issues if used in input validation (bypassing intended checks)"
+  },
+  "recommendation": {
+    "primary": "Ensure every back-reference (e.g., `\\1`, `\\2`) refers only to capturing groups that are guaranteed to have been matched before the reference is evaluated.",
+    "alternatives": [
+      "Replace back-references with explicit patterns where possible.",
+      "Restructure the regex to ensure capturing groups are matched in the correct order.",
+      "Use non-capturing groups `(?:...)` for parts of the pattern that shouldn't be referenced."
+    ]
+  },
+  "references": [
+    {
+      "url": "https://docs.python.org/3/library/re.html#re-syntax",
+      "title": "Python re — Regular expression operations (official docs)"
+    },
+    {
+      "url": "https://www.regular-expressions.info/backref.html",
+      "title": "Regular-Expressions.info: Backreferences"
+    },
+    {
+      "url": "https://rules.sonarsource.com/python/RSPEC-6437",
+      "title": "SonarSource Rule S6437 (hypothetical - for reference structure)"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import re\npattern = re.compile(r'(a)?\\1')  # \\1 refers to group 1 which may not have matched",
+        "explanation": "The back-reference `\\1` refers to the first capturing group `(a)?`, which is optional. If the input doesn't start with 'a', the back-reference will fail."
+      },
+      {
+        "code": "import re\npattern = re.compile(r'(a)|(b)\\2')  # \\2 may refer to unmatched group",
+        "explanation": "In the alternative `(a)`, group 2 is never matched, making `\\2` invalid in that branch."
+      },
+      {
+        "code": "import re\npattern = re.compile(r'(a)*\\1')  # \\1 may refer to unmatched group if 'a' appears 0 times",
+        "explanation": "The `*` quantifier allows group 1 to match zero times, making `\\1` potentially invalid."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import re\npattern = re.compile(r'(a)\\1')  # \\1 refers to group 1 which is guaranteed to match",
+        "explanation": "The back-reference `\\1` is safe because group 1 must match before the reference is evaluated."
+      },
+      {
+        "code": "import re\npattern = re.compile(r'(a)(b)\\2\\1')  # References in correct order",
+        "explanation": "Both `\\2` and `\\1` refer to groups that are guaranteed to have matched before the references."
+      },
+      {
+        "code": "import re\npattern = re.compile(r'(?:a)*+b')  # No back-references used",
+        "explanation": "Avoids back-references entirely by using a possessive quantifier and non-capturing group."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Reliability",
+    "subcategory": "Pattern Matching",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": true
+    },
+    "severity": "High",
+    "phase": "Development"
+  },
+  "why_is_this_an_issue": {
+    "short": "Back-references to unmatched groups cause unpredictable regex behavior.",
+    "long": "Regular expressions with invalid back-references suffer from several problems:\n\n1. **Silent Failures**: The regex engine may fail to match without any error, leading to false negatives in pattern matching.\n\n2. **Incorrect Matches**: Some regex engines may treat invalid back-references as literal text, causing the regex to match unintended patterns.\n\n3. **Performance Issues**: Invalid back-references can cause excessive backtracking as the regex engine attempts to resolve the reference.\n\n4. **Security Risks**: In input validation scenarios, invalid back-references might allow malicious input to bypass intended checks.\n\n5. **Maintenance Problems**: Such regex patterns are harder to understand and modify safely.\n\nThe core issue is that back-references create an implicit dependency on the matching state of earlier capturing groups. When these dependencies aren't satisfied (because the referenced group didn't match), the behavior becomes undefined or implementation-dependent."
+  },
+  "how_to_fix": {
+    "steps": [
+      {
+        "step": 1,
+        "action": "Identify all back-references in the regular expression (e.g., `\\1`, `\\2`, etc.)."
+      },
+      {
+        "step": 2,
+        "action": "For each back-reference, trace back to its corresponding capturing group."
+      },
+      {
+        "step": 3,
+        "action": "Analyze the path from the start of the regex to the back-reference to ensure the capturing group must have matched before the reference is evaluated. Consider all possible paths through alternatives (`|`) and quantifiers (`*`, `+`, `?`)."
+      },
+      {
+        "step": 4,
+        "action": "If the capturing group might not have matched, either:\n- Restructure the regex to ensure the group matches before the reference, or\n- Replace the back-reference with an explicit pattern, or\n- Use a non-capturing group `(?:...)` if the reference isn't needed."
+      },
+      {
+        "step": 5,
+        "action": "Test the modified regex with various inputs, including edge cases where capturing groups might not match."
+      }
+    ],
+    "tools": [
+      {
+        "name": "Regex101",
+        "url": "https://regex101.com/",
+        "description": "Online regex tester with debuggers that show capturing group matches."
+      },
+      {
+        "name": "RegExr",
+        "url": "https://regexr.com/",
+        "description": "Interactive regex learning tool with real-time matching visualization."
+      }
+    ]
+  },
+  "security_mappings": [
+    {
+      "type": "CWE",
+      "value": "CWE-185: Incorrect Regular Expression",
+      "description": "The software uses a regular expression with an incorrect syntax or logic that does not match the programmer's intent."
+    },
+    {
+      "type": "CERT",
+      "value": "IDS12-J: Prevent regular expression injection",
+      "description": "While not directly about back-references, invalid regex patterns can lead to similar issues as regex injection."
+    }
+  ],
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {"check_type": "node_type", "value": "Call"},
+      {"check_type": "equals", "property_path": ["attr"], "value": "compile"},
+      {"check_type": "equals", "property_path": ["value", "id"], "value": "re"},
+      {"check_type": "regex", "property_path": ["args", 0, "value"], "value": ".*\\\\1.*"}
+    ]
+  }
+}

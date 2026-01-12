@@ -1,0 +1,167 @@
+{
+  "rule_id": "allowing_both_safe_and_unsafe_http_methods_is_securitysensitive",
+  "title": "Allowing both safe and unsafe HTTP methods is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Allowing both safe (e.g., GET, HEAD) and unsafe (e.g., POST, PUT, DELETE) HTTP methods on the same endpoint can lead to security vulnerabilities such as Cross-Site Request Forgery (CSRF) and unintended data modification. Endpoints should be restricted to only the HTTP methods necessary for their intended function.",
+  "message": "This endpoint allows both safe and unsafe HTTP methods. Consider restricting to only necessary methods.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "security",
+    "csrf",
+    "http-methods",
+    "web-framework",
+    "flask",
+    "django"
+  ],
+  "impact": "Allowing mixed HTTP methods on the same endpoint can expose applications to CSRF attacks and unintended state modifications, potentially leading to data corruption or unauthorized actions.",
+  "recommendation": "Restrict endpoints to only the HTTP methods they actually need. Separate safe operations (GET, HEAD) from unsafe operations (POST, PUT, DELETE, PATCH) into different endpoints.",
+  "references": [
+    {
+      "title": "OWASP CSRF Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+    },
+    {
+      "title": "RFC 7231 - HTTP/1.1 Semantics and Content",
+      "url": "https://tools.ietf.org/html/rfc7231#section-4.2"
+    },
+    {
+      "title": "Flask Documentation - HTTP Methods",
+      "url": "https://flask.palletsprojects.com/en/2.0.x/quickstart/#http-methods"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Flask route allowing both GET and POST methods",
+        "code": "@app.route('/user', methods=['GET', 'POST'])\ndef user_handler():\n    if request.method == 'GET':\n        return get_user_info()\n    elif request.method == 'POST':\n        return create_user()"
+      },
+      {
+        "description": "Django view allowing mixed safe and unsafe methods",
+        "code": "class UserView(View):\n    def dispatch(self, request, *args, **kwargs):\n        if request.method in ['GET', 'POST', 'DELETE']:\n            return super().dispatch(request, *args, **kwargs)\n        return HttpResponseNotAllowed(['GET', 'POST', 'DELETE'])"
+      },
+      {
+        "description": "FastAPI endpoint with mixed methods",
+        "code": "@app.api_route('/items/{item_id}', methods=['GET', 'PUT', 'DELETE'])\ndef handle_item(item_id: int):\n    pass"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Separate endpoints for different HTTP methods",
+        "code": "@app.route('/user', methods=['GET'])\ndef get_user():\n    return get_user_info()\n\n@app.route('/user', methods=['POST'])\ndef create_user():\n    return create_new_user()"
+      },
+      {
+        "description": "Single method endpoint",
+        "code": "@app.route('/users', methods=['GET'])\ndef list_users():\n    return get_all_users()"
+      },
+      {
+        "description": "Only safe methods together",
+        "code": "@app.route('/status', methods=['GET', 'HEAD'])\ndef get_status():\n    return {'status': 'ok'}"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Input Validation & Output Encoding",
+    "subcategory": "HTTP Method Restrictions",
+    "phase": "Implementation"
+  },
+  "why_is_this_an_issue": "Mixing safe and unsafe HTTP methods on the same endpoint creates security vulnerabilities because:\n\n1. **CSRF Vulnerability**: Safe methods (GET, HEAD) are often not protected by CSRF tokens, but if the same endpoint accepts unsafe methods (POST, PUT, DELETE), attackers can potentially bypass CSRF protections.\n\n2. **Method Override Attacks**: Some frameworks allow method overriding via headers or parameters, which could allow attackers to convert safe requests into unsafe ones.\n\n3. **Semantic Confusion**: Having different behaviors for the same URL based on HTTP method can lead to developer confusion and security oversights.\n\n4. **Cache Poisoning**: Safe methods are typically cached, while unsafe methods modify state. Mixing them can lead to cache poisoning vulnerabilities.",
+  "how_to_fix": "To fix this security issue:\n\n1. **Separate Endpoints**: Create different endpoints for different operations:\n   - Use GET for retrieving data\n   - Use POST for creating resources\n   - Use PUT for updating resources\n   - Use DELETE for removing resources\n\n2. **Group Related Methods**: If you must handle multiple methods, group only semantically similar ones:\n   - Safe methods together: GET, HEAD, OPTIONS\n   - Unsafe methods separately: POST, PUT, DELETE, PATCH\n\n3. **Use Specific Decorators**: Instead of generic route decorators, use method-specific ones when available:\n   ```python\n   @app.get('/users')  # Only GET\n   @app.post('/users') # Only POST\n   ```\n\n4. **Implement Proper CSRF Protection**: Ensure all state-changing operations require CSRF tokens.",
+  "security_mappings": {
+    "CWE": [
+      {
+        "id": "CWE-352",
+        "name": "Cross-Site Request Forgery (CSRF)"
+      },
+      {
+        "id": "CWE-434",
+        "name": "Unrestricted Upload of File with Dangerous Type"
+      }
+    ],
+    "OWASP_TOP10": [
+      {
+        "category": "A01:2021",
+        "name": "Broken Access Control"
+      }
+    ],
+    "SANS_TOP25": [
+      {
+        "id": "CWE-352",
+        "rank": 9
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "FunctionDef"
+      },
+      {
+        "check_type": "contains",
+        "property_path": ["decorator_list", "*"],
+        "forbidden_values": ["route"]
+      },
+      {
+        "check_type": "contains",
+        "property_path": ["decorator_list", "*"],
+        "forbidden_values": ["methods"]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["GET"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["HEAD"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["OPTIONS"]
+              }
+            ]
+          },
+          {
+            "operator": "or",
+            "conditions": [
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["POST"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["PUT"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["DELETE"]
+              },
+              {
+                "check_type": "contains",
+                "property_path": ["decorator_list", "*"],
+                "forbidden_values": ["PATCH"]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

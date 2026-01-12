@@ -1,0 +1,100 @@
+{
+  "rule_id": "zoneinfo_should_be_preferred_to_pytz_when_using_python_39_and_later",
+  "title": "\"zoneinfo\" should be preferred to \"pytz\" when using Python 3.9 and later",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "The `pytz` library has been the de facto standard for timezone handling in Python for many years. However, Python 3.9 introduced the `zoneinfo` module as part of the standard library, providing a modern, standardized approach to timezone handling. The `zoneinfo` module is now the recommended way to work with timezones and should be preferred over `pytz` for new code when using Python 3.9 or later versions.",
+  "message": "Replace usage of 'pytz' with the standard library 'zoneinfo' module for Python 3.9+.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "datetime",
+    "timezone",
+    "standard-library",
+    "modernization",
+    "python39"
+  ],
+  "impact": "Using `pytz` instead of the standard library `zoneinfo` module adds an unnecessary external dependency, increases the attack surface, and may lead to compatibility issues in the future. The `zoneinfo` module provides better performance, follows modern Python standards, and is actively maintained as part of the Python standard library.",
+  "recommendation": "Replace imports and usage of `pytz` with the `zoneinfo` module. Update timezone creation from `pytz.timezone()` to `zoneinfo.ZoneInfo()`, and use `datetime.now(tz=ZoneInfo('timezone'))` instead of `datetime.now(pytz.timezone('timezone'))`.",
+  "references": [
+    {
+      "title": "Python 3.9 - zoneinfo module documentation",
+      "url": "https://docs.python.org/3/library/zoneinfo.html"
+    },
+    {
+      "title": "PEP 615 - Support for the IANA Time Zone Database in the Standard Library",
+      "url": "https://peps.python.org/pep-0615/"
+    },
+    {
+      "title": "SonarSource - Python Rules - S6890",
+      "url": "https://rules.sonarsource.com/python/RSPEC-6890/"
+    },
+    {
+      "title": "Real Python - Working With Python Datetime and Timezones",
+      "url": "https://realpython.com/python-datetime/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import pytz\nfrom datetime import datetime\n\n# Using pytz for timezone creation\neastern = pytz.timezone('US/Eastern')\nnow = datetime.now(eastern)\n\n# Using pytz.utc\nutc_time = datetime.now(pytz.utc)\n\n# Localizing with pytz\nnaive_dt = datetime(2023, 10, 15, 12, 0)\nlocalized_dt = eastern.localize(naive_dt)",
+        "description": "Using pytz for timezone handling when Python 3.9+ standard library zoneinfo is available."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "from zoneinfo import ZoneInfo\nfrom datetime import datetime, timezone\n\n# Using zoneinfo for timezone creation\neastern = ZoneInfo('US/Eastern')\nnow = datetime.now(eastern)\n\n# Using standard library UTC\nutc_time = datetime.now(timezone.utc)\n\n# Creating timezone-aware datetime directly\naware_dt = datetime(2023, 10, 15, 12, 0, tzinfo=ZoneInfo('US/Eastern'))",
+        "description": "Using the standard library zoneinfo module for timezone handling, which is the recommended approach for Python 3.9+."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Dependency Management",
+    "security": "Low - Reduces external dependencies and potential supply chain risks",
+    "automation": "High - Can be automatically detected through import analysis",
+    "compliance": "Medium - Follows modern Python standards and best practices"
+  },
+  "why_is_this_an_issue": "The `pytz` library, while historically important, is now superseded by the standard library `zoneinfo` module in Python 3.9+. Continuing to use `pytz` introduces unnecessary external dependencies, increases the project's attack surface, and may lead to maintenance challenges. The `zoneinfo` module provides equivalent functionality with better integration into the Python ecosystem, improved performance, and guaranteed long-term support as part of the standard library.",
+  "how_to_fix": "Replace `pytz` imports and usage with the `zoneinfo` module: 1. Change `import pytz` to `from zoneinfo import ZoneInfo`. 2. Replace `pytz.timezone('timezone_name')` with `ZoneInfo('timezone_name')`. 3. Replace `pytz.utc` with `datetime.timezone.utc`. 4. Update timezone-aware datetime creation to use `datetime(year, month, day, hour, minute, second, tzinfo=ZoneInfo('timezone'))`. 5. Remove the pytz dependency from your requirements file after ensuring all usage has been migrated.",
+  "security_mappings": {
+    "CWE": "CWE-1104: Use of Unmaintained Third Party Components",
+    "CERT": "",
+    "OWASP": "A06:2021 - Vulnerable and Outdated Components"
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Import"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["names", "*", "name"],
+            "regex": "^pytz$"
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "ImportFrom"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["module"],
+            "required_values": ["pytz"]
+          }
+        ]
+      }
+    ]
+  }
+}

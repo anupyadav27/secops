@@ -1,0 +1,271 @@
+{
+  "rule_id": "aws_lambda_handlers_must_not_be_an_async_function",
+  "title": "AWS Lambda handlers should not be async functions",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": {
+    "text": "AWS Lambda functions are designed to run synchronously by default. While Python supports async/await syntax, AWS Lambda's execution environment does not natively support asynchronous handlers without additional configuration (e.g., using Mangum or AWS Lambda Powertools for async support).\n\nWhen an async function is used as a Lambda handler:\n1. The handler may time out prematurely if the event loop isn't properly managed\n2. Cold starts may behave unpredictably\n3. The Lambda runtime may not wait for async operations to complete\n4. Error handling becomes more complex\n\nThis rule detects async functions that are used as AWS Lambda handlers to prevent these issues."
+  },
+  "message": {
+    "text": "Make this AWS Lambda handler a synchronous function; async handlers require special configuration to work correctly with AWS Lambda."
+  },
+  "remediation": {
+    "effort": "10min",
+    "description": "Low effort: Convert the async function to a synchronous one or implement proper async handler wrapper if async is truly required."
+  },
+  "tags": [
+    "aws",
+    "lambda",
+    "async",
+    "serverless",
+    "cloud",
+    "performance",
+    "reliability",
+    "pitfall"
+  ],
+  "impact": {
+    "short": "May cause Lambda timeouts, incomplete executions, or unpredictable behavior",
+    "long": "Async Lambda handlers without proper configuration can lead to:\n- Premature function termination before async operations complete\n- Increased cold start latency\n- Difficult-to-debug runtime issues\n- Inconsistent behavior between invocations\n- Potential data loss if operations aren't properly awaited\n\nThese issues can affect production systems by causing:\n- Failed transactions\n- Incomplete data processing\n- Increased error rates\n- Poor user experience due to timeouts"
+  },
+  "recommendation": {
+    "primary": "Convert the async function to a synchronous function unless you specifically need async capabilities and have configured proper async support (e.g., using Mangum or AWS Lambda Powertools).",
+    "alternative": "If async is required:\n1. Use a proper async handler wrapper like Mangum\n2. Ensure all async operations are properly awaited\n3. Configure appropriate Lambda timeouts\n4. Implement proper error handling for async operations"
+  },
+  "references": [
+    {
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/python-handler.html",
+      "title": "AWS Lambda Python handler documentation"
+    },
+    {
+      "url": "https://aws.amazon.com/blogs/compute/using-python-with-async-features-in-aws-lambda/",
+      "title": "Using Python with async features in AWS Lambda"
+    },
+    {
+      "url": "https://github.com/jordaneremieff/mangum",
+      "title": "Mangum - AWS Lambda adapter for ASGI applications"
+    },
+    {
+      "url": "https://awslabs.github.io/aws-lambda-powertools-python/latest/core/event_source/",
+      "title": "AWS Lambda Powertools for Python"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Async function used as Lambda handler",
+        "code": "import json\n\nasync def lambda_handler(event, context):\n    # This will not work as expected in AWS Lambda\n    result = await some_async_operation()\n    return {\n        'statusCode': 200,\n        'body': json.dumps(result)\n    }"
+      },
+      {
+        "description": "Async function with decorator",
+        "code": "import json\nfrom some_library import async_decorator\n\n@async_decorator\nasync def lambda_handler(event, context):\n    return {\n        'statusCode': 200,\n        'body': json.dumps('Hello from Lambda!')\n    }"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Synchronous Lambda handler",
+        "code": "import json\n\ndef lambda_handler(event, context):\n    result = sync_operation()\n    return {\n        'statusCode': 200,\n        'body': json.dumps(result)\n    }"
+      },
+      {
+        "description": "Proper async handler with Mangum",
+        "code": "from mangum import Mangum\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/\")\nasync def root():\n    return {\"message\": \"Hello World\"}\n\nhandler = Mangum(app)"
+      },
+      {
+        "description": "Async handler with proper await",
+        "code": "import json\nfrom aws_lambda_powertools.utilities.parser import parse\nfrom aws_lambda_powertools.utilities.typing import LambdaContext\n\nasync def some_async_operation():\n    return \"async result\"\n\ndef lambda_handler(event: dict, context: LambdaContext):\n    # Note: This is sync handler that calls async code properly\n    import asyncio\n    result = asyncio.run(some_async_operation())\n    return {\n        'statusCode': 200,\n        'body': json.dumps(result)\n    }"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "reliability",
+    "subcategory": "cloud-function",
+    "impact_area": "runtime-behavior",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stage": [
+      "development",
+      "testing"
+    ]
+  },
+  "why_is_this_an_issue": {
+    "short": "AWS Lambda's execution model isn't designed for native async functions without proper configuration.",
+    "long": "AWS Lambda functions are invoked synchronously by the Lambda service. When you define an async function as a handler:\n\n1. The Lambda runtime doesn't automatically manage the event loop\n2. The function may return before async operations complete\n3. Timeouts can occur even when the function is still processing\n4. Error handling becomes inconsistent\n5. Cold starts may not properly initialize async resources\n\nThis can lead to:\n- Incomplete executions that appear successful\n- Data corruption or loss\n- Increased latency and timeouts\n- Difficult-to-diagnose production issues\n\nThe problem is exacerbated by:\n- Lambda's ephemeral nature (no persistent event loop)\n- The stateless execution model\n- Automatic scaling behavior\n- Concurrency limits that affect async operations differently"
+  },
+  "how_to_fix": {
+    "steps": [
+      {
+        "step": 1,
+        "description": "Identify all async functions used as Lambda handlers",
+        "example": "Search for 'async def' followed by function names that match your Lambda handler pattern"
+      },
+      {
+        "step": 2,
+        "description": "For simple cases, convert to synchronous functions",
+        "example": "Change 'async def lambda_handler' to 'def lambda_handler'"
+      },
+      {
+        "step": 3,
+        "description": "If async is truly needed, implement proper async support",
+        "options": [
+          {
+            "option": "A",
+            "description": "Use Mangum for ASGI applications",
+            "example": "from mangum import Mangum\nhandler = Mangum(your_fastapi_app)"
+          },
+          {
+            "option": "B",
+            "description": "Use AWS Lambda Powertools",
+            "example": "from aws_lambda_powertools.utilities.parser import parse\n# Use their async utilities"
+          },
+          {
+            "option": "C",
+            "description": "Manually manage the event loop",
+            "example": "import asyncio\ndef handler(event, context):\n    return asyncio.run(your_async_function(event, context))"
+          }
+        ]
+      },
+      {
+        "step": 4,
+        "description": "Ensure all async operations are properly awaited",
+        "example": "result = await some_async_operation()  # Make sure this is in an async context"
+      },
+      {
+        "step": 5,
+        "description": "Test thoroughly with realistic payloads and concurrency",
+        "example": "Use AWS SAM or Serverless Framework to test locally and in staging"
+      },
+      {
+        "step": 6,
+        "description": "Monitor production behavior after deployment",
+        "example": "Watch CloudWatch logs for timeouts or incomplete executions"
+      }
+    ],
+    "additional_considerations": [
+      "Consider increasing Lambda timeout settings when using async operations",
+      "Be aware of Lambda concurrency limits when using async patterns",
+      "Implement proper error handling for async operations",
+      "Consider using Lambda Powertools for better async support and observability"
+    ]
+  },
+  "security_mappings": [
+    {
+      "type": "CWE",
+      "value": "CWE-706: Use of Incorrectly Resolved Name or Reference",
+      "description": "Async handlers may resolve to incomplete or incorrect execution paths"
+    },
+    {
+      "type": "CWE",
+      "value": "CWE-400: Uncontrolled Resource Consumption",
+      "description": "Async handlers may consume resources unpredictably leading to denial of service"
+    },
+    {
+      "type": "CWE",
+      "value": "CWE-477: Use of Obsolete Function",
+      "description": "Using async functions without proper async support is effectively obsolete for Lambda"
+    },
+    {
+      "type": "OWASP",
+      "value": "OWASP:API10:2023 - Unsafe Consumption of APIs",
+      "description": "Async handlers may consume AWS services APIs unsafely"
+    }
+  ],
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "regex_match",
+            "property_path": "name",
+            "value": "^lambda_handler$",
+            "case_sensitive": false
+          },
+          {
+            "check_type": "regex_match",
+            "property_path": "name",
+            "value": "^handle_.*",
+            "case_sensitive": false
+          },
+          {
+            "check_type": "regex_match",
+            "property_path": "name",
+            "value": ".*_handler$",
+            "case_sensitive": false
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": "decorator_list",
+            "conditions": [
+              {
+                "check_type": "node_type_in_list",
+                "property_path": "decorator_list",
+                "value": "Call",
+                "conditions": [
+                  {
+                    "check_type": "property_exists",
+                    "property_path": "func",
+                    "conditions": [
+                      {
+                        "check_type": "property_value",
+                        "property_path": "func.id",
+                        "value": "lambda_handler"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "import_exists",
+            "value": "mangum"
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "import_exists",
+            "value": "aws_lambda_powertools"
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": "body",
+            "conditions": [
+              {
+                "check_type": "node_type_in_body",
+                "value": "Call",
+                "conditions": [
+                  {
+                    "check_type": "property_value",
+                    "property_path": "func.id",
+                    "value": "asyncio.run"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "rule_id": "builtin_generic_types_should_be_preferred_over_the_typing_module_in_type_hints",
+  "title": "Built-in generic types should be preferred over the typing module in type hints",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule checks that Python's built-in generic types (like `list`, `dict`, `set`, etc.) are used in type hints instead of their equivalents from the `typing` module (like `typing.List`, `typing.Dict`, `typing.Set`). Since Python 3.9, the built-in types support subscripting and are preferred for cleaner, more modern code.",
+  "message": "Use built-in generic type '{{builtin_type}}' instead of 'typing.{{typing_type}}' for type hints.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "2min"
+  },
+  "tags": [
+    "convention",
+    "python3",
+    "type-hints",
+    "modernization",
+    "best-practice"
+  ],
+  "impact": "Using `typing` module types when built-in equivalents are available makes code less readable and less maintainable. It also doesn't take advantage of Python 3.9+ features that allow direct subscripting of built-in types. While this doesn't affect runtime behavior, it goes against PEP 585 recommendations and modern Python coding standards.",
+  "recommendation": "Replace all occurrences of `typing.List`, `typing.Dict`, `typing.Set`, and other generic types from the `typing` module with their built-in equivalents (`list`, `dict`, `set`, etc.) when using Python 3.9 or later. For older Python versions, keep using the `typing` module types for compatibility.",
+  "references": [
+    {
+      "title": "PEP 585 -- Type Hinting Generics In Standard Collections",
+      "url": "https://peps.python.org/pep-0585/"
+    },
+    {
+      "title": "Python 3.9 Documentation: Built-in Types",
+      "url": "https://docs.python.org/3.9/library/stdtypes.html"
+    },
+    {
+      "title": "mypy documentation: Built-in types vs typing module",
+      "url": "https://mypy.readthedocs.io/en/stable/kinds_of_types.html#built-in-types-vs-typing-module"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "from typing import Optional\n\ndef process_items(items: list[str]) -> dict[str, int]:\n    counts: dict[str, int] = {}\n    for item in items:\n        counts[item] = counts.get(item, 0) + 1\n    return counts",
+        "description": "Uses built-in generic types `list[str]` and `dict[str, int]` which is the preferred style in Python 3.9+"
+      },
+      {
+        "code": "from typing import Tuple, Union\n\n# For types that don't have built-in equivalents\ndef get_coordinates() -> tuple[float, float]:\n    return (1.0, 2.0)\n\n# Union can be replaced with | in Python 3.10+\ndef process_value(value: float | int) -> None:\n    pass",
+        "description": "Shows proper use of built-in types where available while still using `typing` for types without built-in equivalents"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "from typing import List, Dict\n\ndef process_items(items: List[str]) -> Dict[str, int]:\n    counts: Dict[str, int] = {}\n    for item in items:\n        counts[item] = counts.get(item, 0) + 1\n    return counts",
+        "description": "Uses `typing.List` and `typing.Dict` instead of the built-in `list` and `dict` types"
+      },
+      {
+        "code": "from typing import Set, FrozenSet, DefaultDict\n\ndef analyze_data(data: Set[int]) -> DefaultDict[str, list[int]]:\n    unique_values: FrozenSet[int] = frozenset(data)\n    return defaultdict(list)",
+        "description": "Uses multiple `typing` module types that have built-in equivalents in Python 3.9+"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "mypy"
+      ],
+      "auto_fix": true
+    }
+  },
+  "why_is_this_an_issue": "Using the `typing` module for generic types that have built-in equivalents creates several problems:\n\n1. **Readability**: Built-in types are more immediately recognizable to Python developers.\n2. **Modernization**: Python 3.9+ officially supports subscripting built-in types, making the `typing` module versions redundant for these cases.\n3. **Consistency**: Mixing `typing.List` with `dict[str, int]` creates inconsistent style in codebases.\n4. **Future-proofing**: As Python evolves, more type-related features will likely be added to built-in types rather than the `typing` module.\n5. **PEP Compliance**: PEP 585 explicitly recommends using built-in generic types when available.\n\nWhile this doesn't affect runtime behavior, it represents a coding standard violation that can accumulate technical debt over time as the codebase diverges from modern Python practices.",
+  "how_to_fix": {
+    "description": "Migrate from `typing` module types to built-in generic types",
+    "steps": [
+      "1. Identify all type hints using `typing.List`, `typing.Dict`, `typing.Set`, etc. in your codebase",
+      "2. Replace them with their built-in equivalents: `list`, `dict`, `set`, etc.",
+      "3. Ensure you're using Python 3.9 or later (check your runtime environment and `pyproject.toml`/`setup.py`)",
+      "4. For types that don't have built-in equivalents (like `Tuple`, `Union`, `Callable`), keep using the `typing` module",
+      "5. Consider using the `|` operator for unions in Python 3.10+ instead of `typing.Union`",
+      "6. Run your test suite to verify the changes don't affect behavior",
+      "7. Update any type checking configuration (like `mypy.ini`) if needed",
+      "8. Consider adding a pre-commit hook or linter rule to prevent regressions"
+    ],
+    "additional_notes": "For projects that need to support Python versions before 3.9, you can use conditional imports or maintain the `typing` module imports. Tools like `future` annotations or `__future__` imports can help with forward compatibility."
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "other": [
+      {
+        "standard": "PEP",
+        "id": "585",
+        "description": "Type Hinting Generics In Standard Collections"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "FunctionDef"
+          },
+          {
+            "check_type": "node_type",
+            "value": "AsyncFunctionDef"
+          },
+          {
+            "check_type": "node_type",
+            "value": "AnnAssign"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Assign",
+            "conditions": [
+              {
+                "check_type": "property_exists",
+                "property_path": "type_comment"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": "args.args.*.annotation"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type_in_path",
+            "property_path": "args.args.*.annotation",
+            "value": "Attribute",
+            "conditions": [
+              {
+                "check_type": "property_match",
+                "property_path": "attr",
+                "value": {
+                  "operator": "in",
+                  "values": [
+                    "List",
+                    "Dict",
+                    "Set",
+                    "FrozenSet",
+                    "DefaultDict",
+                    "ChainMap",
+                    "Counter",
+                    "Deque"
+                  ]
+                }
+              },
+              {
+                "check_type": "property_match",
+                "property_path": "value.id",
+                "value": "typing"
+              }
+            ]
+          },
+          {
+            "check_type": "node_type_in_path",
+            "property_path": "args.args.*.annotation",
+            "value": "Subscript",
+            "conditions": [
+              {
+                "check_type": "node_type_in_path",
+                "property_path": "value",
+                "value": "Attribute",
+                "conditions": [
+                  {
+                    "check_type": "property_match",
+                    "property_path": "attr",
+                    "value": {
+                      "operator": "in",
+                      "values": [
+                        "List",
+                        "Dict",
+                        "Set",
+                        "FrozenSet",
+                        "DefaultDict"
+                      ]
+                    }
+                  },
+                  {
+                    "check_type": "property_match",
+                    "property_path": "value.id",
+                    "value": "typing"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "check_type": "node_type_in_path",
+            "property_path": "returns",
+            "value": "Attribute",
+            "conditions": [
+              {
+                "check_type": "property_match",
+                "property_path": "attr",
+                "value": {
+                  "operator": "in",
+                  "values": [
+                    "List",
+                    "Dict",
+                    "Set",
+                    "FrozenSet",
+                    "DefaultDict"
+                  ]
+                }
+              },
+              {
+                "check_type": "property_match",
+                "property_path": "value.id",
+                "value": "typing"
+              }
+            ]
+          },
+          {
+            "check_type": "node_type_in_path",
+            "property_path": "returns",
+            "value": "Subscript",
+            "conditions": [
+              {
+                "check_type": "node_type_in_path",
+                "property_path": "value",
+                "value": "Attribute",
+                "conditions": [
+                  {
+                    "check_type": "property_match",
+                    "property_path": "attr",
+                    "value": {
+                      "operator": "in",
+                      "values": [
+                        "List",
+                        "Dict",
+                        "Set",
+                        "FrozenSet",
+                        "DefaultDict"
+                      ]
+                    }
+                  },
+                  {
+                    "check_type": "property_match",
+                    "property_path": "value.id",
+                    "value": "typing"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "python_version",
+        "condition": ">=",
+        "value": [
+          3,
+          9,
+          0
+        ]
+      }
+    ]
+  }
+}

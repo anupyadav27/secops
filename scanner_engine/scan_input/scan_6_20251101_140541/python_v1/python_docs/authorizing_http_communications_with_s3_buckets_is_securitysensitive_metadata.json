@@ -1,0 +1,129 @@
+{
+  "rule_id": "authorizing_http_communications_with_s3_buckets_is_securitysensitive",
+  "title": "Authorizing HTTP communications with S3 buckets should be marked as security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "status": "ready",
+  "defaultSeverity": "Critical",
+  "description": "This rule detects when Python code configures S3 buckets to allow HTTP (non-HTTPS) communications without proper security-sensitive annotations. HTTP communications with S3 buckets can expose data to man-in-the-middle attacks, credential interception, and other security vulnerabilities. Such configurations should be explicitly marked as security-sensitive to ensure proper review and risk assessment.",
+  "message": "Configure this S3 bucket to use HTTPS only or mark this HTTP configuration as security-sensitive with '# nosemgrep: security-sensitive.http-s3' if intentional.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "security",
+    "aws",
+    "s3",
+    "http",
+    "data-protection",
+    "insecure-communication",
+    "security-hotspot"
+  ],
+  "impact": "Allowing HTTP communications with S3 buckets exposes all transmitted data (including potentially sensitive information) to interception and tampering. This violates security best practices for cloud storage and may violate compliance requirements for data protection. Attackers could exploit this to steal credentials, modify data in transit, or gain unauthorized access to bucket contents.",
+  "recommendation": "Always use HTTPS for S3 communications. If HTTP must be used for specific legacy reasons, explicitly document the security implications and mark the code as security-sensitive for review. Consider implementing bucket policies that enforce HTTPS-only access at the AWS level.",
+  "references": [
+    {
+      "title": "AWS Security Best Practices for S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html"
+    },
+    {
+      "title": "OWASP Transport Layer Protection Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html"
+    },
+    {
+      "title": "AWS: How to configure S3 bucket policies to enforce HTTPS",
+      "url": "https://aws.amazon.com/premiumsupport/knowledge-center/s3-bucket-policy-for-config-rule/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import boto3\n\n# Good: Explicit HTTPS configuration\ns3 = boto3.client('s3',\n                 use_ssl=True,  # Explicit HTTPS enforcement\n                 config=boto3.session.Config(signature_version='s3v4'))\n\n# Good: Bucket policy enforces HTTPS (shown conceptually)\nbucket_policy = {\n    \"Version\": \"2012-10-17\",\n    \"Statement\": [\n        {\n            \"Effect\": \"Deny\",\n            \"Principal\": \"*\",\n            \"Action\": \"s3:*\",\n            \"Resource\": [\"arn:aws:s3:::my-bucket/*\"],\n            \"Condition\": {\n                \"Bool\": {\"aws:SecureTransport\": \"false\"}\n            }\n        }\n    ]\n}",
+        "description": "Both examples enforce HTTPS communications - either through client configuration or bucket policy. This is the recommended secure approach."
+      },
+      {
+        "code": "import boto3\n\n# Good: HTTP usage marked as security-sensitive\n# nosemgrep: security-sensitive.http-s3\ns3 = boto3.client('s3',\n                 use_ssl=False)  # Only acceptable if properly documented and reviewed",
+        "description": "When HTTP must be used for legacy reasons, it should be explicitly marked as security-sensitive for review and documentation."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\n\n# Bad: HTTP enabled without security annotation\ns3 = boto3.client('s3',\n                 use_ssl=False)  # Security Hotspot - HTTP enabled\n\n# Bad: Default client may use HTTP in some configurations\ns3 = boto3.client('s3')  # Security Hotspot - no explicit SSL configuration",
+        "description": "Both examples either explicitly enable HTTP or don't enforce HTTPS, creating potential security vulnerabilities without proper security review annotations."
+      },
+      {
+        "code": "from boto3.s3.transfer import S3Transfer\n\n# Bad: Transfer configuration without HTTPS enforcement\ntransfer_config = S3Transfer(\n    client=boto3.client('s3', use_ssl=False),  # Security Hotspot\n    config={}\n)",
+        "description": "S3 transfer operations should always use HTTPS to protect data in transit."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "cloud-security",
+    "priority": "high",
+    "automation": {
+      "detect": "static-analysis",
+      "prevent": "policy-as-code",
+      "respond": "manual-review"
+    },
+    "lifecycle": [
+      "development",
+      "deployment"
+    ]
+  },
+  "why_is_this_an_issue": "HTTP communications with S3 buckets are vulnerable to several critical security risks:\n\n1. **Man-in-the-Middle Attacks**: Attackers can intercept and modify data transmitted over HTTP, including sensitive files and access credentials.\n\n2. **Credential Theft**: AWS signature credentials can be intercepted when transmitted over HTTP, potentially giving attackers full access to the S3 bucket.\n\n3. **Data Tampering**: Files can be altered during transfer without detection, leading to data corruption or malicious content injection.\n\n4. **Compliance Violations**: Most security standards (PCI DSS, HIPAA, GDPR) require encryption for data in transit.\n\n5. **Bucket Enumeration**: HTTP traffic can be more easily monitored to discover bucket names and structures.\n\nEven in internal networks, HTTP should be avoided as network traffic can often be intercepted through various means. The risk is particularly high when accessing S3 buckets over the public internet.",
+  "how_to_fix": {
+    "description": "Follow these steps to properly secure S3 communications:",
+    "steps": [
+      "1. **Enforce HTTPS in code**: Always set `use_ssl=True` when creating S3 clients (this is the default in newer boto3 versions but should be explicit).",
+      "2. **Configure bucket policies**: Add bucket policies that deny non-HTTPS access using the `aws:SecureTransport` condition.",
+      "3. **Use S3 V4 signatures**: Configure clients to use signature version 4 which provides additional security benefits.",
+      "4. **Mark intentional HTTP usage**: If HTTP must be used for legacy compatibility, add a security-sensitive comment (`# nosemgrep: security-sensitive.http-s3`) and document the risk acceptance.",
+      "5. **Review network architecture**: Ensure your network infrastructure doesn't force HTTP downgrades (e.g., through proxies or load balancers).",
+      "6. **Monitor for HTTP access**: Set up AWS CloudTrail alerts for any HTTP access to your S3 buckets.",
+      "7. **Educate developers**: Train teams on the risks of HTTP communications with cloud services."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-319",
+        "name": "Cleartext Transmission of Sensitive Information",
+        "description": "The software transmits sensitive or security-critical data in cleartext in a communication channel that can be sniffed by unauthorized actors."
+      },
+      {
+        "id": "CWE-326",
+        "name": "Inadequate Encryption Strength",
+        "description": "The software stores or transmits sensitive data using an encryption scheme that is theoretically sound, but is not strong enough for the level of protection required."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC61-J",
+        "name": "Do not use insecure or weak cryptographic algorithms",
+        "description": "Using weak encryption or no encryption for sensitive communications violates this rule."
+      }
+    ],
+    "owasp": [
+      {
+        "id": "A02:2021",
+        "name": "Cryptographic Failures",
+        "description": "Failure to enforce HTTPS for S3 communications represents a cryptographic failure that can lead to data exposure."
+      },
+      {
+        "id": "A04:2021",
+        "name": "Insecure Design",
+        "description": "Designing systems that allow unencrypted communications with cloud storage represents an insecure design choice."
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {"check_type": "node_type", "value": "Call"},
+      {"check_type": "equals", "property_path": ["attr"], "value": "client"},
+      {"check_type": "equals", "property_path": ["value", "id"], "value": "boto3"},
+      {"check_type": "equals", "property_path": ["keywords", 0, "arg"], "value": "use_ssl"},
+      {"check_type": "equals", "property_path": ["keywords", 0, "value", "value"], "value": false}
+    ]
+  }
+}

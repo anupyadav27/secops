@@ -1,0 +1,150 @@
+{
+  "rule_id": "assert_should_not_be_called_on_a_tuple_literal",
+  "title": "Assert statements should not be called on tuple literals",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects when `assert` statements are used with tuple literals as their test expression. Using `assert` with tuple literals is problematic because tuples are always truthy in Python (even empty ones), which makes the assertion meaningless. This can lead to false confidence in code correctness and hide real bugs by making assertions that never fail when they should.",
+  "message": "Remove this assertion on a tuple literal; tuples are always truthy and make this assertion meaningless.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "best-practice",
+    "python",
+    "assertion",
+    "logical-error",
+    "misleading"
+  ],
+  "impact": "Using assertions on tuple literals provides no actual validation since tuples are always truthy. This can lead to: 1) False sense of security in code correctness, 2) Hidden bugs that should have been caught by proper assertions, 3) Confusing code that appears to validate something when it doesn't, and 4) Potential issues when code is refactored assuming the assertion provides real validation.",
+  "recommendation": "Replace the tuple literal in the assertion with a meaningful boolean expression that actually tests the intended condition. If you meant to check if the tuple is non-empty, use `if not tuple_var:` or `assert len(tuple_var) > 0` instead. If the assertion was meant to be a no-op, remove it entirely as it serves no purpose.",
+  "references": [
+    {
+      "title": "Python Documentation: Truth Value Testing",
+      "url": "https://docs.python.org/3/library/stdtypes.html#truth-value-testing"
+    },
+    {
+      "title": "Python Assertions: When to Use and When to Avoid",
+      "url": "https://realpython.com/python-assert-statement/"
+    },
+    {
+      "title": "SonarSource: Meaningless Assertions",
+      "url": "https://rules.sonarsource.com/python/RSPEC-2757"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "my_tuple = (1, 2, 3)\nassert len(my_tuple) > 0, \"Tuple should not be empty\"",
+        "description": "Proper assertion that actually checks if the tuple has elements"
+      },
+      {
+        "code": "def process_data(data):\n    if not data:\n        raise ValueError(\"Data cannot be empty\")\n    # process data...",
+        "description": "Better alternative using explicit validation instead of assertion"
+      },
+      {
+        "code": "result = some_operation()\nassert result is not None, \"Operation should return a value\"",
+        "description": "Meaningful assertion that checks for None"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "my_tuple = (1, 2, 3)\nassert my_tuple  # Always passes, meaningless assertion",
+        "description": "Assertion on a tuple literal is always truthy and provides no real validation"
+      },
+      {
+        "code": "def get_config():\n    return ('localhost', 8080)\n\nconfig = get_config()\nassert config  # Useless assertion",
+        "description": "Even though the function might return different values, the tuple will always be truthy"
+      },
+      {
+        "code": "empty_tuple = ()\nassert empty_tuple  # Still passes despite being empty",
+        "description": "Empty tuples are still truthy in Python, making this assertion meaningless"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "low",
+    "automation": {
+      "static_analysis": "high",
+      "unit_test": "medium",
+      "code_review": "medium"
+    }
+  },
+  "why_is_this_an_issue": "Assertions are meant to validate assumptions in code and fail fast when those assumptions are violated. When an assertion uses a tuple literal as its test expression, it will always evaluate to True because all tuples in Python are truthy (including empty tuples). This makes the assertion completely meaningless and defeats its purpose. Such assertions can: 1) Give false confidence that code is being validated when it isn't, 2) Hide real bugs that should have been caught by proper assertions, 3) Make code harder to understand by including assertions that don't actually do anything, and 4) Potentially mask more serious issues when code is refactored under the assumption that the assertions provide real validation.",
+  "how_to_fix": {
+    "description": "To fix this issue, either replace the tuple literal with a meaningful boolean expression or remove the assertion entirely if it serves no purpose.",
+    "steps": [
+      "1. Identify what condition you actually want to assert (e.g., tuple non-emptiness, specific values, etc.)",
+      "2. Replace the tuple literal with a proper boolean expression that tests this condition (e.g., `assert len(my_tuple) > 0` instead of `assert my_tuple`)",
+      "3. If the assertion was meant to validate tuple contents, consider using explicit checks for each element",
+      "4. If the assertion was a no-op (accidental or intentional), remove it entirely as it adds no value",
+      "5. Consider whether an assertion is the right tool - for input validation, explicit error raising might be more appropriate",
+      "6. Add a meaningful error message to the assertion to clarify what condition is being checked"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-252",
+        "name": "Unchecked Return Value",
+        "description": "While not exactly the same, meaningless assertions can lead to unchecked assumptions similar to unchecked return values"
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Assert"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [
+              "test"
+            ],
+            "value": "Tuple"
+          },
+          {
+            "check_type": "node_type",
+            "property_path": [
+              "test"
+            ],
+            "value": "Constant",
+            "additional_checks": [
+              {
+                "check_type": "property_exists",
+                "property_path": [
+                  "test",
+                  "value"
+                ],
+                "condition": {
+                  "check_type": "instanceof",
+                  "value": "tuple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "node_type",
+          "property_path": [
+            "test"
+          ],
+          "value": "Name"
+        }
+      }
+    ]
+  }
+}

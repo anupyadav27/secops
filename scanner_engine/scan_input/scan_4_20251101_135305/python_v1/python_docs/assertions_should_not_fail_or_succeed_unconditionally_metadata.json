@@ -1,0 +1,233 @@
+{
+  "rule_id": "assertions_should_not_fail_or_succeed_unconditionally",
+  "title": "Assertions should not fail or succeed unconditionally",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Detects assertions in Python code that always pass or fail, such as 'assert True', 'assert False', or tautological expressions like 'assert 1 == 1'. These assertions do not test any real logic and reduce the effectiveness of your test suite.",
+  "message": "Remove this assertion that will always {{#isTrue}}pass{{/isTrue}}{{^isTrue}}fail{{/isTrue}}.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "testing",
+    "readability",
+    "best-practice",
+    "python",
+    "maintainability"
+  ],
+  "impact": "Unconditional assertions make tests meaningless and can mask bugs. They reduce confidence in test coverage and may lead to undetected failures.",
+  "recommendation": "Replace unconditional assertions with meaningful checks that validate actual behavior or state. Avoid using 'assert True', 'assert False', or tautologies like 'assert 1 == 1'.",
+  "references": [
+    {
+      "title": "PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource: Detecting useless assertions",
+      "url": "https://rules.sonarsource.com/python/RSPEC-5704"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def test_add():\n    assert add(2, 2) == 4",
+        "description": "Assert checks actual function output."
+      },
+      {
+        "code": "def test_value():\n    assert value > 0",
+        "description": "Assert checks a meaningful condition."
+      },
+      {
+        "code": "def test_with_message():\n    assert some_function(), \"Function should return truthy value\"",
+        "description": "Assert with meaningful message checks actual logic."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def test_true():\n    assert True",
+        "description": "Always passes, does not test anything."
+      },
+      {
+        "code": "def test_false():\n    assert False",
+        "description": "Always fails, does not test anything."
+      },
+      {
+        "code": "def test_tautology():\n    assert 1 == 1",
+        "description": "Always passes, tautological assertion."
+      },
+      {
+        "code": "def test_contradiction():\n    assert 1 == 2",
+        "description": "Always fails, contradictory assertion."
+      },
+      {
+        "code": "def test_constant_comparison():\n    assert \"hello\" == \"hello\"",
+        "description": "Always passes, constant string comparison."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "testing-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linter": true
+    }
+  },
+  "why_is_this_an_issue": "Unconditional assertions do not verify any real behavior and can give a false sense of correctness. They may hide bugs and reduce the reliability of automated tests.",
+  "how_to_fix": {
+    "description": "Replace unconditional assertions with meaningful checks.",
+    "steps": [
+      "Identify all assertions that always pass or fail (e.g., 'assert True', 'assert False', 'assert 1 == 1').",
+      "Replace them with assertions that check actual logic or state relevant to the test.",
+      "Ensure each assertion validates a real condition.",
+      "Remove placeholder assertions used during development."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-561",
+        "name": "Dead Code",
+        "description": "Unconditional assertions represent dead code that doesn't perform meaningful validation."
+      }
+    ],
+    "cert": [],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Assert"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "node_type",
+                "property_path": ["test"],
+                "value": "Constant"
+              },
+              {
+                "operator": "or",
+                "conditions": [
+                  {
+                    "check_type": "equals",
+                    "property_path": ["test", "value"],
+                    "required_values": [true]
+                  },
+                  {
+                    "check_type": "equals",
+                    "property_path": ["test", "value"],
+                    "required_values": [false]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "node_type",
+                "property_path": ["test"],
+                "value": "Compare"
+              },
+              {
+                "check_type": "is_constant_comparison",
+                "property_path": ["test"]
+              }
+            ]
+          },
+          {
+            "operator": "and",
+            "conditions": [
+              {
+                "check_type": "node_type",
+                "property_path": ["test"],
+                "value": "UnaryOp"
+              },
+              {
+                "check_type": "node_type",
+                "property_path": ["test", "op"],
+                "value": "Not"
+              },
+              {
+                "check_type": "node_type",
+                "property_path": ["test", "operand"],
+                "value": "Constant"
+              },
+              {
+                "operator": "or",
+                "conditions": [
+                  {
+                    "check_type": "equals",
+                    "property_path": ["test", "operand", "value"],
+                    "required_values": [true]
+                  },
+                  {
+                    "check_type": "equals",
+                    "property_path": ["test", "operand", "value"],
+                    "required_values": [false]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "context": {
+    "isTrue": {
+      "operator": "or",
+      "conditions": [
+        {
+          "check_type": "equals",
+          "property_path": ["test", "value"],
+          "required_values": [true]
+        },
+        {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "node_type",
+              "property_path": ["test"],
+              "value": "UnaryOp"
+            },
+            {
+              "check_type": "node_type",
+              "property_path": ["test", "op"],
+              "value": "Not"
+            },
+            {
+              "check_type": "equals",
+              "property_path": ["test", "operand", "value"],
+              "required_values": [false]
+            }
+          ]
+        },
+        {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "node_type",
+              "property_path": ["test"],
+              "value": "Compare"
+            },
+            {
+              "check_type": "is_tautological_comparison",
+              "property_path": ["test"]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

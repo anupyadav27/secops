@@ -1,0 +1,261 @@
+{
+  "rule_id": "builtins_should_not_be_shadowed_by_local_variables",
+  "title": "Built-in names should not be shadowed by local variables",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when Python built-in names (like `list`, `dict`, `str`, etc.) are shadowed by local variable assignments. Shadowing built-ins can lead to confusing code and potential bugs when the original built-in functionality is needed later in the scope. It reduces code readability and maintainability, as other developers might not immediately recognize that a standard built-in has been redefined.",
+  "message": "Remove this assignment of '{{variable_name}}'; it shadows the built-in name and can lead to unexpected behavior.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "best-practice",
+    "python",
+    "readability",
+    "maintainability",
+    "pitfall"
+  ],
+  "impact": "Shadowing built-in names can cause subtle bugs that are difficult to diagnose. When a built-in is redefined, any subsequent code expecting the original built-in behavior will fail or behave unexpectedly. This particularly affects code maintainability and can lead to runtime errors that are hard to trace back to their root cause. In collaborative environments, it may also confuse other developers who assume standard built-in behavior.",
+  "recommendation": "Avoid using Python built-in names as local variables. Instead, choose more descriptive names that clearly indicate the variable's purpose. If you must use a name that conflicts with a built-in, consider using a trailing underscore (e.g., `list_` instead of `list`) or a more specific name (e.g., `items_list` instead of `list`).",
+  "references": [
+    {
+      "title": "Python Documentation: Built-in Names",
+      "url": "https://docs.python.org/3/library/functions.html"
+    },
+    {
+      "title": "PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource: Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def process_items(items):\n    items_list = []  # Good: descriptive name that doesn't shadow built-ins\n    for item in items:\n        items_list.append(item.upper())\n    return items_list",
+        "description": "Uses a descriptive variable name (`items_list`) instead of shadowing the built-in `list`."
+      },
+      {
+        "code": "def calculate_total(numbers):\n    total = sum(numbers)  # Good: doesn't shadow any built-ins\n    return total",
+        "description": "Avoids shadowing built-ins by using meaningful, non-conflicting names."
+      },
+      {
+        "code": "from collections import defaultdict\n\ndef count_words(text):\n    word_counts = defaultdict(int)  # Good: uses imported name without shadowing\n    for word in text.split():\n        word_counts[word] += 1\n    return word_counts",
+        "description": "Uses an imported name (`defaultdict`) without conflicting with built-ins."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def process_data(data):\n    list = []  # Bad: shadows the built-in `list`\n    for item in data:\n        list.append(item)\n    return list",
+        "description": "Shadows the built-in `list` with a local variable, which can cause confusion and errors if `list()` is needed later."
+      },
+      {
+        "code": "def parse_input(input_str):\n    str = input_str.strip()  # Bad: shadows the built-in `str`\n    return str.upper()",
+        "description": "Redefines `str`, which could break any subsequent code expecting the built-in `str()` constructor or type."
+      },
+      {
+        "code": "def calculate_stats(values):\n    sum = 0  # Bad: shadows the built-in `sum`\n    for value in values:\n        sum += value\n    return sum / len(values)",
+        "description": "Shadows the built-in `sum()` function, making it unavailable within this scope."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonarpython"
+      ],
+      "ide_support": true
+    }
+  },
+  "why_is_this_an_issue": {
+    "technical_debt": "Shadowing built-ins increases technical debt by making the code harder to understand and maintain. Future developers (or even the original author) may not realize a built-in has been redefined, leading to bugs when standard Python behavior is expected.",
+    "readability": "Code readability suffers when standard names are repurposed. Built-ins have well-known meanings in Python, and redefining them violates the principle of least surprise.",
+    "reliability": "Reliability is compromised because the shadowed built-in is no longer available in its original form within the scope. This can cause runtime errors if the built-in is needed later in the same function or by other functions called from this scope.",
+    "collaboration": "In team environments, shadowing built-ins can lead to misunderstandings and inconsistent code quality, as different developers may have different expectations about which names are safe to use."
+  },
+  "how_to_fix": {
+    "description": "To fix violations of this rule, rename the local variable to something that doesn't conflict with Python built-ins. Follow these steps:",
+    "steps": [
+      "Identify the built-in name being shadowed (e.g., `list`, `dict`, `str`).",
+      "Choose a more descriptive name that clearly indicates the variable's purpose (e.g., `items_list` instead of `list`, `input_string` instead of `str`).",
+      "Update all references to the old variable name in the same scope to use the new name.",
+      "If the built-in functionality is actually needed later in the scope, consider whether the variable is truly necessary or if the code can be refactored to avoid the conflict.",
+      "For cases where a built-in-like name is desirable (e.g., for type hints), consider using a trailing underscore (e.g., `list_`, `dict_`) as a convention to avoid shadowing."
+    ],
+    "additional_tips": [
+      "Use your IDE's refactoring tools to safely rename variables across the entire scope.",
+      "Run your tests after renaming to ensure no functionality was accidentally broken.",
+      "Consider adding a comment explaining why a particular name was chosen if it's not immediately obvious."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-710",
+        "description": "Improper Adherence to Coding Standards",
+        "relevance": "medium"
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC00-P.",
+        "description": "Compile cleanly at high warning levels",
+        "relevance": "low"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          },
+          {
+            "check_type": "node_type",
+            "value": "For"
+          },
+          {
+            "check_type": "node_type",
+            "value": "With"
+          },
+          {
+            "check_type": "node_type",
+            "value": "ExceptHandler"
+          }
+        ]
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": [
+          "targets",
+          0,
+          "id"
+        ]
+      },
+      {
+        "check_type": "in_set",
+        "property_path": [
+          "targets",
+          0,
+          "id"
+        ],
+        "values": [
+          "list",
+          "dict",
+          "set",
+          "str",
+          "int",
+          "float",
+          "bool",
+          "tuple",
+          "bytearray",
+          "bytes",
+          "range",
+          "slice",
+          "object",
+          "type",
+          "super",
+          "len",
+          "sum",
+          "min",
+          "max",
+          "sorted",
+          "reversed",
+          "enumerate",
+          "zip",
+          "filter",
+          "map",
+          "any",
+          "all",
+          "open",
+          "print",
+          "input",
+          "id",
+          "hash",
+          "oct",
+          "hex",
+          "ord",
+          "chr",
+          "callable",
+          "staticmethod",
+          "classmethod",
+          "property",
+          "format",
+          "repr",
+          "eval",
+          "exec",
+          "compile",
+          "globals",
+          "locals",
+          "vars",
+          "dir",
+          "help",
+          "memoryview",
+          "breakpoint",
+          "aiter",
+          "anext",
+          "ascii",
+          "bin",
+          "complex",
+          "delattr",
+          "getattr",
+          "hasattr",
+          "setattr",
+          "frozenset",
+          "bytearray",
+          "bytes",
+          "exec",
+          "issubclass",
+          "isinstance",
+          "iter",
+          "next",
+          "pow",
+          "round",
+          "__import__"
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "FunctionDef",
+            "property_path": [
+              "parent"
+            ]
+          },
+          {
+            "check_type": "equals",
+            "property_path": [
+              "targets",
+              0,
+              "id"
+            ],
+            "value": {
+              "check_type": "property",
+              "property_path": [
+                "parent",
+                "name"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

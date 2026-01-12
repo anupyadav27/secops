@@ -1,0 +1,141 @@
+{
+  "rule_id": "asyncio_tasks_should_be_saved_to_prevent_premature_garbage_collection",
+  "title": "Asyncio tasks should be saved to prevent premature garbage collection",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asyncio tasks are created but not stored in a variable, which can lead to premature garbage collection before the task completes. When a task isn't referenced, Python's garbage collector may clean it up before execution finishes, causing silent failures or incomplete operations. This is particularly problematic in asyncio applications where tasks are meant to run in the background.",
+  "message": "Save this asyncio task to a variable to prevent premature garbage collection. The task '{task_name}' might be collected before completion.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "asyncio",
+    "bug",
+    "concurrency",
+    "memory-management",
+    "best-practice",
+    "python"
+  ],
+  "impact": "When asyncio tasks are not properly referenced, they may be garbage collected before completing their execution. This can lead to: 1) Silent failures where background operations never complete, 2) Inconsistent application state when expected side effects don't occur, 3) Difficult-to-debug issues where operations appear to succeed but don't actually finish, 4) Resource leaks if the task was meant to clean up resources.",
+  "recommendation": "Always assign asyncio tasks to variables when you want them to complete execution. If you don't need the task result, at least store the task object to maintain a reference. For fire-and-forget tasks, consider using a task tracker or collection to maintain references to all active tasks.",
+  "references": [
+    {
+      "title": "Python asyncio Documentation - Task Objects",
+      "url": "https://docs.python.org/3/library/asyncio-task.html"
+    },
+    {
+      "title": "Common asyncio Pitfalls - Task Garbage Collection",
+      "url": "https://docs.python.org/3/library/asyncio-dev.html#avoiding-common-pitfalls"
+    },
+    {
+      "title": "StackOverflow: Why does my asyncio task disappear?",
+      "url": "https://stackoverflow.com/questions/45600579/asyncio-ensure-future-returns-a-task-that-is-never-awaited"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\n\nasync def background_task():\n    await asyncio.sleep(1)\n    print(\"Task completed\")\n\nasync def main():\n    # Good: Task is stored in a variable\n    task = asyncio.create_task(background_task())\n    await asyncio.sleep(2)  # Give task time to complete\n    await task  # Explicitly await if needed\n\nasyncio.run(main())",
+        "description": "The task is properly stored in a variable, preventing garbage collection before completion."
+      },
+      {
+        "code": "import asyncio\n\nasync def background_task():\n    await asyncio.sleep(1)\n    print(\"Task completed\")\n\nasync def main():\n    # Good: Tasks stored in a collection\n    tasks = [\n        asyncio.create_task(background_task()),\n        asyncio.create_task(background_task())\n    ]\n    await asyncio.gather(*tasks)\n\nasyncio.run(main())",
+        "description": "Multiple tasks are stored in a list, ensuring they all complete before the collection is garbage collected."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import asyncio\n\nasync def background_task():\n    await asyncio.sleep(1)\n    print(\"Task completed\")\n\nasync def main():\n    # Bad: Task is not stored\n    asyncio.create_task(background_task())\n    await asyncio.sleep(2)\n\nasyncio.run(main())",
+        "description": "The task is not stored in any variable, making it eligible for garbage collection before completion."
+      },
+      {
+        "code": "import asyncio\n\nasync def background_task():\n    await asyncio.sleep(1)\n    print(\"Task completed\")\n\nasync def main():\n    # Bad: Task returned but not used\n    asyncio.create_task(background_task())\n    return \"Done\"\n\nasyncio.run(main())",
+        "description": "The task is created but immediately discarded, likely to be garbage collected before finishing."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-reliability",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_testing": false,
+      "integration_testing": true
+    }
+  },
+  "why_is_this_an_issue": "In Python's asyncio framework, tasks are the primary unit of concurrent execution. When you create a task using `asyncio.create_task()` or similar methods, Python's garbage collector doesn't automatically know that this task should be kept alive until completion. If no references to the task exist, the garbage collector may clean it up at any time, terminating the task prematurely. This is particularly problematic because:\n\n1. The behavior is non-deterministic - tasks may or may not complete depending on garbage collection timing\n2. There's no explicit error - the task just silently disappears\n3. The issue often manifests only under specific conditions (like high memory pressure)\n4. It can cause race conditions where resources are cleaned up while still in use\n\nThis rule helps prevent these subtle but serious bugs by ensuring all asyncio tasks are properly referenced.",
+  "how_to_fix": {
+    "description": "To fix this issue, ensure all asyncio tasks are properly referenced until they complete. Here's how:",
+    "steps": [
+      "1. **Store the task in a variable**: Always assign the result of `asyncio.create_task()` to a variable, even if you don't need the result.",
+      "2. **Use task collections**: For multiple tasks, store them in a list or set to maintain references.",
+      "3. **Explicitly await when possible**: If you need the task's result, use `await` to both reference the task and get its result.",
+      "4. **Use task trackers**: For fire-and-forget tasks, implement a task tracker that maintains weak references to all active tasks.",
+      "5. **Clean up properly**: When you're done with a task, explicitly cancel it if needed rather than relying on garbage collection.",
+      "6. **Consider task groups (Python 3.11+)**: Use `asyncio.TaskGroup` which automatically manages task references and provides better error handling."
+    ],
+    "code_example": "import asyncio\n\nasync def background_task():\n    await asyncio.sleep(1)\n    print(\"Task completed\")\n\nasync def main():\n    # Fixed: Task is properly stored\n    task = asyncio.create_task(background_task())\n    try:\n        await asyncio.sleep(2)\n    finally:\n        # Ensure task completes even if main is cancelled\n        if not task.done():\n            task.cancel()\n\nasyncio.run(main())"
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-404",
+        "name": "Improper Resource Shutdown or Release",
+        "description": "The task may be terminated before completing its resource cleanup operations."
+      },
+      {
+        "id": "CWE-825",
+        "name": "Expired Pointer Dereference",
+        "description": "The task object might be accessed after being garbage collected."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MEM03-C",
+        "name": "Ensure that references are valid when used",
+        "description": "The rule helps ensure task references remain valid until completion."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["attr"],
+            "value": "create_task"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["attr"],
+            "value": "ensure_future"
+          }
+        ]
+      },
+      {
+        "check_type": "equals",
+        "property_path": ["value", "id"],
+        "value": "asyncio"
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          }
+        ]
+      }
+    ]
+  }
+}

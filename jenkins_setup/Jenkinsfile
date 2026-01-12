@@ -1,0 +1,194 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(
+            name: 'GIT_REPO_URL',
+            defaultValue: 'https://github.com/your-org/your-repo.git',
+            description: '🔗 Enter Git repository URL to scan'
+        )
+        choice(
+            name: 'GIT_BRANCH',
+            choices: ['main', 'master', 'develop', 'staging'],
+            description: '🌿 Select branch to scan'
+        )
+        string(
+            name: 'CLEANUP_DAYS',
+            defaultValue: '7',
+            description: '🗑️ Days to keep old scan folders'
+        )
+    }
+    
+    environment {
+        // Scanner API
+        SCANNER_API_URL = 'http://localhost:8000'
+        
+        // Folders
+        SCANNER_INPUT = '/Users/apple/Desktop/secops/scanner_engine/scan_input'
+        SCANNER_OUTPUT = '/Users/apple/Desktop/secops/scanner_engine/scan_output'
+        
+        // Unique project name with timestamp
+        TIMESTAMP = sh(script: "date +%Y%m%d_%H%M%S", returnStdout: true).trim()
+        PROJECT_NAME = "scan_${BUILD_NUMBER}_${TIMESTAMP}"
+        
+        // Git repo from parameters
+        TEST_REPO_URL = "${params.GIT_REPO_URL}"
+        TEST_REPO_BRANCH = "${params.GIT_BRANCH}"
+    }
+    
+    stages {
+        stage('Cleanup Old Scans') {
+            steps {
+                script {
+                    echo "🧹 Cleaning up folders older than ${params.CLEANUP_DAYS} days..."
+                    sh """
+                        find ${SCANNER_INPUT} -maxdepth 1 -type d -mtime +${params.CLEANUP_DAYS} -exec rm -rf {} + 2>/dev/null || true
+                        find ${SCANNER_OUTPUT} -maxdepth 1 -type d -mtime +${params.CLEANUP_DAYS} -exec rm -rf {} + 2>/dev/null || true
+                        echo "✅ Cleanup completed"
+                    """
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "🔍 Checking Scanner API..."
+                    sh '''
+                        curl -f ${SCANNER_API_URL}/health || {
+                            echo "❌ Scanner not running!"
+                            exit 1
+                        }
+                        echo "✅ Scanner is healthy"
+                    '''
+                }
+            }
+        }
+        
+        stage('Download Test Code') {
+            steps {
+                script {
+                    echo "📥 Downloading test code from Git..."
+                    sh """
+                        # Create input folder
+                        mkdir -p ${SCANNER_INPUT}/${PROJECT_NAME}
+                        
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo "Build #${BUILD_NUMBER} - ${TIMESTAMP}"
+                        echo "Git Repo:   ${TEST_REPO_URL}"
+                        echo "Branch:     ${TEST_REPO_BRANCH}"
+                        echo "Input:      ${SCANNER_INPUT}/${PROJECT_NAME}"
+                        echo "Output:     ${SCANNER_OUTPUT}/${PROJECT_NAME}"
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    """
+                    
+                    // Clone test code repo to input folder
+                    dir("${SCANNER_INPUT}/${PROJECT_NAME}") {
+                        git branch: "${TEST_REPO_BRANCH}", url: "${TEST_REPO_URL}"
+                    }
+                    
+                    sh """
+                        echo "✅ Code downloaded successfully"
+                        echo "Files in input folder:"
+                        ls -lh ${SCANNER_INPUT}/${PROJECT_NAME}/
+                    """
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                script {
+                    echo "🔒 Running security scan..."
+                    sh """
+                        curl -X POST ${SCANNER_API_URL}/scan \
+                             -H "Content-Type: application/json" \
+                             -d '{
+                                 "project_name": "${PROJECT_NAME}",
+                                 "save_results": true,
+                                 "fail_on_findings": false
+                             }' -o scan_response.json
+                        
+                        echo "✅ Scan completed"
+                        cat scan_response.json | jq '.'
+                    """
+                }
+            }
+        }
+        
+        stage('Analyze Results') {
+            steps {
+                script {
+                    echo "📊 Analyzing results..."
+                    sh """
+                        RESULT_FILE="${SCANNER_OUTPUT}/${PROJECT_NAME}/scan_results_latest.json"
+                        
+                        if [ ! -f "\$RESULT_FILE" ]; then
+                            echo "❌ Results not found!"
+                            exit 1
+                        fi
+                        
+                        FILES=\$(jq -r '.summary.files_scanned' "\$RESULT_FILE")
+                        FINDINGS=\$(jq -r '.summary.total_findings' "\$RESULT_FILE")
+                        ERRORS=\$(jq -r '.summary.total_errors' "\$RESULT_FILE")
+                        
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo "📊 SCAN RESULTS - Build #${BUILD_NUMBER}"
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo "Files Scanned:    \$FILES"
+                        echo "Total Findings:   \$FINDINGS"
+                        echo "Total Errors:     \$ERRORS"
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        
+                        # Copy to workspace for archiving
+                        cp "\$RESULT_FILE" ${WORKSPACE}/scan_results.json
+                        
+                        # Create summary report
+                        cat > ${WORKSPACE}/summary.txt << EOF
+SECURITY SCAN SUMMARY
+Build: #${BUILD_NUMBER}
+Time: ${TIMESTAMP}
+Repo: ${TEST_REPO_URL}
+
+Files Scanned:    \$FILES
+Total Findings:   \$FINDINGS
+Total Errors:     \$ERRORS
+
+Input:  ${SCANNER_INPUT}/${PROJECT_NAME}
+Output: ${SCANNER_OUTPUT}/${PROJECT_NAME}
+EOF
+                        
+                        cat ${WORKSPACE}/summary.txt
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "📦 Archiving results..."
+                archiveArtifacts artifacts: 'scan_results.json, summary.txt, scan_response.json', 
+                                allowEmptyArchive: true
+                
+                // Set build description
+                try {
+                    def findings = sh(script: "jq -r '.summary.total_findings' ${SCANNER_OUTPUT}/${PROJECT_NAME}/scan_results_latest.json 2>/dev/null || echo '0'", returnStdout: true).trim()
+                    currentBuild.description = "Build #${BUILD_NUMBER} | Findings: ${findings}"
+                } catch (Exception e) {
+                    currentBuild.description = "Build #${BUILD_NUMBER}"
+                }
+            }
+        }
+        
+        success {
+            echo "✅ Scan completed successfully!"
+        }
+        
+        failure {
+            echo "❌ Scan failed!"
+        }
+    }
+}
+

@@ -1,0 +1,207 @@
+{
+  "rule_id": "using_weak_hashing_algorithms_is_securitysensitive",
+  "title": "Using weak hashing algorithms is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "LOW",
+      "SECURITY": "HIGH"
+    },
+    "attribute": "TRUSTWORTHY"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Cryptographic hash functions are essential for data integrity verification and digital signatures. However, weak hashing algorithms like MD2, MD4, MD5, SHA-1, and RIPEMD are vulnerable to collision attacks where different inputs produce the same hash output. This vulnerability can be exploited by attackers to forge digital signatures, compromise data integrity checks, or perform other cryptographic attacks. Modern applications should use stronger alternatives like SHA-256, SHA-3, or BLAKE2 that are resistant to known cryptographic attacks.",
+  "message": "Make sure this weak hash algorithm is not used in a security context here.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "30min"
+  },
+  "tags": [
+    "security",
+    "cwe",
+    "owasp-a02",
+    "owasp-a03",
+    "sans-top25-porous",
+    "cryptography"
+  ],
+  "impact": {
+    "security": "High impact as weak hashing algorithms can be exploited for collision attacks, allowing attackers to forge digital signatures or compromise data integrity",
+    "reliability": "Medium impact on system reliability due to potential security breaches and compromised data validation"
+  },
+  "recommendation": "Replace weak hashing algorithms (MD5, SHA-1, etc.) with stronger alternatives like SHA-256, SHA-3, or BLAKE2. For password hashing, use specialized algorithms like bcrypt, scrypt, or Argon2.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Using weak hashing algorithms is security-sensitive",
+      "url": "https://rules.sonarsource.com/python/RSPEC-4790"
+    },
+    {
+      "title": "OWASP - Cryptographic Storage Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
+    },
+    {
+      "title": "NIST - Secure Hash Standard (SHS)",
+      "url": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf"
+    },
+    {
+      "title": "Python hashlib documentation",
+      "url": "https://docs.python.org/3/library/hashlib.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Using MD5 hashing algorithm",
+        "code": "import hashlib\n\n# Noncompliant: MD5 is vulnerable to collision attacks\nhash_md5 = hashlib.md5()\nhash_md5.update(b\"Hello World\")\ndigest = hash_md5.hexdigest()"
+      },
+      {
+        "description": "Using SHA-1 hashing algorithm",
+        "code": "import hashlib\n\n# Noncompliant: SHA-1 is vulnerable to collision attacks\nhash_sha1 = hashlib.sha1()\nhash_sha1.update(b\"Hello World\")\ndigest = hash_sha1.hexdigest()"
+      },
+      {
+        "description": "Using deprecated MD2 algorithm",
+        "code": "import hashlib\n\n# Noncompliant: MD2 is cryptographically broken\nhash_md2 = hashlib.new('md2')\nhash_md2.update(b\"Hello World\")\ndigest = hash_md2.hexdigest()"
+      },
+      {
+        "description": "Using weak hash in security context",
+        "code": "import hashlib\n\ndef generate_token(user_id):\n    # Noncompliant: Using MD5 for security token generation\n    return hashlib.md5(str(user_id).encode()).hexdigest()"
+      },
+      {
+        "description": "Direct weak algorithm instantiation",
+        "code": "import hashlib\n\n# Noncompliant: Direct instantiation of weak algorithms\nmd5_hash = hashlib.md5(b\"data\")\nsha1_hash = hashlib.sha1(b\"data\")\nmd4_hash = hashlib.new('md4', b\"data\")"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Using SHA-256 hashing algorithm",
+        "code": "import hashlib\n\n# Compliant: SHA-256 is cryptographically secure\nhash_sha256 = hashlib.sha256()\nhash_sha256.update(b\"Hello World\")\ndigest = hash_sha256.hexdigest()"
+      },
+      {
+        "description": "Using SHA-3 hashing algorithm",
+        "code": "import hashlib\n\n# Compliant: SHA-3 provides strong security\nhash_sha3 = hashlib.sha3_256()\nhash_sha3.update(b\"Hello World\")\ndigest = hash_sha3.hexdigest()"
+      },
+      {
+        "description": "Using BLAKE2 hashing algorithm",
+        "code": "import hashlib\n\n# Compliant: BLAKE2 is a secure modern hash function\nhash_blake2 = hashlib.blake2b()\nhash_blake2.update(b\"Hello World\")\ndigest = hash_blake2.hexdigest()"
+      },
+      {
+        "description": "Using bcrypt for password hashing",
+        "code": "import bcrypt\n\n# Compliant: bcrypt is designed for password hashing\npassword = b\"my_password\"\nhashed = bcrypt.hashpw(password, bcrypt.gensalt())"
+      },
+      {
+        "description": "Using secure hash in security context",
+        "code": "import hashlib\n\ndef generate_secure_token(user_id):\n    # Compliant: Using SHA-256 for security token generation\n    return hashlib.sha256(str(user_id).encode()).hexdigest()"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "cryptography",
+    "priority": "high",
+    "remediation_guidance": "Replace with SHA-256 or stronger algorithms"
+  },
+  "why_is_this_an_issue": "Weak hashing algorithms like MD5 and SHA-1 are vulnerable to collision attacks where attackers can find different inputs that produce the same hash output. This vulnerability undermines the security guarantees that hash functions are supposed to provide, such as data integrity verification and digital signature security. In security-sensitive contexts, these weaknesses can be exploited to forge documents, bypass authentication mechanisms, or compromise cryptographic protocols. Modern cryptographic standards recommend against using these algorithms in favor of stronger alternatives that are resistant to known attacks.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify all uses of weak hashing algorithms (MD2, MD4, MD5, SHA-1, RIPEMD) in your code"
+    },
+    {
+      "step": 2,
+      "description": "For general-purpose hashing, replace with SHA-256, SHA-3, or BLAKE2"
+    },
+    {
+      "step": 3,
+      "description": "For password hashing, use specialized algorithms like bcrypt, scrypt, or Argon2"
+    },
+    {
+      "step": 4,
+      "description": "Update any stored hash values to use the new algorithm format"
+    },
+    {
+      "step": 5,
+      "description": "Ensure compatibility with existing systems that may rely on the hash format"
+    },
+    {
+      "step": 6,
+      "description": "Test thoroughly to ensure the new hashing implementation works correctly"
+    },
+    {
+      "step": 7,
+      "description": "Update documentation to reflect the new hashing algorithm choice"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [
+      "CWE-327",
+      "CWE-328",
+      "CWE-916"
+    ],
+    "CERT": [
+      "MSC61-J"
+    ],
+    "OWASP": [
+      "A02:2021",
+      "A03:2021"
+    ]
+  },
+  "ruleSpecification": "RSPEC-4790",
+  "scope": "Main",
+  "securityStandards": {
+    "CWE": [327, 328, 916],
+    "OWASP Top 10 2021": ["A02", "A03"],
+    "SANS Top 25": ["CWE-327"]
+  },
+  "quickfix": "feasible",
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Detect direct calls to weak hash algorithms like hashlib.md5(), hashlib.sha1(), etc.",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["func", "attr"],
+            "forbidden_values": ["md5", "sha1", "md4", "md2", "ripemd"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "value", "id"],
+            "required_values": ["hashlib"]
+          }
+        ]
+      },
+      {
+        "comment": "Detect hashlib.new() with weak algorithms passed as string argument",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["new"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "value", "id"],
+            "required_values": ["hashlib"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["args", "*", "value"],
+            "forbidden_values": ["md2", "md4", "md5", "sha1", "ripemd"]
+          }
+        ]
+      }
+    ]
+  }
+}

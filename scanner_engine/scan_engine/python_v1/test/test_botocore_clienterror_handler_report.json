@@ -1,0 +1,226 @@
+{
+  "file_scanned": "D:\\python_scanner\\test\\test_botocore_clienterror_handler.py",
+  "vulnerabilities_found": 20,
+  "findings": [
+    {
+      "rule_id": "all_except_blocks_should_be_able_to_catch_exceptions",
+      "message": "All \"except\" blocks should be able to catch exceptions",
+      "node": "ExceptHandler.e",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 8,
+      "column": 4,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "boolean_checks_should_not_be_inverted",
+      "message": "Boolean checks should not be inverted",
+      "node": "Compare.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 11,
+      "column": 3,
+      "severity": "Minor"
+    },
+    {
+      "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
+      "message": "Boto3 operations that support pagination should use paginators or manual pagination handling",
+      "node": "Call.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 5,
+      "column": 9,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
+      "message": "Boto3 operations that support pagination should use paginators or manual pagination handling",
+      "node": "Call.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 7,
+      "column": 8,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
+      "message": "Boto3 operations that support pagination should use paginators or manual pagination handling",
+      "node": "Call.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 9,
+      "column": 8,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "boto3_operations_that_support_pagination_should_be_performed_using_paginators_or_manual_pagination_handling",
+      "message": "Boto3 operations that support pagination should use paginators or manual pagination handling",
+      "node": "Call.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 12,
+      "column": 4,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "botocoreexceptionsclienterror_must_be_explicitly_catch_and_handled",
+      "message": "Botocore ClientError exceptions must be explicitly caught and handled",
+      "node": "ExceptHandler.e",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 8,
+      "column": 4,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 5,
+      "column": 4,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 7,
+      "column": 8,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 8,
+      "column": 11,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 9,
+      "column": 8,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 11,
+      "column": 3,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_defined_before_being_used",
+      "message": "Variables, classes and functions should be defined before being used",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 12,
+      "column": 4,
+      "severity": "Major"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 5,
+      "column": 4,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Attribute.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 7,
+      "column": 8,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 8,
+      "column": 11,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 9,
+      "column": 8,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 11,
+      "column": 3,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_classes_and_functions_should_be_either_defined_or_imported",
+      "message": "Variables, classes and functions should be either defined or imported",
+      "node": "Name.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 12,
+      "column": 4,
+      "severity": "Blocker"
+    },
+    {
+      "rule_id": "variables_should_not_be_selfassigned",
+      "message": "Variables should not be self-assigned",
+      "node": "Assign.anonymous",
+      "property_path": [],
+      "value": null,
+      "status": "violation",
+      "line": 5,
+      "column": 4,
+      "severity": "Major"
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "rule_id": "bare_raise_statements_should_only_be_used_in_except_blocks",
+  "title": "Bare 'raise' statements should only be used within 'except' blocks",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects bare 'raise' statements (those without an exception specified) that appear outside of 'except' blocks. Bare 'raise' statements are only meaningful when re-raising an exception that was caught in an 'except' block. When used elsewhere, they either cause runtime errors or indicate poor exception handling practices. The rule ensures that 'raise' statements are used correctly according to Python's exception handling conventions.",
+  "message": "Remove this bare 'raise' statement or move it inside an 'except' block to re-raise a caught exception.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "error-handling",
+    "python",
+    "best-practice",
+    "exception",
+    "maintainability"
+  ],
+  "impact": "Using bare 'raise' statements outside of 'except' blocks can lead to confusing code behavior and runtime errors. When executed, such statements will raise a RuntimeError if no active exception exists, or re-raise the last exception if one exists - both scenarios are typically unintended and can make debugging more difficult. This practice reduces code clarity and maintainability, as the control flow becomes less predictable.",
+  "recommendation": "Always use bare 'raise' statements only within 'except' blocks to explicitly re-raise caught exceptions. If you need to raise an exception outside an 'except' block, specify the exception type and optionally an error message. For example, use 'raise ValueError(\"message\")' instead of a bare 'raise'.",
+  "references": [
+    {
+      "title": "Python Documentation: The raise statement",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#the-raise-statement"
+    },
+    {
+      "title": "PEP 8 - Python Style Guide (Exception Handling)",
+      "url": "https://peps.python.org/pep-0008/#programming-recommendations"
+    },
+    {
+      "title": "SonarSource Python Rules: Exception Handling",
+      "url": "https://rules.sonarsource.com/python/tag/error-handling/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept ValueError as e:\n    # Log the error\n    logger.error(f\"Operation failed: {e}\")\n    # Re-raise the caught exception\n    raise",
+        "description": "Bare 'raise' is used correctly within an 'except' block to re-raise the caught exception."
+      },
+      {
+        "code": "def validate_input(value):\n    if not value:\n        raise ValueError(\"Input cannot be empty\")",
+        "description": "Explicit exception is raised with a meaningful message when validation fails."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def process_data():\n    # Some processing\n    if error_condition:\n        raise  # Bare raise outside except block",
+        "description": "Bare 'raise' is used outside an 'except' block, which will raise a RuntimeError if no exception is active."
+      },
+      {
+        "code": "try:\n    risky_operation()\nexcept ValueError:\n    handle_error()\n\nraise  # Bare raise after except block",
+        "description": "Bare 'raise' appears after the except block but not inside it, making its behavior unclear."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    }
+  },
+  "why_is_this_an_issue": "Bare 'raise' statements outside of 'except' blocks create several problems:\n\n1. **Unpredictable Behavior**: They will either raise a RuntimeError (if no exception is active) or re-raise the last exception (if one exists), both of which are typically not the intended behavior.\n\n2. **Debugging Difficulties**: When such statements accidentally re-raise exceptions from unrelated code paths, it becomes extremely difficult to trace the original source of the error.\n\n3. **Code Clarity Issues**: The intent of the code becomes unclear - is it meant to re-raise an exception? If so, which one? This violates the principle of explicit over implicit in Python.\n\n4. **Maintenance Challenges**: Other developers reading the code may not understand the intended behavior, leading to potential misuse or incorrect modifications.\n\n5. **Potential Bugs**: In complex control flows, a bare 'raise' might re-raise an exception from a completely different try-except block than intended, causing unexpected program behavior.\n\nThe rule enforces proper exception handling practices by ensuring bare 'raise' statements are only used where they have clear, predictable behavior - within 'except' blocks to re-raise caught exceptions.",
+  "how_to_fix": {
+    "description": "To fix violations of this rule, follow these steps to ensure proper exception handling:",
+    "steps": [
+      "1. **Identify the bare 'raise'**: Locate the bare 'raise' statement that's outside an 'except' block.",
+      "2. **Determine the intent**: Decide whether you want to:\n   - Re-raise a caught exception (move to except block)\n   - Raise a new exception (specify exception type)\n   - Handle the error differently (remove the raise)",
+      "3. **For re-raising exceptions**: Move the bare 'raise' inside the corresponding 'except' block where the exception was caught.",
+      "4. **For new exceptions**: Replace the bare 'raise' with a specific exception like 'raise ValueError(\"message\")'.",
+      "5. **For error handling**: If the raise was unintended, remove it and implement proper error handling logic.",
+      "6. **Test the changes**: Verify that the modified code handles exceptions as intended in all scenarios."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-390",
+        "name": "Detection of Error Condition Without Action",
+        "description": "While not directly a security issue, poor exception handling can lead to information exposure or denial of service if errors aren't properly managed."
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "name": "Prefer exceptions to returning error values",
+        "description": "Proper exception handling is crucial for robust error management."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Raise"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_missing",
+            "property_path": "exc"
+          },
+          {
+            "check_type": "property_equals",
+            "property_path": "exc",
+            "value": null
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "parent_node_type",
+            "property_path": ["parent"],
+            "value": "ExceptHandler"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "rule_id": "a_field_should_not_duplicate_the_name_of_its_containing_class",
+  "title": "A field should not duplicate the name of its containing class",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Fields in a class should not have the same name as the class itself. This can lead to confusion and maintenance issues, as it is unclear whether a reference is to the class or the field. Having a field with the same name as its containing class makes the code harder to read and understand, potentially causing developers to make incorrect assumptions about what they are referencing.",
+  "message": "Rename field '{{field_name}}' to avoid duplication with class name '{{class_name}}'.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "confusing",
+    "pitfall",
+    "convention",
+    "readability"
+  ],
+  "impact": "This naming conflict can cause confusion for developers and make code maintenance more difficult. It may lead to bugs when developers accidentally reference the wrong entity (field vs class), reducing code readability and increasing the likelihood of errors during development and maintenance.",
+  "recommendation": "Rename the field to have a more descriptive name that clearly indicates its purpose and differs from the class name. Use meaningful naming conventions that make the code more readable and maintainable.",
+  "references": [
+    {
+      "title": "PEP 8 - Style Guide for Python Code - Naming Conventions",
+      "url": "https://peps.python.org/pep-0008/#naming-conventions"
+    },
+    {
+      "title": "SonarSource - Python Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    },
+    {
+      "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+      "url": "https://www.oreilly.com/library/view/clean-code-a/9780136083238/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "class User:\n    def __init__(self):\n        self.User = \"John Doe\"  # Field has same name as class\n\nclass Product:\n    def __init__(self, name):\n        self.Product = name  # Confusing field name\n\nclass Account:\n    Account = \"default\"  # Class attribute with same name as class",
+        "description": "Fields and attributes have the same name as their containing class, creating ambiguity about whether the reference is to the class or the field/attribute."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "class User:\n    def __init__(self):\n        self.name = \"John Doe\"  # Clear, descriptive field name\n\nclass Product:\n    def __init__(self, name):\n        self.product_name = name  # Clear field name that differs from class\n\nclass Account:\n    default_type = \"savings\"  # Clear class attribute name",
+        "description": "Fields and attributes have clear, descriptive names that differ from the class name, making the code more readable and less confusing."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "None",
+    "automation": "High - Can be automatically detected through AST analysis",
+    "compliance": "Low - Mainly affects code maintainability and readability"
+  },
+  "why_is_this_an_issue": "Having a field with the same name as its containing class creates ambiguity in the code. When reading or maintaining the code, it becomes unclear whether a reference is to the class itself or to an instance field/attribute. This violates the principle of clear and unambiguous naming, can lead to confusion, misunderstandings, and potential bugs when developers make incorrect assumptions about what the identifier refers to.",
+  "how_to_fix": "Rename the field to have a more descriptive and meaningful name that clearly indicates its purpose. Choose a name that follows Python naming conventions (snake_case for instance variables, lowercase for module-level constants) and makes the code more readable. For example, if the class is 'User' and the field represents the user's name, rename the field to 'name', 'username', 'user_name', or 'full_name' depending on what it represents. Ensure the new name is semantically meaningful and follows established naming patterns in your codebase.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ClassDef"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["body", "*", "targets", "*", "id"],
+            "other_property_path": ["name"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["body", "*", "body", "*", "targets", "*", "attr"],
+            "other_property_path": ["name"],
+            "filter": {
+              "property_path": ["body", "*", "body", "*", "targets", "*", "value", "id"],
+              "value": "self"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

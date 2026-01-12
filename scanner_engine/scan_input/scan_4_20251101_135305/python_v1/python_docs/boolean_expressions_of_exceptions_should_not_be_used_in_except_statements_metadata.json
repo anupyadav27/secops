@@ -1,0 +1,124 @@
+{
+  "rule_id": "boolean_expressions_of_exceptions_should_not_be_used_in_except_statements",
+  "title": "Boolean expressions of exceptions should not be used in except statements",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when boolean expressions are used directly in `except` statements instead of catching specific exception types. Using boolean expressions in exception handling can lead to unclear error handling logic, make debugging more difficult, and potentially catch unintended exceptions. The rule promotes explicit exception handling by catching specific exception types rather than relying on boolean evaluations of exceptions.",
+  "message": "Replace this boolean expression with specific exception types in the except statement.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "error-handling",
+    "best-practice",
+    "python",
+    "readability",
+    "maintainability"
+  ],
+  "impact": "Using boolean expressions in except statements reduces code clarity and can lead to unexpected behavior when exceptions are caught unintentionally. This makes the code harder to maintain, debug, and understand. It may also mask genuine errors by catching exceptions too broadly.",
+  "recommendation": "Always catch specific exception types in except statements rather than using boolean expressions. This makes the error handling more explicit, predictable, and easier to debug. If you need to handle multiple exception types, list them explicitly or use a tuple of exception types.",
+  "references": [
+    {
+      "title": "Python Documentation: Errors and Exceptions",
+      "url": "https://docs.python.org/3/tutorial/errors.html"
+    },
+    {
+      "title": "PEP 8 -- Style Guide for Python Code",
+      "url": "https://peps.python.org/pep-0008/"
+    },
+    {
+      "title": "SonarSource: Python Exception Handling Best Practices",
+      "url": "https://rules.sonarsource.com/python/tag/error-handling"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept ValueError as e:\n    handle_value_error(e)\nexcept (TypeError, AttributeError) as e:\n    handle_type_or_attribute_error(e)",
+        "description": "Explicitly catches specific exception types, making the error handling clear and intentional."
+      },
+      {
+        "code": "try:\n    file_operation()\nexcept OSError as e:\n    if e.errno == 2:\n        handle_file_not_found()\n    else:\n        handle_other_os_error()",
+        "description": "Catches a specific exception type and uses additional logic to handle different cases within that exception type."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept e:\n    if e:\n        handle_error()",
+        "description": "Uses a boolean expression (`if e`) in the except block, which is unclear and catches all exceptions."
+      },
+      {
+        "code": "try:\n    file_operation()\nexcept Exception as e:\n    if not e:\n        pass\n    else:\n        handle_error(e)",
+        "description": "Uses a boolean check (`if not e`) on the caught exception, which is redundant and confusing. The `except` block already implies the exception exists."
+      },
+      {
+        "code": "try:\n    network_call()\nexcept:\n    if some_condition:\n        handle_error()",
+        "description": "Uses a bare `except` with a boolean condition, which catches all exceptions (including system-exiting ones) and makes the logic unclear."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonarpython"
+      ],
+      "ide_support": [
+        "VSCode",
+        "PyCharm",
+        "SonarLint"
+      ]
+    }
+  },
+  "why_is_this_an_issue": "Using boolean expressions in `except` statements is problematic for several reasons:\n\n1. **Clarity**: Boolean expressions obscure the intent of the exception handling. It's unclear which exceptions are being caught and why.\n\n2. **Overly Broad Catching**: Boolean checks can inadvertently catch exceptions that should not be handled at that level, such as `KeyboardInterrupt` or `SystemExit`, leading to unexpected behavior.\n\n3. **Debugging Difficulty**: When an exception is caught unexpectedly due to a boolean check, it becomes harder to trace the root cause of issues in the code.\n\n4. **Maintainability**: Code with boolean expressions in except blocks is harder to maintain because the logic is implicit rather than explicit.\n\n5. **Violation of Python Best Practices**: Python's official documentation and style guides (like PEP 8) recommend catching specific exceptions rather than using broad or boolean-based exception handling.\n\nThis practice is considered a code smell because it reduces the robustness and readability of the codebase.",
+  "how_to_fix": {
+    "description": "To fix this issue, replace the boolean expression in the `except` statement with explicit exception types. Follow these steps:",
+    "steps": [
+      "1. **Identify the exceptions** that could realistically be raised in the `try` block. Review the operations inside the `try` block and their documentation to determine possible exceptions.",
+      "2. **Replace the boolean expression** with specific exception types. For example, replace `except e:` with `except ValueError:` or `except (TypeError, ValueError):`.",
+      "3. **Handle each exception appropriately** in separate `except` blocks or within the same block if the handling logic is identical.",
+      "4. **Avoid bare `except:` clauses** unless you are certain you want to catch all exceptions (which is rare). If you must catch all exceptions, consider logging them before re-raising to avoid silent failures.",
+      "5. **Test the updated code** to ensure that exceptions are caught and handled as expected, and that no unintended exceptions are being masked."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "description": "Improper Check or Handling of Exceptional Conditions"
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "description": "Prevent exceptions while handling errors"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ExceptHandler"
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": ["type"]
+      },
+      {
+        "check_type": "node_type",
+        "property_path": ["type"],
+        "value": "BoolOp"
+      }
+    ]
+  }
+}

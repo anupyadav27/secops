@@ -1,0 +1,111 @@
+{
+  "rule_id": "weak_ssltls_protocols_should_not_be_used",
+  "title": "Weak SSL/TLS protocols should not be used",
+  "type": "VULNERABILITY",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This vulnerability exposes encrypted data to a number of attacks whose goal is to recover the plaintext. SSL versions 1.0, 2.0, 3.0 and TLS versions 1.0, 1.1 are all considered weak by the cryptographic community and are officially deprecated. When these unsecured protocols are used, it is best practice to expect a breach: that a user or organization with malicious intent will perform mathematical attacks on this data after obtaining it by other means.",
+  "message": "Change this code to use a stronger SSL/TLS protocol.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "cwe",
+    "privacy",
+    "security",
+    "ssl",
+    "tls",
+    "encryption"
+  ],
+  "impact": "This vulnerability can lead to breach of confidentiality and privacy, additional attack surface, and legal and compliance issues. Attackers can recover plaintext data that encryption was supposed to protect, leading to privacy violations, identity theft, financial loss, and unauthorized access to confidential systems.",
+  "recommendation": "Use strong SSL/TLS protocols (TLS 1.2 or higher) instead of deprecated versions. Configure your SSL context to explicitly disable weak protocols and use secure cipher suites.",
+  "references": [
+    {
+      "name": "CWE-326: Inadequate Encryption Strength",
+      "url": "https://cwe.mitre.org/data/definitions/326.html"
+    },
+    {
+      "name": "RFC 8996 - Deprecating TLS 1.0 and TLS 1.1",
+      "url": "https://tools.ietf.org/rfc/rfc8996.txt"
+    },
+    {
+      "name": "OWASP Cryptographic Storage Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import ssl\n\n# Noncompliant: Using deprecated SSL/TLS versions\ncontext = ssl.SSLContext(ssl.PROTOCOL_SSLv3)\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1_1)\n\n# Noncompliant: Using deprecated ssl.wrap_socket with weak protocols\nsock = ssl.wrap_socket(socket.socket(), ssl_version=ssl.PROTOCOL_TLSv1)",
+        "description": "Using deprecated SSL/TLS protocol versions that are considered weak and vulnerable to attacks."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import ssl\n\n# Compliant: Using secure TLS versions\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)  # Uses secure defaults\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1_3)\n\n# Compliant: Using create_default_context() which uses secure protocols\ncontext = ssl.create_default_context()\n\n# Compliant: Explicitly setting minimum TLS version\ncontext = ssl.SSLContext(ssl.PROTOCOL_TLS)\ncontext.minimum_version = ssl.TLSVersion.TLSv1_2",
+        "description": "Using secure SSL/TLS protocol versions (TLS 1.2 or higher) and secure configuration methods."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Cryptography",
+    "subcategory": "Protocol Security",
+    "security_impact": "High"
+  },
+  "why_is_this_an_issue": "Encryption algorithms are essential for protecting sensitive information and ensuring secure communications. However, SSL versions 1.0, 2.0, 3.0 and TLS versions 1.0, 1.1 are all considered weak by the cryptographic community and are officially deprecated. These protocols have known vulnerabilities that can be exploited by attackers to decrypt communications or perform man-in-the-middle attacks. When these unsecured protocols are used, attackers can perform mathematical attacks on encrypted data to recover the plaintext, compromising confidentiality and security.",
+  "how_to_fix": "1. Replace deprecated SSL/TLS protocol constants with secure versions (TLS 1.2 or higher). 2. Use ssl.create_default_context() which automatically uses secure protocols and settings. 3. If using ssl.SSLContext(), specify ssl.PROTOCOL_TLS_CLIENT or ssl.PROTOCOL_TLS_SERVER and set minimum_version to TLSVersion.TLSv1_2 or higher. 4. Avoid using ssl.wrap_socket() with deprecated ssl_version parameters. 5. Review and update any configuration files or environment variables that specify SSL/TLS versions.",
+  "security_mappings": {
+    "CWE": [
+      "CWE-326: Inadequate Encryption Strength",
+      "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+      "CWE-693: Protection Mechanism Failure"
+    ],
+    "OWASP": [
+      "A02:2021 – Cryptographic Failures",
+      "A06:2021 – Vulnerable and Outdated Components"
+    ],
+    "NIST": [
+      "SC-8: Transmission Confidentiality and Integrity",
+      "SC-13: Cryptographic Protection"
+    ]
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "value": "SSLContext"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["args", "0", "attr"],
+            "regex": "PROTOCOL_SSLv[23]|PROTOCOL_TLSv1(_1)?$"
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Attribute"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["attr"],
+            "regex": "PROTOCOL_SSLv[23]|PROTOCOL_TLSv1(_1)?$"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "rule_id": "aws_region_should_not_be_set_with_a_hardcoded_string",
+  "title": "AWS regions should not be set with hardcoded strings",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when AWS regions are hardcoded as string literals in Python code. Hardcoding AWS regions makes the code less maintainable and less adaptable to different deployment environments. It also increases the risk of errors when deploying to multiple regions or when region requirements change. The recommended approach is to use environment variables, configuration files, or AWS SDK default region providers.",
+  "message": "Avoid hardcoding AWS regions. Use environment variables or configuration files instead (found hardcoded region: '{{hardcoded_region}}').",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "aws",
+    "best-practice",
+    "maintainability",
+    "configuration",
+    "cloud",
+    "python"
+  ],
+  "impact": "Hardcoded AWS regions reduce code flexibility and maintainability. They make it difficult to deploy the same code to multiple regions or change regions without code modifications. This can lead to operational inefficiencies and potential deployment errors when region-specific configurations are required.",
+  "recommendation": "Replace hardcoded AWS region strings with configurable values from environment variables (e.g., os.environ['AWS_REGION']) or configuration files. Use AWS SDK's default region chain which automatically checks environment variables, configuration files, and IAM role settings in order.",
+  "references": [
+    {
+      "title": "AWS SDK for Python (Boto3) - Configuration",
+      "url": "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html"
+    },
+    {
+      "title": "AWS Regions and Endpoints",
+      "url": "https://docs.aws.amazon.com/general/latest/gr/rande.html"
+    },
+    {
+      "title": "12 Factor App - Config",
+      "url": "https://12factor.net/config"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import os\nimport boto3\n\n# Good: Using environment variable\nregion = os.environ.get('AWS_REGION', 'us-east-1')\ns3 = boto3.client('s3', region_name=region)",
+        "description": "Region is configured via environment variable with a fallback default"
+      },
+      {
+        "code": "import boto3\n\n# Good: Using AWS default region chain\ns3 = boto3.client('s3')  # Uses default region from ~/.aws/config or environment",
+        "description": "Lets Boto3 determine the region using its default provider chain"
+      },
+      {
+        "code": "import configparser\nimport boto3\n\n# Good: Using configuration file\nconfig = configparser.ConfigParser()\nconfig.read('aws_config.ini')\nregion = config['aws']['region']\ns3 = boto3.client('s3', region_name=region)",
+        "description": "Region is loaded from a configuration file"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import boto3\n\n# Bad: Hardcoded region\ns3 = boto3.client('s3', region_name='us-west-2')",
+        "description": "Region is hardcoded as a string literal"
+      },
+      {
+        "code": "import boto3\n\n# Bad: Hardcoded region in variable\naws_region = 'eu-central-1'\ns3 = boto3.client('s3', region_name=aws_region)",
+        "description": "Region is hardcoded in a variable assignment"
+      },
+      {
+        "code": "import boto3\n\ndef get_s3_client():\n    # Bad: Hardcoded region in function\n    return boto3.client('s3', region_name='ap-southeast-1')",
+        "description": "Region is hardcoded within a function"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "detect": "static-analysis",
+      "prevent": "code-review",
+      "respond": "refactor"
+    }
+  },
+  "why_is_this_an_issue": "Hardcoding AWS regions creates several problems:\n1. **Reduced Flexibility**: The code becomes environment-specific and cannot be easily deployed to different regions without modification.\n2. **Maintenance Overhead**: Changing regions requires code changes and redeployment rather than simple configuration updates.\n3. **Error Prone**: Developers might forget to update all hardcoded region references when requirements change.\n4. **Security Risks**: Hardcoded regions might expose deployment patterns or make it harder to implement proper region isolation for security compliance.\n5. **Best Practice Violation**: Violates the 12-factor app principle of storing config in the environment.\n\nUsing configurable regions allows the same code to be deployed to multiple environments (dev, staging, production) with different region requirements without code changes.",
+  "how_to_fix": {
+    "description": "Replace hardcoded AWS region strings with configurable alternatives",
+    "steps": [
+      "1. **Identify all hardcoded region strings** in your codebase (search for common region patterns like 'us-', 'eu-', 'ap-').",
+      "2. **Choose a configuration method**:\n   - Environment variables (recommended for 12-factor apps)\n   - Configuration files (INI, YAML, JSON)\n   - AWS SDK default region provider chain",
+      "3. **For environment variables**:\n   - Replace hardcoded strings with `os.environ.get('AWS_REGION')`\n   - Set default values if needed: `os.environ.get('AWS_REGION', 'us-east-1')`\n   - Document the required environment variable in your deployment instructions",
+      "4. **For configuration files**:\n   - Create a configuration file (e.g., `config.ini`)\n   - Add a section for AWS settings with a region key\n   - Load the configuration in your code using `configparser` or similar",
+      "5. **For AWS SDK default region**:\n   - Simply omit the `region_name` parameter when creating clients\n   - Ensure your environment is properly configured with AWS credentials and default region",
+      "6. **Update deployment documentation** to specify how to configure the region for different environments",
+      "7. **Test the changes** in all target environments to ensure the region configuration works as expected"
+    ],
+    "additional_considerations": [
+      "For serverless applications (AWS Lambda), use the region from the execution environment or context object",
+      "Consider using AWS Systems Manager Parameter Store for sensitive or frequently changed region configurations",
+      "If you must have some default regions in code, clearly document them and make them easily overrideable"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-13",
+        "name": "Architectural Design without Considering Security Requirements",
+        "description": "Hardcoded regions can lead to architectural inflexibility that may violate security requirements for data residency or compliance"
+      }
+    ],
+    "cert": [],
+    "owasp": [
+      {
+        "id": "OWASP-ASCVS-5.2",
+        "name": "Configuration",
+        "description": "Proper configuration management includes not hardcoding environment-specific values"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "node_type",
+            "value": "Assign"
+          }
+        ]
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "func",
+          "attr"
+        ],
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "equals",
+              "value": "client"
+            },
+            {
+              "check_type": "equals",
+              "value": "resource"
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "keywords"
+        ],
+        "condition": {
+          "operator": "and",
+          "conditions": [
+            {
+              "check_type": "property_exists",
+              "property_path": [
+                "arg"
+              ],
+              "condition": {
+                "check_type": "equals",
+                "value": "region_name"
+              }
+            },
+            {
+              "check_type": "property_check",
+              "property_path": [
+                "value",
+                "value"
+              ],
+              "condition": {
+                "check_type": "regex_match",
+                "pattern": "^(us|eu|ap|ca|sa|me|af)-(central|(north|south)?(east|west)?)\\d$",
+                "flags": "i"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "rule_id": "all_except_blocks_should_be_able_to_catch_exceptions",
+  "title": "All \"except\" blocks should be able to catch exceptions",
+  "type": "BUG",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "MEDIUM"
+    },
+    "attribute": "LOGICAL"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "An except block that cannot catch any exceptions is misleading and serves no purpose. This can happen if the except block specifies an exception type that cannot be raised by the try block, or if the block is unreachable. Such code is confusing and should be removed or corrected.",
+  "message": "This except block cannot catch any exceptions. Review the exception type or remove unnecessary code.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "suspicious",
+    "bug-prone",
+    "misleading"
+  ],
+  "impact": {
+    "reliability": "Medium impact on code correctness and exception handling logic",
+    "maintainability": "High impact on code clarity and developer understanding"
+  },
+  "recommendation": "Remove unreachable except blocks or correct the exception type to match exceptions that can actually be raised by the try block.",
+  "references": [
+    {
+      "title": "Python Exception Handling Documentation",
+      "url": "https://docs.python.org/3/tutorial/errors.html"
+    },
+    {
+      "title": "SonarSource Rules - Except Blocks",
+      "url": "https://rules.sonarsource.com/python/RSPEC-1045"
+    },
+    {
+      "title": "Python PEP 3134 - Exception Chaining",
+      "url": "https://peps.python.org/pep-3134/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Except block that can never catch anything due to wrong exception type",
+        "code": "try:\n    result = int(\"hello\")\nexcept KeyError:  # ValueError will be raised, not KeyError\n    print(\"This will never execute\")"
+      },
+      {
+        "description": "Unreachable except block after broad exception handler",
+        "code": "try:\n    risky_operation()\nexcept Exception:\n    print(\"Caught general exception\")\nexcept ValueError:  # This is unreachable because Exception catches everything\n    print(\"This will never execute\")"
+      },
+      {
+        "description": "Except block for exception that code cannot raise",
+        "code": "try:\n    x = 5 + 10  # Simple arithmetic cannot raise FileNotFoundError\nexcept FileNotFoundError:\n    print(\"This will never execute\")"
+      },
+      {
+        "description": "Multiple except blocks with inheritance issues",
+        "code": "try:\n    process_data()\nexcept BaseException:\n    print(\"Caught base exception\")\nexcept Exception:  # Unreachable - BaseException catches all exceptions\n    print(\"This will never execute\")"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Proper exception handling with correct exception types",
+        "code": "try:\n    result = int(user_input)\nexcept ValueError:\n    print(\"Invalid number format\")\nexcept TypeError:\n    print(\"Input is not a string\")"
+      },
+      {
+        "description": "Correct order of exception handlers (specific to general)",
+        "code": "try:\n    risky_operation()\nexcept ValueError:\n    print(\"Value error occurred\")\nexcept Exception:\n    print(\"Other exception occurred\")"
+      },
+      {
+        "description": "Exception handling that matches possible exceptions",
+        "code": "try:\n    with open(filename, 'r') as f:\n        content = f.read()\nexcept FileNotFoundError:\n    print(\"File not found\")\nexcept PermissionError:\n    print(\"No permission to read file\")"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "priority": "Medium",
+    "effort": "Low"
+  },
+  "why_is_this_an_issue": "Unreachable except blocks create several problems: (1) They mislead developers into thinking certain exceptions are being handled when they're not, (2) They add unnecessary complexity to the code, (3) They can hide real bugs in exception handling logic, (4) They make code reviews more difficult as reviewers must determine which except blocks are actually reachable, (5) They can create false confidence in error handling coverage during testing.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Analyze the code in the try block to identify what exceptions can actually be raised"
+    },
+    {
+      "step": 2,
+      "description": "Review the order of except blocks - more specific exceptions must come before general ones"
+    },
+    {
+      "step": 3,
+      "description": "Remove except blocks that handle exceptions that cannot be raised by the try block"
+    },
+    {
+      "step": 4,
+      "description": "Reorder except blocks so that specific exceptions come before their parent classes"
+    },
+    {
+      "step": 5,
+      "description": "Consider using 'except Exception as e' for general error handling instead of multiple unreachable blocks"
+    },
+    {
+      "step": 6,
+      "description": "Test the exception handling to ensure all paths work as expected"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [],
+    "CERT": [],
+    "OWASP": []
+  },
+  "ruleSpecification": "RSPEC-1045",
+  "scope": "Main",
+  "quickfix": "unknown",
+  "logic": {
+    "comment": "Detect all except handlers for analysis. TODO: refine logic to identify unreachable except blocks through exception hierarchy and try block analysis.",
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ExceptHandler"
+      }
+    ]
+  }
+}

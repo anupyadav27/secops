@@ -1,0 +1,186 @@
+{
+  "rule_id": "walrus_operator_should_not_make_code_confusing",
+  "title": "Walrus operator should not make code confusing",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "The walrus operator (:=) introduced in Python 3.8 allows assignment expressions within larger expressions. While this can make code more concise, it can also make code harder to read and understand when used inappropriately. This rule flags confusing uses of the walrus operator that decrease code clarity.",
+  "message": "This walrus operator usage makes the code confusing. Consider using a regular assignment statement instead.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "bad-practice",
+    "confusing",
+    "pep"
+  ],
+  "impact": "Confusing walrus operator usage can make code harder to read, debug, and maintain, leading to increased development time and potential bugs.",
+  "recommendation": "Use the walrus operator sparingly and only when it genuinely improves code readability. Prefer regular assignment statements when the assignment doesn't need to be part of a larger expression.",
+  "references": [
+    {
+      "name": "PEP 572 – Assignment Expressions",
+      "url": "https://www.python.org/dev/peps/pep-0572/"
+    },
+    {
+      "name": "PEP 572 Exceptional Cases",
+      "url": "https://www.python.org/dev/peps/pep-0572/#exceptional-cases"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "description": "Simple condition capture in if statement",
+        "code": "# Good: Clear and readable walrus usage\nif match := pattern.search(text):\n    print(f\"Found: {match.group(0)}\")"
+      },
+      {
+        "description": "Loop-and-a-half pattern",
+        "code": "# Good: Eliminates the need for break statement\nwhile chunk := file.read(8192):\n    process(chunk)"
+      },
+      {
+        "description": "Capturing expensive computation in comprehension",
+        "code": "# Good: Avoids recomputing expensive function\nresults = [y for x in data if (y := expensive_func(x)) > threshold]"
+      },
+      {
+        "description": "Regular assignment statement",
+        "code": "# Good: Clear intent with regular assignment\nresult = compute_value()\nif result > 10:\n    process(result)"
+      }
+    ],
+    "noncompliant": [
+      {
+        "description": "Walrus operator in complex nested expression",
+        "code": "# Bad: Too many walrus operators make it confusing\nif (a := func1()) and (b := func2(a)) and (c := func3(b)) > (d := threshold()):\n    process(a, b, c, d)"
+      },
+      {
+        "description": "Walrus operator with side effects in unexpected places",
+        "code": "# Bad: Assignment buried in function argument\nprocess_data(items, threshold=(limit := calculate_limit()))\nprint(f\"Used limit: {limit}\")"
+      },
+      {
+        "description": "Confusing precedence with walrus operator",
+        "code": "# Bad: Unclear precedence and flow\nresult = (x := get_value()) + (y := x * 2) if x > 0 else (z := default_value())"
+      },
+      {
+        "description": "Walrus operator where regular assignment is clearer",
+        "code": "# Bad: Walrus doesn't add value here\nprint(f\"Processing {name := user.get_name()}\")\n# The name is only used once, regular assignment would be clearer"
+      },
+      {
+        "description": "Nested walrus operators in comprehension",
+        "code": "# Bad: Multiple nested assignments are confusing\ndata = [(x := item.value, y := x * 2, z := y + (w := offset)) for item in items]"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "cwe": [],
+    "owasp": [],
+    "sans": []
+  },
+  "why_is_this_an_issue": "The walrus operator (:=) can significantly improve code conciseness in specific scenarios, but when overused or used inappropriately, it can make code much harder to read and understand. Complex expressions with multiple walrus operators, assignments in unexpected locations, or cases where regular assignment statements would be clearer all contribute to reduced code maintainability. The operator should enhance readability, not hinder it.",
+  "how_to_fix": "1. Replace confusing walrus operators with regular assignment statements when the expression doesn't benefit from inline assignment. 2. Limit the use of walrus operators to cases where they genuinely improve readability, such as eliminating loop-and-a-half patterns or avoiding duplicate expensive computations. 3. Avoid nesting multiple walrus operators in the same expression. 4. Don't use walrus operators just to make code shorter if it makes it less clear. 5. Consider the cognitive load on future readers of the code.",
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp_asvs": [],
+    "owasp_top10": [],
+    "sans_top25": []
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Multiple walrus operators in the same boolean expression",
+        "check_type": "node_type",
+        "value": "NamedExpr",
+        "property_path": ["parent"],
+        "conditions": [
+          {
+            "check_type": "contains",
+            "property_path": ["parent", "values"],
+            "required_values": ["NamedExpr", "NamedExpr"],
+            "comment": "// TODO: refine property_path based on AST structure for counting NamedExpr siblings"
+          }
+        ]
+      },
+      {
+        "comment": "Walrus operator used in function call keyword arguments",
+        "check_type": "node_type",
+        "value": "NamedExpr",
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["parent", "parent", "_type"],
+            "required_values": ["Call"],
+            "comment": "// TODO: refine property_path to detect if NamedExpr is in Call.keywords"
+          }
+        ]
+      },
+      {
+        "comment": "Walrus operator in conditional expression with multiple operators",
+        "check_type": "node_type", 
+        "value": "NamedExpr",
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["parent", "_type"],
+            "required_values": ["IfExp"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["parent", "body", "_type"],
+            "required_values": ["BinOp"],
+            "comment": "// TODO: refine to detect complex expressions with multiple operations"
+          }
+        ]
+      },
+      {
+        "comment": "Multiple walrus operators in tuple or list literal",
+        "check_type": "node_type",
+        "value": "NamedExpr", 
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["parent", "_type"],
+            "required_values": ["Tuple", "List"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["parent", "elts"],
+            "forbidden_values": [],
+            "comment": "// TODO: refine to count NamedExpr nodes in tuple/list elements - trigger if > 2"
+          }
+        ]
+      },
+      {
+        "comment": "Walrus operator nested within another walrus operator",
+        "check_type": "node_type",
+        "value": "NamedExpr",
+        "conditions": [
+          {
+            "check_type": "contains",
+            "property_path": ["value"],
+            "required_values": ["NamedExpr"],
+            "comment": "// TODO: refine to detect NamedExpr within the value of another NamedExpr"
+          }
+        ]
+      },
+      {
+        "comment": "Walrus operator in f-string where name is used only once", 
+        "check_type": "node_type",
+        "value": "NamedExpr",
+        "conditions": [
+          {
+            "check_type": "equals",
+            "property_path": ["parent", "parent", "_type"],
+            "required_values": ["FormattedValue"]
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["usage_count"],
+            "required_values": [1],
+            "comment": "// TODO: refine to count how many times the target variable is used after assignment"
+          }
+        ]
+      }
+    ]
+  }
+}

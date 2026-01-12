@@ -1,0 +1,191 @@
+{
+  "rule_id": "async_functions_should_not_contain_input_calls",
+  "title": "Async functions should not contain direct 'input()' calls",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when Python async functions contain direct calls to the built-in `input()` function. Using `input()` in async functions is problematic because:\n\n1. It blocks the event loop, defeating the purpose of async programming\n2. It creates potential deadlocks in async applications\n3. It violates the principle that async functions should be non-blocking\n4. It makes the function impossible to properly await or cancel\n\nThe rule helps maintain proper async programming patterns by encouraging the use of async alternatives for user input when needed.",
+  "message": "Remove this 'input()' call from async function '{{function_name}}'. Use async alternatives instead to avoid blocking the event loop.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "async",
+    "concurrency",
+    "best-practice",
+    "python",
+    "blocking",
+    "performance"
+  ],
+  "impact": "Blocking calls in async functions can:\n- Reduce application performance by preventing concurrent operations\n- Cause deadlocks in async applications\n- Make the application unresponsive during I/O operations\n- Violate async programming principles\n- Make the code harder to maintain and reason about",
+  "recommendation": "Replace direct `input()` calls in async functions with:\n1. Async alternatives like `aioinput` for terminal input\n2. Proper async I/O patterns for user input\n3. Move blocking input operations to synchronous functions called from sync contexts\n4. Use async frameworks that provide non-blocking input methods",
+  "references": [
+    {
+      "title": "Python asyncio Documentation",
+      "url": "https://docs.python.org/3/library/asyncio.html"
+    },
+    {
+      "title": "Async IO in Python: A Complete Walkthrough",
+      "url": "https://realpython.com/async-io-python/"
+    },
+    {
+      "title": "Why you shouldn't use input() in async functions",
+      "url": "https://stackoverflow.com/questions/54045149/using-input-inside-async-function"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\nimport aioinput\n\nasync def get_user_input():\n    # Good: Using async alternative for input\n    name = await aioinput.ainput('Enter your name: ')\n    return name",
+        "description": "Uses async-compatible input function that doesn't block the event loop"
+      },
+      {
+        "code": "async def process_data(data):\n    # Good: No blocking input calls\n    result = await some_async_operation(data)\n    return result",
+        "description": "Async function without any blocking input operations"
+      },
+      {
+        "code": "def get_sync_input():\n    # Good: Blocking input in sync function\n    return input('Enter value: ')\n\nasync def main():\n    # Call sync function properly\n    value = await asyncio.to_thread(get_sync_input)",
+        "description": "Properly handles blocking input by running it in a separate thread"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def get_name():\n    # Bad: Direct input() call in async function\n    name = input('What is your name? ')\n    return name",
+        "description": "Blocks the event loop with synchronous input call"
+      },
+      {
+        "code": "async def process_user_data():\n    # Bad: Multiple blocking calls\n    user_id = input('Enter ID: ')\n    data = input('Enter data: ')\n    return user_id, data",
+        "description": "Contains multiple blocking input calls in async function"
+      },
+      {
+        "code": "async def main():\n    # Bad: Nested blocking call\n    def helper():\n        return input('Helper input: ')\n    \n    result = helper()  # Still blocks the event loop\n    return result",
+        "description": "Even indirect input calls block the event loop when called from async context"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stage": "development"
+  },
+  "why_is_this_an_issue": "When an async function contains a direct call to `input()`, it creates several serious problems:\n\n1. **Event Loop Blocking**: The `input()` function is synchronous and blocking. When called from an async function, it prevents the event loop from processing other tasks during the input operation, effectively negating all benefits of async programming.\n\n2. **Deadlock Potential**: In complex async applications, blocking calls can lead to deadlocks where the event loop is waiting for the input to complete while other coroutines are waiting for the event loop to process their tasks.\n\n3. **Uncancelable Operations**: Async functions should be cancelable, but a blocking `input()` call cannot be properly canceled, which violates async programming principles.\n\n4. **Performance Degradation**: The entire purpose of async programming is to enable concurrent operations. Blocking calls eliminate this concurrency, leading to poor performance.\n\n5. **Maintenance Issues**: Code that mixes blocking and non-blocking operations is harder to reason about and maintain, especially as applications grow in complexity.\n\nThis rule helps maintain clean async programming patterns by preventing these problematic blocking calls in async contexts.",
+  "how_to_fix": {
+    "description": "To fix violations of this rule, follow these steps to replace blocking input calls with proper async alternatives:",
+    "steps": [
+      "1. **Identify the blocking input call**: Locate the `input()` call in your async function that's causing the violation.",
+      "2. **Choose an async alternative**: \n   - For terminal input: Use libraries like `aioinput` that provide async input functions\n   - For web applications: Use your framework's async request handling (e.g., FastAPI, aiohttp)\n   - For GUI applications: Use the framework's async event handlers",
+      "3. **Replace the blocking call**: Change the `input()` call to use your chosen async alternative, making sure to properly `await` it.",
+      "4. **Handle the async context**: Ensure the calling code properly awaits your async function and handles the async context correctly.",
+      "5. **Test the changes**: Verify that your application still works as expected and that the event loop isn't being blocked.",
+      "6. **Consider architecture changes**: If you must use blocking input, consider restructuring your code to:\n      - Move the input operation to a synchronous function\n      - Use `asyncio.to_thread()` to run the blocking operation in a separate thread\n      - Call the sync function from a sync context rather than from async code"
+    ],
+    "additional_considerations": [
+      "For CLI applications, consider whether async is truly needed - sometimes a simple sync application is more appropriate",
+      "Document any async/await patterns clearly for future maintainers",
+      "Consider using timeouts for user input to prevent indefinite hanging"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-841",
+        "name": "Improper Enforcement of Behavioral Workflow",
+        "description": "Blocking calls in async functions can disrupt expected program flow and create security issues"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CON54-J",
+        "name": "Do not use blocking methods in asynchronous code",
+        "description": "Blocking methods in async code can lead to performance and security issues"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "descendant_node",
+            "node_type": "Call",
+            "conditions": [
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "func",
+                  "id"
+                ],
+                "condition": {
+                  "check_type": "equals",
+                  "value": "input"
+                }
+              },
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "func",
+                  "attr"
+                ],
+                "condition": {
+                  "check_type": "equals",
+                  "value": "input"
+                }
+              }
+            ]
+          },
+          {
+            "check_type": "descendant_node",
+            "node_type": "Call",
+            "conditions": [
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "func",
+                  "value",
+                  "id"
+                ],
+                "condition": {
+                  "check_type": "equals",
+                  "value": "input"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "ancestor_node",
+          "node_type": "FunctionDef",
+          "conditions": [
+            {
+              "check_type": "property_check",
+              "property_path": [
+                "name"
+              ],
+              "condition": {
+                "check_type": "regex_match",
+                "value": "^_.*",
+                "description": "Exclude functions that are likely test helpers or private methods"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

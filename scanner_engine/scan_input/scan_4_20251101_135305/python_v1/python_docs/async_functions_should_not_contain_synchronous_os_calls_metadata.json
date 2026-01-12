@@ -1,0 +1,227 @@
+{
+  "rule_id": "async_functions_should_not_contain_synchronous_os_calls",
+  "title": "Async functions should not contain synchronous OS calls",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asynchronous functions (coroutines) contain synchronous OS-level calls that block the event loop. Such calls defeat the purpose of async programming by introducing blocking operations that prevent other coroutines from executing while waiting for I/O completion. This can lead to performance bottlenecks and poor scalability in async applications.",
+  "message": "Remove this synchronous OS call from async function '{{function_name}}' or replace it with an async alternative. Blocking calls like '{{call_name}}' will freeze the event loop.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "async",
+    "performance",
+    "blocking",
+    "concurrency",
+    "best-practice",
+    "python3",
+    "event-loop"
+  ],
+  "impact": "Blocking OS calls in async functions cause the entire event loop to pause while waiting for I/O operations to complete. This negates the benefits of asynchronous programming by: 1) Reducing throughput as other coroutines cannot run during the block 2) Increasing latency for all operations in the event loop 3) Potentially causing timeouts in distributed systems 4) Making the application behave synchronously despite using async/await syntax",
+  "recommendation": "Replace synchronous OS calls with their asynchronous equivalents from libraries like aiofiles (for file operations), asyncio.create_subprocess_exec (for subprocesses), or other async-compatible alternatives. For operations without async alternatives, consider running them in a thread pool using asyncio.to_thread() or asyncio.run_in_executor().",
+  "references": [
+    {
+      "title": "Python asyncio Documentation - Subprocesses",
+      "url": "https://docs.python.org/3/library/asyncio-subprocess.html"
+    },
+    {
+      "title": "aiofiles - Async file I/O",
+      "url": "https://github.com/Tinche/aiofiles"
+    },
+    {
+      "title": "Async IO in Python: A Complete Walkthrough",
+      "url": "https://realpython.com/async-io-python/"
+    },
+    {
+      "title": "Python asyncio - Avoid Blocking Calls",
+      "url": "https://docs.python.org/3/library/asyncio-dev.html#avoid-blocking-calls"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\nimport aiofiles\n\nasync def read_file_async(path):\n    async with aiofiles.open(path, mode='r') as f:\n        contents = await f.read()\n    return contents\n\nasync def run_command_async(cmd):\n    proc = await asyncio.create_subprocess_shell(\n        cmd,\n        stdout=asyncio.subprocess.PIPE,\n        stderr=asyncio.subprocess.PIPE\n    )\n    stdout, stderr = await proc.communicate()\n    return stdout.decode()",
+        "description": "Uses async alternatives for file I/O and subprocess execution that don't block the event loop"
+      },
+      {
+        "code": "import asyncio\n\nasync def cpu_bound_work(data):\n    # For CPU-bound work that must be synchronous\n    result = await asyncio.to_thread(\n        synchronous_cpu_intensive_function,\n        data\n    )\n    return result",
+        "description": "Properly offloads synchronous CPU-bound work to a thread pool using asyncio.to_thread()"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import os\nimport asyncio\n\nasync def bad_file_operations(path):\n    # This blocks the event loop!\n    with open(path, 'r') as f:\n        return f.read()\n\nasync def bad_subprocess_call(cmd):\n    # This blocks the event loop!\n    return os.system(cmd)",
+        "description": "Uses synchronous file I/O and os.system() which block the event loop during execution"
+      },
+      {
+        "code": "import subprocess\nimport asyncio\n\nasync def blocking_subprocess(path):\n    # This blocks the event loop!\n    result = subprocess.run(\n        ['ls', path],\n        capture_output=True,\n        text=True\n    )\n    return result.stdout",
+        "description": "Uses subprocess.run() synchronously in an async function, blocking the event loop"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "performance-anti-pattern",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "dynamic_analysis": false,
+      "manual_review": false
+    },
+    "lifecycle_stages": [
+      "development",
+      "code-review"
+    ]
+  },
+  "why_is_this_an_issue": "Asynchronous programming in Python relies on an event loop that can switch between coroutines when they're waiting for I/O. When a synchronous OS call is made from an async function, it blocks the entire event loop until the call completes. This prevents other coroutines from running during the wait time, effectively turning what should be concurrent operations into sequential ones. The problem becomes particularly severe in high-load scenarios where many such blocking calls can bring the application to a crawl. This anti-pattern defeats the primary benefits of async programming: concurrency and scalability.",
+  "how_to_fix": {
+    "description": "To fix this issue, you need to replace blocking OS calls with their non-blocking alternatives or properly offload them to thread pools.",
+    "steps": [
+      "1. Identify all synchronous OS calls in your async functions (file I/O, subprocess calls, etc.)",
+      "2. For file operations, replace with aiofiles or similar async file I/O libraries",
+      "3. For subprocess operations, use asyncio.create_subprocess_exec() or asyncio.create_subprocess_shell()",
+      "4. For operations without async alternatives, use asyncio.to_thread() or asyncio.run_in_executor() to run them in a thread pool",
+      "5. For network operations, use async HTTP clients like aiohttp instead of requests",
+      "6. Test your changes to ensure they don't block the event loop (you can verify this by checking that other coroutines can run concurrently)",
+      "7. Consider adding timeouts to your async operations to prevent hanging",
+      "8. Document any remaining synchronous operations that couldn't be made async, explaining why they're necessary"
+    ],
+    "additional_considerations": [
+      "Be aware that thread pools have limited size - don't use them for high-frequency operations",
+      "Some synchronous libraries have async wrappers available",
+      "Consider using async context managers (async with) where available",
+      "For database operations, use async database drivers like asyncpg or aiomysql"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-835",
+        "name": "Infinite Loop",
+        "description": "Blocking calls in async functions can lead to effective infinite loops when the event loop is starved"
+      }
+    ],
+    "cert": [
+      {
+        "id": "CERT-POS46-C",
+        "name": "Avoid blocking calls in event-driven single-threaded programs",
+        "description": "This rule violates the principle of not blocking in single-threaded event loops"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "descendant_node",
+            "node_type": "Call",
+            "conditions": [
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "func",
+                  "attr"
+                ],
+                "condition": {
+                  "check_type": "in_list",
+                  "value": [
+                    "system",
+                    "popen",
+                    "execv",
+                    "spawn",
+                    "fork",
+                    "wait",
+                    "waitpid",
+                    "open",
+                    "read",
+                    "write",
+                    "run"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "check_type": "descendant_node",
+            "node_type": "Call",
+            "conditions": [
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "func",
+                  "value",
+                  "id"
+                ],
+                "condition": {
+                  "check_type": "equals",
+                  "value": "subprocess"
+                }
+              }
+            ]
+          },
+          {
+            "check_type": "descendant_node",
+            "node_type": "With",
+            "conditions": [
+              {
+                "check_type": "property_check",
+                "property_path": [
+                  "items",
+                  0,
+                  "context_expr",
+                  "func",
+                  "id"
+                ],
+                "condition": {
+                  "check_type": "equals",
+                  "value": "open"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check_type": "not",
+        "condition": {
+          "check_type": "descendant_node",
+          "node_type": "Call",
+          "conditions": [
+            {
+              "check_type": "property_check",
+              "property_path": [
+                "func",
+                "attr"
+              ],
+              "condition": {
+                "check_type": "equals",
+                "value": "to_thread"
+              }
+            },
+            {
+              "check_type": "property_check",
+              "property_path": [
+                "func",
+                "value",
+                "id"
+              ],
+              "condition": {
+                "check_type": "equals",
+                "value": "asyncio"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

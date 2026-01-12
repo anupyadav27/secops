@@ -1,0 +1,176 @@
+{
+  "rule_id": "caught_exceptions_must_derive_from_baseexception",
+  "title": "Caught exceptions should derive from BaseException",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that all caught exceptions in try-except blocks derive from Python's `BaseException` class (or its standard subclasses like `Exception`). Catching objects that don't inherit from `BaseException` can lead to unexpected behavior since they won't follow Python's exception protocol. This is particularly important because non-exception objects caught in except blocks can mask real errors and make debugging difficult.",
+  "message": "Catch only exceptions that derive from 'BaseException'; caught object '{{exception_type}}' does not appear to be an exception class.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "error-handling",
+    "best-practice",
+    "python",
+    "exception",
+    "reliability"
+  ],
+  "impact": "Catching non-exception objects can lead to several problems: 1) Real exceptions may be silently ignored, 2) Debugging becomes more difficult as the exception traceback is lost, 3) The code may behave unpredictably when non-exception objects are raised, and 4) It violates Python's exception handling conventions, making the code harder to maintain and understand.",
+  "recommendation": "Always ensure that caught exceptions inherit from Python's `BaseException` class (preferably from `Exception`). If you need to catch specific exceptions, create proper exception classes that inherit from `Exception`. For custom exceptions, use `class MyError(Exception): pass` pattern.",
+  "references": [
+    {
+      "title": "Python Documentation: Built-in Exceptions",
+      "url": "https://docs.python.org/3/library/exceptions.html"
+    },
+    {
+      "title": "PEP 352 -- Required Superclass for Exceptions",
+      "url": "https://peps.python.org/pep-0352/"
+    },
+    {
+      "title": "SonarSource: Exception Handling in Python",
+      "url": "https://rules.sonarsource.com/python/tag/error-handling/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept ValueError as e:\n    handle_value_error(e)\nexcept Exception as e:\n    handle_generic_exception(e)",
+        "description": "Catching standard exception classes that properly inherit from BaseException"
+      },
+      {
+        "code": "class MyCustomError(Exception):\n    pass\n\ntry:\n    might_raise()\nexcept MyCustomError as e:\n    handle_custom_error(e)",
+        "description": "Custom exception class properly inheriting from Exception"
+      },
+      {
+        "code": "try:\n    operation()\nexcept (ValueError, TypeError) as e:\n    handle_multiple_exceptions(e)",
+        "description": "Catching multiple standard exception types"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept str as e:\n    # This will catch string objects, not exceptions\n    print(f\"Caught: {e}\")",
+        "description": "Catching a string class which doesn't inherit from BaseException"
+      },
+      {
+        "code": "class NotAnException:\n    pass\n\ntry:\n    something()\nexcept NotAnException as e:\n    # This will never be caught as an exception\n    handle(e)",
+        "description": "Custom class that doesn't inherit from BaseException"
+      },
+      {
+        "code": "try:\n    operation()\nexcept (int, float) as e:\n    # Catching numeric types as \"exceptions\"\n    log_error(e)",
+        "description": "Catching non-exception types in a tuple"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": "high",
+      "unit_test": "medium",
+      "code_review": "high"
+    }
+  },
+  "why_is_this_an_issue": "Python's exception handling mechanism is designed to work with objects that inherit from `BaseException`. When you catch objects that don't follow this inheritance hierarchy, several problems can occur:\n\n1. **Silent Failure**: Real exceptions might be ignored because the except block caught something else first.\n2. **Debugging Difficulty**: The normal exception traceback is suppressed when non-exception objects are caught.\n3. **Unpredictable Behavior**: The code might behave differently than expected when non-exception objects are raised.\n4. **Maintenance Issues**: Violates Python's established conventions, making the code harder to understand and maintain.\n5. **Potential Security Issues**: Could mask important errors that should be handled or logged.\n\nThis practice goes against Python's design principles and can lead to subtle bugs that are difficult to track down. The Python language itself enforces that only `BaseException` subclasses can be raised with the `raise` statement, but doesn't enforce this for `except` clauses, which is why this static analysis rule is important.",
+  "how_to_fix": {
+    "description": "To fix violations of this rule, follow these steps to ensure proper exception handling:",
+    "steps": [
+      "1. **Identify the problematic except clause**: Locate where non-exception types are being caught.",
+      "2. **Determine the intended exception**: Understand what exception you actually meant to catch.",
+      "3. **Create proper exception classes**: If you need custom exceptions, make them inherit from `Exception`:\n     ```python\n     class MyCustomError(Exception):\n         pass\n     ```",
+      "4. **Update the except clause**: Change the caught type to either:\n     - A standard exception class (ValueError, TypeError, etc.)\n     - Your custom exception class that inherits from Exception\n     - The base `Exception` class if you want to catch all exceptions",
+      "5. **Test the changes**: Verify that your exception handling now works as intended and doesn't mask real errors.",
+      "6. **Consider logging**: For generic exception catching, add proper logging to ensure errors aren't silently ignored:\n     ```python\n     except Exception as e:\n         logger.error(f\"Unexpected error: {e}\", exc_info=True)\n         raise  # or handle appropriately\n     ```"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "description": "Improper Check or Handling of Exceptional Conditions"
+      },
+      {
+        "id": "CWE-396",
+        "description": "Declaration of Catch for Generic Exception"
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR00-C",
+        "description": "Adhere to the exception-handling restrictions"
+      },
+      {
+        "id": "ERR02-C",
+        "description": "Avoid catching exception objects by non-constant reference"
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ExceptHandler"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "type"
+            ]
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "type",
+              "elts"
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "inheritance_check",
+            "property_path": [
+              "type"
+            ],
+            "base_class": "BaseException",
+            "include_builtins": true
+          }
+        ]
+      },
+      {
+        "operator": "if_else",
+        "if": {
+          "check_type": "property_exists",
+          "property_path": [
+            "type",
+            "elts"
+          ]
+        },
+        "then": {
+          "check_type": "for_all",
+          "collection_path": [
+            "type",
+            "elts"
+          ],
+          "condition": {
+            "check_type": "inheritance_check",
+            "base_class": "BaseException",
+            "include_builtins": true
+          }
+        },
+        "else": {
+          "check_type": "always_true"
+        }
+      }
+    ]
+  }
+}

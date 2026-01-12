@@ -1,0 +1,183 @@
+{
+  "rule_id": "character_classes_in_regular_expressions_should_not_contain_only_one_character",
+  "title": "Character classes in regular expressions should not contain only one character",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "This rule detects when a regular expression character class (square brackets `[]`) contains only a single character. Such character classes are redundant since they match exactly the same thing as the character itself would without the brackets. This makes the regular expression harder to read and maintain without providing any benefit.",
+  "message": "Remove the character class brackets around this single character; they serve no purpose.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "2min"
+  },
+  "tags": [
+    "convention",
+    "readability",
+    "regex",
+    "python",
+    "best-practice"
+  ],
+  "impact": "While this issue doesn't affect functionality, it reduces code readability and maintainability. Character classes with single characters make regular expressions more complex than necessary, potentially confusing other developers who read the code. This can lead to increased cognitive load when reviewing or modifying regular expressions.",
+  "recommendation": "Remove the square brackets around single characters in regular expression character classes. For example, change `[a]` to `a` and `[0]` to `0`. This makes the regular expression cleaner and easier to understand while maintaining identical functionality.",
+  "references": [
+    {
+      "title": "Python Regular Expression HOWTO",
+      "url": "https://docs.python.org/3/howto/regex.html"
+    },
+    {
+      "title": "Regular-Expressions.info - Character Classes",
+      "url": "https://www.regular-expressions.info/charclass.html"
+    },
+    {
+      "title": "SonarSource Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import re\n\npattern = re.compile('a')  # Matches 'a' directly\nmatch = pattern.search('apple')",
+        "description": "The character is used directly without unnecessary character class brackets."
+      },
+      {
+        "code": "import re\n\npattern = re.compile('[abc]')  # Valid character class with multiple characters\nmatch = pattern.search('banana')",
+        "description": "The character class contains multiple characters, making it meaningful."
+      },
+      {
+        "code": "import re\n\npattern = re.compile(r'\\d')  # Using shorthand character class\nmatch = pattern.search('123')",
+        "description": "Using built-in shorthand character classes is preferred when available."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "import re\n\npattern = re.compile('[a]')  # Redundant character class\nmatch = pattern.search('apple')",
+        "description": "The character class contains only one character, making the brackets unnecessary."
+      },
+      {
+        "code": "import re\n\npattern = re.compile('[0-9]')  # This is fine\npattern2 = re.compile('[5]')  # This violates the rule\nmatch = pattern2.search('555')",
+        "description": "Even when other valid character classes exist in the code, single-character classes should be avoided."
+      },
+      {
+        "code": "import re\n\npattern = re.compile('[A]|[B]')  # Multiple single-character classes\nmatch = pattern.search('ABC')",
+        "description": "Multiple single-character classes make the pattern harder to read than necessary."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-quality",
+    "priority": "low",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "sonar",
+        "pylint",
+        "flake8"
+      ],
+      "fix_pattern": "automatable"
+    }
+  },
+  "why_is_this_an_issue": "Character classes in regular expressions are meant to match any one of several characters. When a character class contains only one character, it's functionally equivalent to the character itself, but with added visual complexity. This creates several problems:\n\n1. **Reduced Readability**: Extra brackets make the regular expression harder to parse visually.\n2. **Maintenance Burden**: Developers might waste time wondering why a single-character class was used.\n3. **Potential for Errors**: The redundant syntax might hide actual intentions (e.g., a developer might have meant to include more characters but forgot).\n4. **Inconsistent Style**: Mixing direct characters and single-character classes creates inconsistent coding style.\n\nWhile this doesn't affect runtime performance in most implementations, it does affect the human factors of code maintenance and review.",
+  "how_to_fix": {
+    "description": "Fixing this issue is straightforward and can be done in two simple steps:",
+    "steps": [
+      "1. **Identify** all regular expression patterns in your code that use character classes with single characters (look for `[x]` patterns where x is a single character).",
+      "2. **Replace** each `[x]` with just `x`, removing the square brackets while keeping the character itself.",
+      "3. **Test** your regular expressions to ensure they still match the intended patterns (though functionally they should work identically)."
+    ],
+    "automation_note": "This fix can be safely automated in most cases, as the transformation preserves the exact same matching behavior."
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "note": "This rule is primarily about code quality and readability rather than security, so no security mappings apply."
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "func",
+          "attr"
+        ],
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "equals",
+              "value": "compile"
+            },
+            {
+              "check_type": "equals",
+              "value": "search"
+            },
+            {
+              "check_type": "equals",
+              "value": "match"
+            },
+            {
+              "check_type": "equals",
+              "value": "fullmatch"
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "operator": "regex_match",
+          "value": "\\[.\\]",
+          "flags": [
+            "MULTILINE"
+          ]
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "operator": "not",
+          "condition": {
+            "operator": "regex_match",
+            "value": "\\[\\\\.\\]",
+            "flags": [
+              "MULTILINE"
+            ]
+          }
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "args",
+          0,
+          "value"
+        ],
+        "condition": {
+          "operator": "not",
+          "condition": {
+            "operator": "regex_match",
+            "value": "\\[\\^\\]",
+            "flags": [
+              "MULTILINE"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

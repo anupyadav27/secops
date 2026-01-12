@@ -1,0 +1,86 @@
+{
+  "rule_id": "yield_and_return_should_not_be_used_outside_functions",
+  "title": "\"yield\" and \"return\" should not be used outside functions",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Blocker",
+  "description": "The `return` and `yield` statements can only be used inside functions, methods, or generators. Using them at module level or within class bodies (but outside methods) results in a SyntaxError in Python. This rule serves as documentation for this language constraint, as such code would typically fail during parsing before static analysis. However, it can be useful for catching such issues in code generation tools, templates, or dynamic code creation scenarios.",
+  "message": "Remove this '{{statement_type}}' statement which is used outside of a function.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "pitfall",
+    "syntax",
+    "bug-prone",
+    "control-flow"
+  ],
+  "impact": "Using `return` or `yield` statements outside functions causes SyntaxError at runtime, making the code unexecutable. This represents a fundamental logical error that prevents the program from running and indicates a misunderstanding of Python's control flow constructs.",
+  "recommendation": "Remove the `return` or `yield` statement from module level or class body. If you need to return a value, wrap the logic in a function. If you need to yield values, create a generator function. For module-level initialization, use regular assignment statements instead.",
+  "references": [
+    {
+      "title": "Python Documentation - The return statement",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#the-return-statement"
+    },
+    {
+      "title": "Python Documentation - The yield statement",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#the-yield-statement"
+    },
+    {
+      "title": "SonarSource - Python Rules - S2711",
+      "url": "https://rules.sonarsource.com/python/RSPEC-2711/"
+    },
+    {
+      "title": "Python PEP 255 - Simple Generators",
+      "url": "https://peps.python.org/pep-0255/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "# Module level return - causes SyntaxError\nreturn 42\n\n# Module level yield - causes SyntaxError\nyield \"value\"\n\n# Return in class body (outside method) - causes SyntaxError\nclass MyClass:\n    return \"invalid\"\n\n# Yield in class body (outside method) - causes SyntaxError\nclass DataProcessor:\n    yield \"data\"",
+        "description": "Return and yield statements used outside of functions, methods, or generators cause SyntaxError and prevent code execution."
+      }
+    ],
+    "compliant": [
+      {
+        "code": "# Proper use in functions\ndef get_value():\n    return 42\n\ndef generate_values():\n    yield \"value1\"\n    yield \"value2\"\n\n# Proper use in methods\nclass MyClass:\n    def get_result(self):\n        return \"valid\"\n    \n    def process_data(self):\n        yield \"data1\"\n        yield \"data2\"\n\n# Module level assignments (no return needed)\nresult = 42\nvalues = [\"value1\", \"value2\"]",
+        "description": "Return and yield statements properly used within functions, methods, and generators. Module-level values assigned directly without return statements."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Code Quality",
+    "security": "None",
+    "automation": "High - Can be automatically detected through AST analysis",
+    "compliance": "High - Prevents syntax errors and runtime failures"
+  },
+  "why_is_this_an_issue": "Return and yield statements are control flow constructs that only have meaning within the context of callable functions, methods, or generators. When used outside these contexts, Python raises a SyntaxError because there is no function execution context to return from or generator context to yield to. This represents a fundamental misunderstanding of Python's execution model and control flow, and makes the code completely non-functional.",
+  "how_to_fix": "1. If you intended to set a module-level variable, use a simple assignment instead of return. 2. If you need to return a value, wrap the logic in a function definition. 3. If you need to yield values, create a generator function. 4. For class-level constants, use class variables or properties instead of return statements. 5. Review the code logic to understand what the intended behavior should be and implement it using appropriate Python constructs.",
+  "security_mappings": {
+    "CWE": "",
+    "CERT": "",
+    "OWASP": ""
+  },
+  "logic": {
+    "comment": "NOTE: This rule detects syntactically invalid Python code. Return/yield outside functions cause SyntaxError, preventing file parsing. This rule serves as documentation and would catch such errors if they occur in generated or templated code before execution.",
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type", 
+        "value": "Module"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "regex",
+            "property_path": ["body", "*", "node_type"],
+            "regex": "^(Return|Yield|YieldFrom)$"
+          }
+        ]
+      }
+    ]
+  }
+}

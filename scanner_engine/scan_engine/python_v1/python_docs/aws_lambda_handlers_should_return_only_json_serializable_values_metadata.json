@@ -1,0 +1,187 @@
+{
+  "rule_id": "aws_lambda_handlers_should_return_only_json_serializable_values",
+  "title": "AWS Lambda handlers should return only JSON-serializable values",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that AWS Lambda function handlers return only values that can be serialized to JSON. AWS Lambda automatically attempts to JSON-serialize the return value of handler functions, and returning non-serializable objects (like file handles, database connections, or custom objects without proper serialization) will cause runtime errors. This rule helps prevent such errors by detecting when handlers return values that cannot be safely converted to JSON.",
+  "message": "Lambda handler returns a non-JSON-serializable value. Return only basic types (str, int, float, bool, None), or collections (list, dict) containing only serializable values.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "aws",
+    "lambda",
+    "serialization",
+    "bug",
+    "python",
+    "cloud",
+    "best-practice"
+  ],
+  "impact": "Returning non-serializable values from Lambda handlers will cause the function to fail at runtime with a 'TypeError: Object of type X is not JSON serializable' error. This leads to failed invocations, wasted compute resources, and potential data loss if the function is part of a critical workflow. In serverless architectures, these failures can also trigger retry storms and increased costs.",
+  "recommendation": "Ensure all return values from Lambda handlers are JSON-serializable. Use basic Python types (str, int, float, bool, None) or collections (list, dict) containing only serializable values. For custom objects, implement a __dict__ method or provide a to_dict() method that returns serializable data. Consider using libraries like 'dataclasses.asdict()' for complex objects.",
+  "references": [
+    {
+      "title": "AWS Lambda Programming Model (Python)",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/python-programming-model.html"
+    },
+    {
+      "title": "Python json module documentation",
+      "url": "https://docs.python.org/3/library/json.html"
+    },
+    {
+      "title": "AWS Lambda Best Practices",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def lambda_handler(event, context):\n    # Good: returning basic serializable types\n    return {\n        'statusCode': 200,\n        'body': 'Hello from Lambda!',\n        'headers': {\n            'Content-Type': 'application/json'\n        },\n        'is_success': True,\n        'count': 42,\n        'data': [1, 2, 3, {'key': 'value'}]\n    }",
+        "description": "All returned values are JSON-serializable (dict with strings, numbers, booleans, and lists)"
+      },
+      {
+        "code": "from dataclasses import dataclass, asdict\nfrom datetime import datetime\n\n@dataclass\nclass Response:\n    message: str\n    timestamp: datetime\n    status: int\n\ndef lambda_handler(event, context):\n    response = Response(\n        message='Success',\n        timestamp=datetime.now(),\n        status=200\n    )\n    # Good: converting to dict before returning\n    return asdict(response)",
+        "description": "Using dataclasses.asdict() to properly serialize a custom object"
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def lambda_handler(event, context):\n    # Bad: returning a file handle\n    with open('/tmp/data.txt', 'r') as f:\n        return f",
+        "description": "File handles cannot be JSON-serialized and will cause runtime errors"
+      },
+      {
+        "code": "class CustomObject:\n    def __init__(self, value):\n        self.value = value\n\ndef lambda_handler(event, context):\n    # Bad: returning custom object without serialization\n    return CustomObject('test')",
+        "description": "Custom objects without proper serialization methods will fail"
+      },
+      {
+        "code": "import boto3\n\ndef lambda_handler(event, context):\n    # Bad: returning a boto3 resource\n    s3 = boto3.resource('s3')\n    return s3",
+        "description": "AWS SDK resources/contents are not JSON-serializable"
+      },
+      {
+        "code": "def lambda_handler(event, context):\n    # Bad: returning a set\n    return {1, 2, 3, 4}",
+        "description": "Python sets are not JSON-serializable (use lists instead)"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "subcategory": "cloud-services",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_test": false,
+      "integration_test": false
+    },
+    "impact_area": [
+      "reliability",
+      "cost-optimization",
+      "debuggability"
+    ]
+  },
+  "why_is_this_an_issue": "AWS Lambda functions automatically attempt to JSON-serialize the return value of the handler function. When non-serializable objects are returned, this serialization fails with a TypeError at runtime. This issue is particularly problematic because: 1) It only manifests at runtime, not during development/testing unless explicitly checked; 2) It causes complete failure of the Lambda invocation; 3) In serverless architectures, these failures can trigger automatic retries, leading to cascading failures and increased costs; 4) The error messages may not clearly indicate which part of the return value caused the failure, making debugging difficult. This rule prevents these issues by catching potential serialization problems during static analysis.",
+  "how_to_fix": {
+    "description": "To fix violations of this rule, ensure all return values from Lambda handlers are JSON-serializable. Follow these steps:",
+    "steps": [
+      "1. Identify the non-serializable object being returned (check the error message or static analysis report)",
+      "2. For basic types: Ensure you're only returning str, int, float, bool, None, or collections (list, dict) containing these types",
+      "3. For custom objects: Implement a to_dict() method or use dataclasses.asdict() to convert to a serializable format",
+      "4. For complex objects (like database connections): Extract only the data you need to return, not the object itself",
+      "5. For sets: Convert to lists before returning (json.dumps() can handle lists but not sets)",
+      "6. For datetime objects: Convert to ISO format strings using .isoformat()",
+      "7. Test your changes by attempting to serialize the return value with json.dumps() during development",
+      "8. Consider adding automated tests that verify your handler returns serializable values"
+    ],
+    "additional_tips": [
+      "Use Python's json.dumps() during development to test if your return values are serializable",
+      "For AWS SDK objects, extract only the data you need rather than returning the entire object",
+      "Consider creating helper functions that validate return values before returning them",
+      "Document your API responses to clearly specify what data structures are returned"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "name": "Improper Check or Handling of Exceptional Conditions",
+        "description": "Failing to handle serialization errors properly could lead to information exposure or denial of service"
+      }
+    ],
+    "cert": [],
+    "owasp": [
+      {
+        "id": "API10:2023",
+        "name": "Unsafe Consumption of APIs",
+        "description": "While primarily about API consumption, returning non-serializable data can break API contracts"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "FunctionDef"
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "name"
+        ],
+        "condition": {
+          "operator": "or",
+          "conditions": [
+            {
+              "check_type": "equals",
+              "value": "lambda_handler"
+            },
+            {
+              "check_type": "regex_match",
+              "pattern": "^handle_.+"
+            },
+            {
+              "check_type": "regex_match",
+              "pattern": ".+_handler$"
+            }
+          ]
+        }
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": [
+          "returns"
+        ]
+      },
+      {
+        "check_type": "custom_analysis",
+        "analysis_type": "return_value_serializability",
+        "parameters": {
+          "allowed_types": [
+            "NoneType",
+            "str",
+            "int",
+            "float",
+            "bool",
+            "list",
+            "dict",
+            "tuple"
+          ],
+          "check_nested": true,
+          "max_depth": 5
+        }
+      },
+      {
+        "check_type": "property_check",
+        "property_path": [
+          "body"
+        ],
+        "condition": {
+          "operator": "contains",
+          "check_type": "node_type",
+          "value": "Return"
+        }
+      }
+    ]
+  }
+}

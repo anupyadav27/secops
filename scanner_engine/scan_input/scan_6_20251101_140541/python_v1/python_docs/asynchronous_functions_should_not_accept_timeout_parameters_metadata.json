@@ -1,0 +1,121 @@
+{
+  "rule_id": "asynchronous_functions_should_not_accept_timeout_parameters",
+  "title": "Asynchronous functions should not accept timeout parameters",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when asynchronous functions accept timeout parameters, which is an anti-pattern. Timeout handling in async code should be managed externally (e.g., by the caller using `asyncio.wait_for()`) rather than being built into the function signature. This promotes better separation of concerns and more flexible timeout management.",
+  "message": "Remove the timeout parameter from this asynchronous function. Use 'asyncio.wait_for()' or similar mechanisms to handle timeouts externally instead.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "async",
+    "convention",
+    "best-practice",
+    "python",
+    "design",
+    "timeout"
+  ],
+  "impact": "Having timeout parameters in async functions leads to several issues: (1) Tight coupling between the function and its execution policy, (2) Reduced flexibility in timeout management, (3) Potential for inconsistent timeout behavior across different call sites, and (4) Difficulty in testing timeout scenarios. This can make the codebase harder to maintain and less robust in production environments.",
+  "recommendation": "Remove timeout parameters from async function signatures. Instead, let callers manage timeouts using Python's built-in asyncio facilities like `asyncio.wait_for()` or `asyncio.timeout()`. This approach provides better control and consistency in timeout handling.",
+  "references": [
+    {
+      "title": "Python asyncio - Timeout handling",
+      "url": "https://docs.python.org/3/library/asyncio-task.html#timeouts"
+    },
+    {
+      "title": "Asynchronous Python: Handling Timeouts Gracefully",
+      "url": "https://realpython.com/async-io-python-timeout/"
+    },
+    {
+      "title": "SonarSource Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "import asyncio\n\nasync def fetch_data(url: str):\n    # No timeout parameter in signature\n    response = await make_async_request(url)\n    return response\n\n# Timeout handled externally\nasync def main():\n    try:\n        result = await asyncio.wait_for(fetch_data(\"https://api.example.com\"), timeout=5.0)\n    except asyncio.TimeoutError:\n        print(\"Request timed out\")",
+        "description": "Timeout is managed by the caller using asyncio.wait_for(), providing flexibility and clear separation of concerns."
+      },
+      {
+        "code": "async def process_item(item: dict):\n    # Business logic without timeout concerns\n    validated = await validate_item(item)\n    return await save_to_database(validated)",
+        "description": "Function focuses purely on business logic without mixing in execution policy concerns like timeouts."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "async def fetch_data(url: str, timeout: float = 10.0):\n    # Timeout parameter in async function signature\n    response = await make_async_request(url)\n    return response",
+        "description": "Timeout parameter mixes execution policy with business logic, reducing flexibility and making testing harder."
+      },
+      {
+        "code": "async def process_with_timeout(data: list, timeout: int = 30):\n    for item in data:\n        if time.monotonic() > start + timeout:\n            raise TimeoutError(\"Processing took too long\")\n        await process_item(item)",
+        "description": "Manual timeout handling within the function creates tight coupling and potential bugs in timeout logic."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "code_review": true
+    }
+  },
+  "why_is_this_an_issue": "When asynchronous functions accept timeout parameters, they violate the single responsibility principle by mixing business logic with execution policy. This creates several problems:\n\n1. **Inflexible Timeout Management**: Different callers might need different timeout values, but the function signature forces a one-size-fits-all approach.\n\n2. **Testing Difficulties**: Testing timeout behavior becomes harder as it's baked into the function rather than being controlled by the test.\n\n3. **Inconsistent Behavior**: Timeout logic might be implemented differently across functions, leading to unpredictable behavior.\n\n4. **Maintenance Burden**: Changes to timeout handling require modifying the function rather than just the call site.\n\n5. **Potential Bugs**: Manual timeout implementations are error-prone compared to using well-tested library functions like asyncio.wait_for().\n\nThe Python asyncio library provides robust timeout handling mechanisms that should be preferred over custom implementations in function signatures.",
+  "how_to_fix": {
+    "description": "To fix this issue, follow these steps to remove timeout parameters and use external timeout handling:",
+    "steps": [
+      "1. **Identify all timeout parameters** in your async function signatures (look for parameters named timeout, timeout_sec, deadline, etc.).",
+      "2. **Remove these parameters** from the function signature and any related documentation.",
+      "3. **Update all call sites** to use asyncio.wait_for() or asyncio.timeout() instead:\n     - Replace `await func(arg, timeout=5)` with `await asyncio.wait_for(func(arg), timeout=5)`\n     - For more complex cases, use context managers: `async with asyncio.timeout(5): await func(arg)`",
+      "4. **Update any internal timeout logic** to focus purely on business logic, removing any manual timeout checks.",
+      "5. **Add proper error handling** for TimeoutError exceptions that might be raised by the new external timeout mechanisms.",
+      "6. **Test the changes** to ensure the timeout behavior works as expected in all scenarios.",
+      "7. **Update documentation** to reflect the new approach to timeout handling."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-770",
+        "description": "Allocation of Resources Without Limits or Throttling"
+      }
+    ],
+    "cert": [],
+    "owasp": [
+      {
+        "id": "OWASP:2021-A05",
+        "description": "Security Misconfiguration (includes improper timeout handling)"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "AsyncFunctionDef"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {"check_type": "equals", "property_path": ["args", "args", 0, "arg"], "value": "timeout"},
+          {"check_type": "equals", "property_path": ["args", "args", 1, "arg"], "value": "timeout"},
+          {"check_type": "equals", "property_path": ["args", "args", 2, "arg"], "value": "timeout"},
+          {"check_type": "equals", "property_path": ["args", "args", 0, "arg"], "value": "deadline"},
+          {"check_type": "equals", "property_path": ["args", "args", 1, "arg"], "value": "deadline"},
+          {"check_type": "equals", "property_path": ["args", "args", 2, "arg"], "value": "deadline"},
+          {"check_type": "equals", "property_path": ["args", "args", 0, "arg"], "value": "timeout_sec"},
+          {"check_type": "equals", "property_path": ["args", "args", 1, "arg"], "value": "timeout_sec"},
+          {"check_type": "equals", "property_path": ["args", "args", 2, "arg"], "value": "timeout_sec"},
+          {"check_type": "equals", "property_path": ["args", "args", 0, "arg"], "value": "timeout_ms"},
+          {"check_type": "equals", "property_path": ["args", "args", 1, "arg"], "value": "timeout_ms"},
+          {"check_type": "equals", "property_path": ["args", "args", 2, "arg"], "value": "timeout_ms"}
+        ]
+      }
+    ]
+  }
+}

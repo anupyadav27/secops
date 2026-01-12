@@ -1,0 +1,152 @@
+{
+  "rule_id": "class_names_should_comply_with_a_naming_convention",
+  "title": "Class names should comply with a naming convention",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule enforces that Python class names follow the standard naming convention where class names should use CapWords (PascalCase) convention. This means each word in the class name should start with an uppercase letter, with no underscores between words. Following this convention improves code readability and maintainability, especially in larger codebases where consistent naming is crucial for understanding the code structure at a glance.",
+  "message": "Rename class '{{class_name}}' to follow CapWords (PascalCase) convention.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "naming",
+    "readability",
+    "best-practice",
+    "python",
+    "pep8",
+    "style"
+  ],
+  "impact": "Non-compliant class names reduce code readability and can make the codebase harder to maintain. Inconsistent naming conventions may lead to confusion among developers, especially in collaborative environments where multiple team members work on the same codebase. While this doesn't affect functionality, it does impact the overall quality and professionalism of the code.",
+  "recommendation": "Always use CapWords (PascalCase) convention for class names. Each word in the class name should start with an uppercase letter, with no underscores between words. For example, use 'MyClass' instead of 'my_class' or 'myClass'.",
+  "references": [
+    {
+      "title": "PEP 8 -- Style Guide for Python Code (Naming Conventions)",
+      "url": "https://peps.python.org/pep-0008/#class-names"
+    },
+    {
+      "title": "Google Python Style Guide (Class Names)",
+      "url": "https://google.github.io/styleguide/pyguide.html#316-classs"
+    },
+    {
+      "title": "SonarSource Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "class UserAccount:\n    def __init__(self, name):\n        self.name = name",
+        "description": "Class name follows CapWords convention with each word capitalized."
+      },
+      {
+        "code": "class HTTPResponseHandler:\n    pass",
+        "description": "Acronyms in class names should have all letters capitalized (e.g., 'HTTP' not 'Http')."
+      },
+      {
+        "code": "class DatabaseConnectionPool:\n    pass",
+        "description": "Multi-word class names are properly capitalized without underscores."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "class user_account:\n    def __init__(self, name):\n        self.name = name",
+        "description": "Class name uses lowercase letters and underscores, violating CapWords convention."
+      },
+      {
+        "code": "class myClass:\n    pass",
+        "description": "Class name uses camelCase instead of CapWords convention."
+      },
+      {
+        "code": "class HTTP_response_handler:\n    pass",
+        "description": "Class name mixes lowercase letters and underscores, and doesn't properly capitalize the acronym."
+      },
+      {
+        "code": "class 123Invalid:\n    pass",
+        "description": "Class name starts with a number, which is invalid in Python and violates naming conventions."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": true,
+      "linters": [
+        "pylint",
+        "flake8",
+        "sonarpython"
+      ],
+      "ide_plugins": [
+        "PyCharm",
+        "VSCode Python Extension"
+      ]
+    },
+    "enforcement": "build-time"
+  },
+  "why_is_this_an_issue": {
+    "readability": "Inconsistent class naming makes it harder for developers to quickly identify classes in the codebase, especially when scanning through files or looking at class hierarchies. CapWords convention is a widely accepted standard in Python that helps maintain visual consistency.",
+    "maintainability": "When class names don't follow a consistent pattern, refactoring becomes more error-prone. Developers might overlook classes that don't match the expected naming pattern when making changes.",
+    "professionalism": "Following standard conventions demonstrates attention to detail and professionalism in code quality. It's particularly important in open-source projects or when code might be reviewed by others.",
+    "tool_compatibility": "Many Python tools and IDEs expect standard naming conventions. Non-compliant names might not work as expected with these tools or might trigger warnings in linters."
+  },
+  "how_to_fix": {
+    "description": "To fix this issue, rename the class to follow CapWords (PascalCase) convention. This involves capitalizing the first letter of each word in the class name and removing any underscores or other non-alphanumeric characters (except numbers, which should not start the name).",
+    "steps": [
+      "Identify all references to the non-compliant class name in your codebase (including imports, instantiations, and inheritance).",
+      "Change the class definition to use CapWords convention (e.g., change 'user_account' to 'UserAccount').",
+      "Update all references to the class to use the new name. Most modern IDEs provide refactoring tools that can help with this process.",
+      "If the class name contains acronyms, capitalize all letters of the acronym (e.g., 'HTTPResponse' not 'HttpResponse').",
+      "Run your test suite to ensure the changes didn't introduce any regressions.",
+      "Commit the changes with a clear message indicating the naming convention fix."
+    ],
+    "automated_tools": "You can use automated tools like pylint (with the 'invalid-name' checker), flake8 (with the 'N801' rule), or SonarQube/SonarCloud to detect and sometimes automatically fix these naming issues."
+  },
+  "security_mappings": {
+    "cwe": [],
+    "cert": [],
+    "owasp": [],
+    "note": "This rule is primarily about code quality and maintainability rather than security, so it doesn't map to common security weakness enumerations."
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "ClassDef"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "regex",
+            "property_path": ["name"],
+            "regex": "^[a-z].*",
+            "description": "Class name starts with lowercase letter"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["name"],
+            "regex": ".*_.*",
+            "description": "Class name contains underscores"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["name"],
+            "regex": "^[^A-Za-z_].*",
+            "description": "Class name starts with non-letter character (excluding underscore)"
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["name"],
+            "regex": "^[A-Z][a-z0-9]+([A-Z][a-z0-9]+)*$",
+            "negate": true,
+            "description": "Class name doesn't match CapWords pattern (PascalCase)"
+          }
+        ]
+      }
+    ]
+  }
+}

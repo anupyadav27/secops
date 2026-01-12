@@ -1,0 +1,121 @@
+{
+  "rule_id": "cognitive_complexity_of_functions_should_not_be_too_high",
+  "title": "Cognitive Complexity of Functions Should Not Be Too High",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule checks that functions do not have an excessive cognitive complexity. Cognitive complexity measures how hard it is to understand and maintain code by counting the number of nested control flow structures (if, for, while, etc.) and logical operators (&&, ||, etc.) that require a developer to break their linear reading flow. High cognitive complexity makes code harder to understand, test, and maintain.",
+  "message": "Refactor this function to reduce its Cognitive Complexity from {{complexity}} to the {{threshold}} allowed.",
+  "remediation": {
+    "func": "Linear",
+    "constantCost": "20min",
+    "baseEffort": "10min"
+  },
+  "tags": [
+    "brain-overload",
+    "convention",
+    "maintainability",
+    "misra",
+    "pitfall",
+    "python",
+    "readability"
+  ],
+  "impact": "High cognitive complexity makes code harder to understand, increases the likelihood of bugs, and makes maintenance more difficult. Functions with high cognitive complexity are more prone to errors during modification and are harder to test thoroughly.",
+  "recommendation": "Break down the function into smaller, focused functions. Each function should do one thing and do it well. Extract complex logic into separate helper functions with clear, descriptive names. Consider using early returns to simplify nested conditions.",
+  "references": [
+    {
+      "title": "Cognitive Complexity - SonarSource",
+      "url": "https://www.sonarsource.com/resources/white-papers/cognitive-complexity/"
+    },
+    {
+      "title": "Python Clean Code - Refactoring High Complexity Functions",
+      "url": "https://realpython.com/python-refactoring/"
+    },
+    {
+      "title": "MISRA C:2012 Guidelines (Relevant for Complexity)",
+      "url": "https://www.misra.org.uk/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def calculate_discount(price: float, is_member: bool, is_holiday: bool) -> float:\n    \"\"\"Calculate discount with clear, simple logic.\"\"\"\n    discount = 0.0\n    \n    if is_holiday:\n        discount = 0.1  # 10% holiday discount\n    \n    if is_member:\n        discount += 0.05  # Additional 5% for members\n    \n    return price * (1 - discount)",
+        "description": "This function has low cognitive complexity (2) because it uses simple, linear conditions without nesting. Each condition is independent and easy to understand."
+      },
+      {
+        "code": "def validate_user_age(age: int) -> bool:\n    \"\"\"Validate if user age meets requirements.\"\"\"\n    if age < 0:\n        return False\n    if age < 13:\n        return False  # Too young\n    if age > 120:\n        return False  # Unrealistic age\n    return True",
+        "description": "Early returns keep the cognitive complexity low (3). Each condition is checked sequentially without nesting."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def process_order(order: dict, user: dict, inventory: dict) -> bool:\n    \"\"\"Process an order with complex validation logic.\"\"\"\n    if user['status'] == 'active':\n        if order['items']:\n            for item in order['items']:\n                if item['id'] in inventory:\n                    if inventory[item['id']]['stock'] >= item['quantity']:\n                        if user['credit'] >= (item['price'] * item['quantity']):\n                            if (user['region'] == 'EU' and item['restricted']) or \\\n                               (user['region'] == 'US' and not item['compliant']):\n                                return False  # Restricted item\n                            else:\n                                inventory[item['id']]['stock'] -= item['quantity']\n                                user['credit'] -= (item['price'] * item['quantity'])\n                                return True\n                        else:\n                            return False  # Insufficient credit\n                    else:\n                        return False  # Insufficient stock\n                else:\n                    return False  # Item not in inventory\n        else:\n            return False  # Empty order\n    else:\n        return False  # Inactive user",
+        "description": "This function has very high cognitive complexity (15+) due to deeply nested conditions (5 levels) and complex logical expressions. It combines multiple responsibilities (validation, inventory management, payment processing) and is extremely difficult to understand or modify safely."
+      },
+      {
+        "code": "def calculate_tax(income: float, deductions: list, exemptions: dict, state: str) -> float:\n    \"\"\"Calculate tax with overly complex logic.\"\"\"\n    taxable_income = income\n    \n    if state in ['CA', 'NY', 'NJ']:\n        if len(deductions) > 0:\n            for deduction in deductions:\n                if deduction['type'] == 'standard' and deduction['amount'] > 0:\n                    taxable_income -= deduction['amount']\n                elif deduction['type'] == 'itemized' and (state == 'CA' or state == 'NY'):\n                    if deduction['category'] in exemptions and exemptions[deduction['category']] > 0:\n                        taxable_income -= min(deduction['amount'], exemptions[deduction['category']])\n                    else:\n                        taxable_income -= deduction['amount'] * 0.8\n                else:\n                    taxable_income -= deduction['amount'] * 0.5\n        else:\n            taxable_income -= 12000  # Standard deduction\n    else:\n        if len(deductions) > 0:\n            for deduction in deductions:\n                if deduction['type'] == 'standard':\n                    taxable_income -= deduction['amount'] * 0.9\n                else:\n                    taxable_income -= deduction['amount'] * 0.7\n        else:\n            taxable_income -= 8000\n    \n    if taxable_income <= 0:\n        return 0.0\n    elif taxable_income <= 50000:\n        return taxable_income * 0.1\n    elif taxable_income <= 100000:\n        return 5000 + (taxable_income - 50000) * 0.15\n    else:\n        return 12500 + (taxable_income - 100000) * 0.2",
+        "description": "This function has high cognitive complexity (12) due to multiple nested conditions (4 levels), complex logical expressions in the conditions, and a long sequence of mutually exclusive conditions at the end. The tax calculation logic is intertwined with deduction processing, making it hard to verify correctness."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-quality",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "code_review": true,
+      "threshold": 10
+    }
+  },
+  "why_is_this_an_issue": "High cognitive complexity makes code difficult to understand, which leads to several problems:\n\n1. **Increased Bug Risk**: Developers are more likely to introduce bugs when modifying complex functions because they may not fully understand all the control flow paths.\n\n2. **Maintenance Difficulty**: Complex functions are harder to modify safely. Even small changes can have unintended side effects in other parts of the function.\n\n3. **Testing Challenges**: Functions with high cognitive complexity require more test cases to achieve good coverage, and the tests themselves become more complex to write and maintain.\n\n4. **Knowledge Transfer**: New team members take longer to understand complex functions, slowing down onboarding and increasing the bus factor.\n\n5. **Performance Impact**: While not always the case, highly complex functions often indicate that the code could be optimized by breaking it down into simpler components.\n\n6. **Technical Debt**: Complex functions accumulate technical debt over time as they become fear-inducing code that developers avoid touching.\n\nThe cognitive complexity metric helps identify functions that would benefit from refactoring to improve maintainability and reduce risk.",
+  "how_to_fix": {
+    "description": "To reduce cognitive complexity, follow these systematic steps to refactor the function:",
+    "steps": [
+      "1. **Identify the Main Responsibility**: Determine the primary purpose of the function. If it's doing multiple things, each should become its own function.",
+      "2. **Extract Helper Functions**: For each distinct sub-task or condition block, create a separate function with a clear, descriptive name that explains what it does.",
+      "3. **Simplify Conditions**: Break down complex logical expressions (especially those with multiple &&/|| operators) into separate if statements or extract them into well-named boolean functions.",
+      "4. **Reduce Nesting**: Use early returns or continue statements to exit functions early rather than nesting conditions. The 'guard clause' pattern is particularly effective.",
+      "5. **Use Data Structures**: Sometimes complexity comes from primitive obsession. Consider using classes or named tuples to group related data and operations.",
+      "6. **Apply the Single Responsibility Principle**: Each function should do one thing and do it well. If a function needs a long name to describe what it does, it's probably doing too much.",
+      "7. **Test Incrementally**: After each refactoring step, run your tests to ensure you haven't changed the behavior. Small, incremental changes are safer than large rewrites.",
+      "8. **Review the Result**: After refactoring, check the cognitive complexity again. Aim for a maximum of 15, but try to get below 10 for most functions.",
+      "9. **Document the Logic**: Add clear docstrings to the new functions explaining their purpose and the logic they encapsulate.",
+      "10. **Consider Design Patterns**: For particularly complex logic, research if a design pattern (Strategy, State, etc.) could help organize the code more cleanly."
+    ],
+    "example_refactoring": {
+      "before": "def process_data(data: list) -> dict:\n    result = {'valid': [], 'invalid': [], 'errors': []}\n    \n    if len(data) > 0:\n        for item in data:\n            if 'id' in item and 'value' in item:\n                if isinstance(item['id'], int) and item['id'] > 0:\n                    if isinstance(item['value'], (int, float)):\n                        if item['value'] >= 0 and item['value'] <= 1000:\n                            if 'timestamp' in item:\n                                if isinstance(item['timestamp'], str):\n                                    try:\n                                        datetime.fromisoformat(item['timestamp'])\n                                        result['valid'].append(item)\n                                    except ValueError:\n                                        result['invalid'].append(item)\n                                        result['errors'].append(f\"Invalid timestamp format: {item['timestamp']}\")\n                                else:\n                                    result['invalid'].append(item)\n                                    result['errors'].append(f\"Timestamp not a string: {item['timestamp']}\")\n                            else:\n                                result['valid'].append(item)\n                        else:\n                            result['invalid'].append(item)\n                            result['errors'].append(f\"Value out of range: {item['value']}\")\n                    else:\n                        result['invalid'].append(item)\n                        result['errors'].append(f\"Invalid value type: {type(item['value'])}\")\n                else:\n                    result['invalid'].append(item)\n                    result['errors'].append(f\"Invalid ID: {item['id']}\")\n            else:\n                result['invalid'].append(item)\n                result['errors'].append(\"Missing required fields\")\n    \n    return result",
+      "after": "def is_valid_id(item: dict) -> bool:\n    \"\"\"Check if item has a valid positive integer ID.\"\"\"\n    return 'id' in item and isinstance(item['id'], int) and item['id'] > 0\n\n\ndef is_valid_value(item: dict) -> bool:\n    \"\"\"Check if item has a valid numeric value between 0-1000.\"\"\"\n    return ('value' in item and isinstance(item['value'], (int, float)) and \n            0 <= item['value'] <= 1000)\n\n\ndef is_valid_timestamp(item: dict) -> bool:\n    \"\"\"Check if item has a valid ISO format timestamp.\"\"\"\n    if 'timestamp' not in item:\n        return True  # timestamp is optional\n    \n    if not isinstance(item['timestamp'], str):\n        return False\n    \n    try:\n        datetime.fromisoformat(item['timestamp'])\n        return True\n    except ValueError:\n        return False\n\n\ndef process_data(data: list) -> dict:\n    \"\"\"Process a list of data items, separating valid and invalid entries.\"\"\"\n    result = {'valid': [], 'invalid': [], 'errors': []}\n    \n    for item in data:\n        # Early continue for items missing required fields\n        if not ('id' in item and 'value' in item):\n            result['invalid'].append(item)\n            result['errors'].append(\"Missing required fields\")\n            continue\n        \n        # Validate each aspect separately\n        if not is_valid_id(item):\n            result['invalid'].append(item)\n            result['errors'].append(f\"Invalid ID: {item.get('id')}\")\n            continue\n        \n        if not is_valid_value(item):\n            result['invalid'].append(item)\n            result['errors'].append(f\"Invalid value: {item.get('value')}\")\n            continue\n        \n        if not is_valid_timestamp(item):\n            result['invalid'].append(item)\n            error = f\"Invalid timestamp: {item.get('timestamp')}\"\n            result['errors'].append(error)\n            continue\n        \n        # If all validations passed\n        result['valid'].append(item)\n    \n    return result"
+    }
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-1074",
+        "name": "Excessive Complexity",
+        "description": "The code contains excessive complexity, which could lead to maintainability issues and potential vulnerabilities that are difficult to identify and fix."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC54-CPP",
+        "name": "Use null pointers with care and only when necessary",
+        "description": "While not directly about complexity, high complexity often leads to pointer/reference issues that this rule aims to prevent."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "FunctionDef"
+      },
+      {
+        "check_type": "greater_than",
+        "property_path": ["cognitive_complexity"],
+        "value": 10
+      }
+    ]
+  }
+}

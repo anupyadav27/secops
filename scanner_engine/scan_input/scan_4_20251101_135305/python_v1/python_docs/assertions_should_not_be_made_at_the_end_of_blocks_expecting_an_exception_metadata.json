@@ -1,0 +1,161 @@
+{
+  "rule_id": "assertions_should_not_be_made_at_the_end_of_blocks_expecting_an_exception",
+  "title": "Assertions should not be made at the end of blocks expecting an exception",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects when `assert` statements are placed at the end of `try` blocks that are designed to catch exceptions. Assertions in such positions are problematic because they will only execute if no exception was raised, which defeats the purpose of exception handling. These assertions often indicate a misunderstanding of control flow or an attempt to verify conditions that should be handled through proper exception handling mechanisms.",
+  "message": "Remove this assertion or move it outside the exception-handling block. Assertions at the end of 'try' blocks are ineffective for exception cases.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "convention",
+    "error-handling",
+    "best-practice",
+    "python",
+    "assertion",
+    "exception"
+  ],
+  "impact": "Assertions at the end of exception-handling blocks create false confidence in code correctness. They fail to execute when exceptions occur (the very cases they might be intended to check), leading to undetected logical errors. This can result in bugs that only manifest in production when exceptions actually occur, making debugging more difficult.",
+  "recommendation": "Replace end-of-block assertions with proper exception handling logic or move them outside the try block. Use explicit condition checks with appropriate error handling rather than assertions for production code.",
+  "references": [
+    {
+      "title": "Python Documentation: Errors and Exceptions",
+      "url": "https://docs.python.org/3/tutorial/errors.html"
+    },
+    {
+      "title": "Python Assertions: When to Use and When to Avoid",
+      "url": "https://realpython.com/python-assert-statement/"
+    },
+    {
+      "title": "SonarSource: Python Coding Rules",
+      "url": "https://rules.sonarsource.com/python/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept ValueError as e:\n    handle_error(e)\nelse:\n    # This runs only if no exception occurred\n    assert post_condition(), \"Post-condition failed\"",
+        "description": "Assertion is placed in the else clause where it will only execute if no exception occurred, making its intent clear."
+      },
+      {
+        "code": "try:\n    result = risky_operation()\nexcept ValueError as e:\n    handle_error(e)\n    return fallback_value()\n\n# Assertion outside the try block\nassert result is not None, \"Operation should return a value\"",
+        "description": "Assertion is moved outside the exception handling block where it will always execute."
+      },
+      {
+        "code": "try:\n    value = get_value()\nexcept KeyError:\n    value = default_value()\n\nif not validate_value(value):\n    raise RuntimeError(\"Invalid value obtained\")",
+        "description": "Uses explicit validation with proper error raising instead of assertions."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "try:\n    risky_operation()\n    assert post_condition(), \"This won't run if an exception occurs\"\nexcept ValueError:\n    handle_error()",
+        "description": "The assertion will never execute if risky_operation() raises an exception, making it ineffective for its intended purpose."
+      },
+      {
+        "code": "try:\n    data = fetch_data()\n    process(data)\n    assert data_is_valid(data), \"Data validation\"\nexcept IOError:\n    log_error()\n    return None",
+        "description": "The data validation assertion is useless if fetch_data() fails, as the exception will skip it entirely."
+      },
+      {
+        "code": "def complex_operation():\n    try:\n        step1()\n        step2()\n        assert final_check(), \"Final verification\"\n    except Exception:\n        cleanup()\n        return False\n    return True",
+        "description": "The final_check assertion provides no value when exceptions occur during step1 or step2."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "coding-standards",
+    "priority": "medium",
+    "automation": {
+      "static_analysis": "high",
+      "code_review": "medium"
+    },
+    "lifecycle_stage": [
+      "development",
+      "testing"
+    ]
+  },
+  "why_is_this_an_issue": "Assertions at the end of try blocks create several problems:\n\n1. **False Sense of Security**: Developers may believe the assertion will catch issues, but it won't execute when exceptions occur.\n\n2. **Hidden Bugs**: Conditions that should be verified might fail silently when exceptions are raised, only manifesting in production.\n\n3. **Poor Error Handling**: Assertions bypass normal error handling mechanisms, potentially leaving the system in an inconsistent state.\n\n4. **Maintenance Issues**: The code's true control flow becomes less obvious, making maintenance more difficult.\n\n5. **Testing Gaps**: Tests might pass when no exceptions occur, but fail to catch issues that appear during exception cases.\n\nThis pattern often indicates either a misunderstanding of Python's exception handling or an attempt to use assertions for production-time validation (which they're not designed for).",
+  "how_to_fix": {
+    "description": "To fix this issue, follow these steps to replace problematic assertions with proper validation:",
+    "steps": [
+      "1. **Identify the assertion's purpose**: Determine what condition the assertion is trying to verify.",
+      "2. **Move validation outside the try block**: Place the check in a location where it will always execute, such as after the try-except block.",
+      "3. **Replace with explicit checks**: Convert assertions to proper if-then-raise patterns for production code:\n     ```python\n     if not condition:\n         raise ValueError(\"Descriptive error message\")\n     ```",
+      "4. **Use else clauses for post-exception checks**: If the check should only run when no exception occurs, place it in an else clause:\n     ```python\n     try:\n         risky_operation()\n     except SomeError:\n         handle_error()\n     else:\n         assert post_condition()\n     ```",
+      "5. **Consider logging**: For debugging assertions, consider using logging instead:\n     ```python\n     if not condition:\n         logger.warning(\"Unexpected condition met\")\n     ```",
+      "6. **Add proper error handling**: Ensure all possible error cases are handled explicitly rather than relying on assertions.",
+      "7. **Write tests**: Create test cases that verify both the happy path and exception cases to ensure your validation works in all scenarios."
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-703",
+        "name": "Improper Check or Handling of Exceptional Conditions",
+        "description": "The code does not properly anticipate or handle exceptional conditions that rarely occur during normal operation of the software."
+      }
+    ],
+    "cert": [
+      {
+        "id": "ERR02-J",
+        "name": "Prefer exceptions to detecting and returning errors",
+        "description": "Using assertions for error handling violates this principle by not properly using Python's exception mechanism."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Try"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "body",
+              "-1",
+              "node_type"
+            ],
+            "value": "Assert"
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "finalbody",
+              "-1",
+              "node_type"
+            ],
+            "value": "Assert"
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "handlers"
+            ],
+            "value": []
+          }
+        ]
+      },
+      {
+        "check_type": "count_comparison",
+        "property_path": [
+          "body"
+        ],
+        "operator": ">",
+        "value": 0
+      }
+    ]
+  }
+}

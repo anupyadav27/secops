@@ -1,0 +1,101 @@
+{
+  "rule_id": "alternatives_in_regular_expressions_should_be_grouped_when_used_with_anchors",
+  "title": "Alternatives in regular expressions should be grouped when used with anchors",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "When using anchors (such as ^ or $) in regular expressions, alternatives (expressions separated by the | operator) should be grouped using parentheses. Without grouping, the anchors may not apply as intended, leading to unexpected matches or bugs. Grouping ensures that the anchor applies to the entire alternation, not just the first or last alternative.",
+  "message": "Group alternatives in regular expressions when using anchors to ensure the anchor applies to the entire alternation.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "5min"
+  },
+  "tags": [
+    "regex",
+    "reliability",
+    "bug",
+    "python"
+  ],
+  "impact": "High",
+  "recommendation": "Wrap the alternatives in parentheses to group them when using anchors. For example, use \"^(pattern1|pattern2)$\" instead of \"^pattern1|pattern2$\".",
+  "references": [
+    {
+      "title": "Python Regular Expression Documentation",
+      "url": "https://docs.python.org/3/library/re.html"
+    },
+    {
+      "title": "Regular Expression Anchors and Grouping",
+      "url": "https://www.regular-expressions.info/anchors.html"
+    }
+  ],
+  "examples": [
+    {
+      "type": "noncompliant",
+      "description": "Alternatives without grouping when using anchors",
+      "code": "import re\n\n# Noncompliant: anchor applies only to first alternative\npattern = r\"^start|end$\"\nresult = re.match(pattern, \"start\")\nresult2 = re.match(pattern, \"end\")\n\n# Noncompliant: anchor applies only to last alternative\npattern2 = r\"^start|middle|end$\""
+    },
+    {
+      "type": "compliant", 
+      "description": "Alternatives properly grouped with anchors",
+      "code": "import re\n\n# Compliant: anchor applies to entire alternation\npattern = r\"^(start|end)$\"\nresult = re.match(pattern, \"start\")\nresult2 = re.match(pattern, \"end\")\n\n# Compliant: anchor applies to entire alternation\npattern2 = r\"^(start|middle|end)$\""
+    }
+  ],
+  "devsecops": {
+    "category": "Code Quality",
+    "subcategory": "Reliability",
+    "priority": "Medium"
+  },
+  "why_is_this_an_issue": "When using anchors (^ or $) with alternatives in regular expressions, the anchor only applies to the first or last alternative without proper grouping. This can lead to unexpected matching behavior where the regex might match strings that do not actually start or end with the intended patterns. For example, \"^start|end$\" will match \"start\" at the beginning of a string OR \"end\" at the end, but it will also match \"end\" anywhere in the string if it is at the end, which may not be the intended behavior.",
+  "how_to_fix": "Wrap the alternatives in parentheses to group them when using anchors. This ensures that the anchor applies to the entire alternation. Change \"^pattern1|pattern2$\" to \"^(pattern1|pattern2)$\" to make the anchor apply to both alternatives.",
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-20",
+        "name": "Improper Input Validation"
+      }
+    ],
+    "cert": [
+      {
+        "id": "STR02-J",
+        "name": "Specify an appropriate locale when comparing locale-dependent data"
+      }
+    ],
+    "owasp": [
+      {
+        "id": "A03:2021",
+        "name": "Injection"
+      }
+    ]
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Call"
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": "func"
+      },
+      {
+        "check_type": "regex_match",
+        "property_path": "func.id",
+        "value": "^(re\\.(match|search|findall|finditer)|compile)$"
+      },
+      {
+        "check_type": "property_exists",
+        "property_path": "args"
+      },
+      {
+        "check_type": "contains",
+        "property_path": "args",
+        "value": {
+          "check_type": "regex_match",
+          "property_path": "s",
+          "value": "\\^.*\\|.*\\$|\\^.*\\|.*|.*\\|.*\\$"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "rule_id": "a_subclass_should_not_be_in_the_same_except_statement_as_a_parent_class",
+  "title": "A subclass should not be in the same \"except\" statement as a parent class",
+  "type": "CODE_SMELL",
+  "status": "ready",
+  "defaultSeverity": "Minor",
+  "description": "When catching exceptions, it is redundant to catch both a parent exception class and one of its subclasses in the same except statement. Since Python exception handling follows the inheritance hierarchy, catching the parent class will automatically catch all its subclasses, making the subclass catch redundant and potentially confusing.",
+  "message": "Remove this redundant exception class; it is already covered by its parent class \"{parent_class}\".",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "1min"
+  },
+  "tags": [
+    "error-handling",
+    "bad-practice",
+    "unused",
+    "redundant"
+  ],
+  "impact": {
+    "attribute": "LOGICAL",
+    "impacts": {
+      "MAINTAINABILITY": "LOW"
+    }
+  },
+  "recommendation": "Remove the redundant subclass from the except statement. Only catch the most specific exception class that you need to handle, or catch the parent class if you want to handle all subclasses uniformly.",
+  "references": [
+    {
+      "url": "https://docs.python.org/3/tutorial/errors.html#handling-exceptions",
+      "title": "Python Exception Handling Documentation"
+    },
+    {
+      "url": "https://pep8.org/#programming-recommendations",
+      "title": "PEP 8 Programming Recommendations"
+    },
+    {
+      "url": "https://rules.sonarsource.com/python/RSPEC-5713/",
+      "title": "SonarSource Rule RSPEC-5713"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept (ValueError, TypeError, Exception):  # Noncompliant: ValueError and TypeError are subclasses of Exception\n    handle_error()",
+        "description": "Both ValueError and TypeError are already covered by Exception"
+      },
+      {
+        "code": "try:\n    process_file()\nexcept (IOError, OSError):  # Noncompliant: IOError is a subclass of OSError (Python 3+)\n    handle_io_error()",
+        "description": "IOError is redundant as it's an alias for OSError in Python 3+"
+      },
+      {
+        "code": "try:\n    parse_data()\nexcept (LookupError, KeyError, IndexError):  # Noncompliant: KeyError and IndexError inherit from LookupError\n    handle_lookup_error()",
+        "description": "KeyError and IndexError are both subclasses of LookupError"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "try:\n    risky_operation()\nexcept Exception:\n    handle_error()",
+        "description": "Catch only the parent class to handle all subclasses"
+      },
+      {
+        "code": "try:\n    risky_operation()\nexcept (ValueError, TypeError):\n    handle_specific_errors()",
+        "description": "Catch specific exception types without their parent"
+      },
+      {
+        "code": "try:\n    parse_data()\nexcept ValueError:\n    handle_value_error()\nexcept TypeError:\n    handle_type_error()\nexcept Exception:\n    handle_general_error()",
+        "description": "Use separate except blocks for different handling logic"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code_quality",
+    "priority": "low",
+    "effort": "minimal"
+  },
+  "why_is_this_an_issue": "Having redundant exception classes in the same except statement creates unnecessary code complexity and can be misleading to other developers. It suggests that different handling might occur for the subclass versus the parent class, when in fact the same handler will be used for both. This violates the DRY (Don't Repeat Yourself) principle and makes the code less maintainable. Additionally, the order of exception classes in a tuple doesn't matter for catching, but having both parent and child classes can create confusion about exception handling precedence.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify the inheritance relationship between the exception classes in your except statement."
+    },
+    {
+      "step": 2,
+      "description": "Remove the subclass(es) that are already covered by their parent class."
+    },
+    {
+      "step": 3,
+      "description": "If you need different handling for specific exception types, use separate except blocks instead of combining them in a tuple."
+    },
+    {
+      "step": 4,
+      "description": "Consider whether you actually need to catch the broad parent class or if catching only specific subclasses would be more appropriate for your use case."
+    }
+  ],
+  "security_mappings": {
+    "cwe": [],
+    "owasp": [],
+    "cert": [],
+    "sans": []
+  },
+  "logic": {
+    "node_type": ["ExceptHandler"],
+    "property_path": ["type", "elts", "*", "id"],
+    "check_type": "custom",
+    "custom_function": "check_redundant_exception_hierarchy"
+  }
+}

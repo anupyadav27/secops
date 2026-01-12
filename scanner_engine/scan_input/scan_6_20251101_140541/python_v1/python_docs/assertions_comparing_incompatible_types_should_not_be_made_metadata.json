@@ -1,0 +1,238 @@
+{
+  "rule_id": "assertions_comparing_incompatible_types_should_not_be_made",
+  "title": "Assertions should not compare incompatible types",
+  "type": "BUG",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "This rule detects assertions that compare values of incompatible types (e.g., comparing a string with a number). Such comparisons are always problematic because they can lead to unexpected behavior, false positives/negatives in tests, and make the code harder to understand. In Python, comparing incompatible types doesn't raise an error but often returns `False`, which can mask real issues in the code.",
+  "message": "Remove this assertion that compares incompatible types ('{0}' and '{1}').",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "10min"
+  },
+  "tags": [
+    "bug",
+    "testability",
+    "reliability",
+    "python",
+    "assertion",
+    "type-safety"
+  ],
+  "impact": "Assertions comparing incompatible types can lead to tests passing when they should fail, or failing when they should pass. This undermines test reliability and can hide real bugs in the codebase. Such assertions make the code harder to maintain and reason about, as their behavior isn't intuitive.",
+  "recommendation": "Replace the assertion with one that compares compatible types. If you need to compare different types, explicitly convert them to a common type first (e.g., using `str()` or `int()`). Consider using proper type hints and validation to prevent such issues at the source.",
+  "references": [
+    {
+      "title": "Python Documentation: Value Comparisons",
+      "url": "https://docs.python.org/3/reference/expressions.html#value-comparisons"
+    },
+    {
+      "title": "SonarSource: Writing Good Unit Tests",
+      "url": "https://www.sonarsource.com/resources/white-papers/unit-testing/"
+    },
+    {
+      "title": "PEP 484 -- Type Hints",
+      "url": "https://peps.python.org/pep-0484/"
+    }
+  ],
+  "examples": {
+    "compliant": [
+      {
+        "code": "def test_string_length():\n    result = get_string()\n    assert len(result) == 10  # Comparing two integers",
+        "description": "Compares two values of the same type (integer length with integer literal)."
+      },
+      {
+        "code": "def test_converted_types():\n    user_input = '42'\n    expected = 42\n    assert int(user_input) == expected  # Explicit conversion before comparison",
+        "description": "Explicitly converts string to integer before comparison with another integer."
+      },
+      {
+        "code": "def test_same_type_comparison():\n    actual = get_float_value()\n    expected = 3.14\n    assert abs(actual - expected) < 0.001  # Comparing floats with tolerance",
+        "description": "Compares two float values with proper tolerance handling."
+      }
+    ],
+    "noncompliant": [
+      {
+        "code": "def test_bad_comparison():\n    result = get_string()\n    assert result == 10  # Comparing string with integer",
+        "description": "Compares a string with an integer, which will always evaluate to False unless the string is explicitly converted."
+      },
+      {
+        "code": "def test_list_vs_dict():\n    data = ['a', 'b', 'c']\n    assert data == {'a': 1, 'b': 2}  # Comparing list with dict",
+        "description": "Compares a list with a dictionary - these can never be equal in Python."
+      },
+      {
+        "code": "def test_none_comparison():\n    value = get_value()\n    assert value == 0  # Might compare None with 0 if get_value() returns None",
+        "description": "Potentially compares None with 0, which is always False but might hide real issues."
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "code-reliability",
+    "priority": "high",
+    "automation": {
+      "static_analysis": true,
+      "unit_testing": true,
+      "code_review": true
+    }
+  },
+  "why_is_this_an_issue": "Assertions comparing incompatible types create several problems:\n\n1. **Unreliable Tests**: Such assertions can pass or fail for reasons unrelated to the actual logic being tested, making tests unreliable.\n\n2. **Hidden Bugs**: When these assertions fail, they might mask the real issues in the code because the failure reason isn't obvious.\n\n3. **Maintenance Difficulty**: Code with such assertions is harder to maintain because developers need to understand the implicit type conversions happening.\n\n4. **False Sense of Security**: Tests with these assertions might appear to be working while actually not testing what they're supposed to test.\n\n5. **Performance Impact**: Some type comparisons might trigger unnecessary type conversion operations.\n\nIn Python, comparing incompatible types doesn't raise an error but follows specific rules (e.g., different types are considered unequal unless one is a subclass of the other). This can lead to surprising behavior that's hard to debug.",
+  "how_to_fix": {
+    "description": "To fix assertions comparing incompatible types, follow these steps:",
+    "steps": [
+      "1. **Identify the types**: Determine the actual types of both sides of the comparison using `type()` or type hints.",
+      "2. **Explicit conversion**: If you need to compare different types, explicitly convert one or both values to a common type before comparison (e.g., `str(value)` or `int(value)`).",
+      "3. **Add type hints**: Use Python type hints to make expected types clear in the code.",
+      "4. **Use proper assertions**: Replace the problematic assertion with one that compares compatible types or uses proper validation methods.",
+      "5. **Add input validation**: If the function receiving the values can get different types, add explicit type checking or validation.",
+      "6. **Consider custom comparison**: For complex cases, create a helper function that performs the comparison with proper type handling.",
+      "7. **Review test logic**: Ensure the test is actually testing the intended behavior and not just checking type compatibility."
+    ],
+    "additional_tips": [
+      "Use `isinstance()` checks when you need to handle multiple types",
+      "Consider using pytest's `approx()` for floating-point comparisons",
+      "For dictionary comparisons, consider checking specific keys rather than the whole dict",
+      "Use Python's `typing` module for complex type scenarios"
+    ]
+  },
+  "security_mappings": {
+    "cwe": [
+      {
+        "id": "CWE-480",
+        "name": "Use of Incompatible Type Comparisons",
+        "description": "The product performs a comparison between two entities, but the entities are of incompatible types, which can lead to unexpected results."
+      }
+    ],
+    "cert": [
+      {
+        "id": "MSC02-C",
+        "name": "Avoid incomparable type comparisons",
+        "description": "Comparing values of incompatible types can lead to undefined or unexpected behavior."
+      }
+    ],
+    "owasp": []
+  },
+  "logic": {
+    "operator": "and",
+    "conditions": [
+      {
+        "check_type": "node_type",
+        "value": "Assert"
+      },
+      {
+        "operator": "or",
+        "conditions": [
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "test",
+              "left",
+              "node_type"
+            ],
+            "condition": {
+              "operator": "!=",
+              "left": {
+                "property_path": [
+                  "test",
+                  "right",
+                  "node_type"
+                ]
+              }
+            }
+          },
+          {
+            "check_type": "property_check",
+            "property_path": [
+              "test",
+              "ops",
+              "0",
+              "left",
+              "node_type"
+            ],
+            "condition": {
+              "operator": "!=",
+              "left": {
+                "property_path": [
+                  "test",
+                  "ops",
+                  "0",
+                  "right",
+                  "node_type"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "type_compatibility_check",
+            "property_path": [
+              "test"
+            ],
+            "compatible_types": [
+              [
+                "Str",
+                "Str"
+              ],
+              [
+                "Num",
+                "Num"
+              ],
+              [
+                "NameConstant",
+                "NameConstant"
+              ],
+              [
+                "List",
+                "List"
+              ],
+              [
+                "Dict",
+                "Dict"
+              ],
+              [
+                "Tuple",
+                "Tuple"
+              ],
+              [
+                "Set",
+                "Set"
+              ],
+              [
+                "Bool",
+                "Bool"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "operator": "not",
+        "conditions": [
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "test",
+              "ops",
+              "0",
+              "left",
+              "value"
+            ],
+            "value": "None"
+          },
+          {
+            "check_type": "property_exists",
+            "property_path": [
+              "test",
+              "ops",
+              "0",
+              "right",
+              "value"
+            ],
+            "value": "None"
+          }
+        ]
+      }
+    ]
+  }
+}

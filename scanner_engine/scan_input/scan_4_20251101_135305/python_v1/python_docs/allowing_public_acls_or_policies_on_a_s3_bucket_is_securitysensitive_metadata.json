@@ -1,0 +1,125 @@
+{
+  "rule_id": "allowing_public_acls_or_policies_on_a_s3_bucket_is_securitysensitive",
+  "title": "Allowing public ACLs or policies on a S3 bucket is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Allowing public ACLs or policies on an Amazon S3 bucket can expose sensitive data to unauthorized users. S3 buckets are used to store data in the cloud, and improper configuration of access control lists (ACLs) or bucket policies can make the data publicly accessible. This is a security-sensitive operation that can lead to data breaches, compliance violations, and unauthorized access to critical information.",
+  "message": "Make sure that granting public access to this S3 bucket is safe here.",
+  "remediation": {
+    "func": "Constant\/Issue",
+    "constantCost": "5min"
+  },
+  "tags": ["security", "aws", "s3", "privacy", "cwe"],
+  "impact": "High",
+  "recommendation": "Ensure that S3 buckets are not publicly accessible unless explicitly required. Use private ACLs and bucket policies, implement proper IAM policies, and regularly audit bucket permissions.",
+  "references": [
+    {
+      "name": "AWS S3 Security Best Practices",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html"
+    },
+    {
+      "name": "CWE-284: Improper Access Control",
+      "url": "https://cwe.mitre.org/data/definitions/284.html"
+    },
+    {
+      "name": "OWASP Top 10 2021 - A01 Broken Access Control",
+      "url": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "code": "import boto3\n\ns3 = boto3.client('s3')\n\n# Noncompliant: Setting bucket ACL to public-read\ns3.put_bucket_acl(\n    Bucket='my-bucket',\n    ACL='public-read'\n)\n\n# Noncompliant: Setting bucket ACL to public-read-write\ns3.put_bucket_acl(\n    Bucket='my-bucket',\n    ACL='public-read-write'\n)\n\n# Noncompliant: Creating bucket with public ACL\ns3.create_bucket(\n    Bucket='my-bucket',\n    ACL='public-read'\n)\n\n# Noncompliant: Bucket policy allowing public access\npublic_policy = {\n    'Version': '2012-10-17',\n    'Statement': [{\n        'Effect': 'Allow',\n        'Principal': '*',\n        'Action': 's3:GetObject',\n        'Resource': 'arn:aws:s3:::my-bucket/*'\n    }]\n}\ns3.put_bucket_policy(\n    Bucket='my-bucket',\n    Policy=json.dumps(public_policy)\n)"
+      }
+    ],
+    "compliant": [
+      {
+        "code": "import boto3\nimport json\n\ns3 = boto3.client('s3')\n\n# Compliant: Using private ACL (default)\ns3.put_bucket_acl(\n    Bucket='my-bucket',\n    ACL='private'\n)\n\n# Compliant: Creating bucket without public ACL\ns3.create_bucket(\n    Bucket='my-bucket'\n)\n\n# Compliant: Bucket policy with specific principal\nrestricted_policy = {\n    'Version': '2012-10-17',\n    'Statement': [{\n        'Effect': 'Allow',\n        'Principal': {'AWS': 'arn:aws:iam::123456789012:user/specific-user'},\n        'Action': 's3:GetObject',\n        'Resource': 'arn:aws:s3:::my-bucket/*'\n    }]\n}\ns3.put_bucket_policy(\n    Bucket='my-bucket',\n    Policy=json.dumps(restricted_policy)\n)\n\n# Compliant: Blocking public access\ns3.put_public_access_block(\n    Bucket='my-bucket',\n    PublicAccessBlockConfiguration={\n        'BlockPublicAcls': True,\n        'IgnorePublicAcls': True,\n        'BlockPublicPolicy': True,\n        'RestrictPublicBuckets': True\n    }\n)"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "Infrastructure Security",
+    "subcategory": "Cloud Storage Security",
+    "severity": "High",
+    "phase": "Implementation"
+  },
+  "why_is_this_an_issue": "Making S3 buckets publicly accessible can lead to serious security vulnerabilities. When ACLs or bucket policies are configured to allow public access, any user on the internet can potentially access, read, or even modify the data stored in the bucket. This can result in data breaches, exposure of sensitive information, compliance violations, and unauthorized data manipulation. Even if the data seems non-sensitive, public buckets can be used for malicious purposes such as hosting malware or conducting DDoS attacks at the bucket owner's expense.",
+  "how_to_fix": [
+    "Remove public ACLs: Use 'private' ACL instead of 'public-read' or 'public-read-write'",
+    "Restrict bucket policies: Replace wildcard principals ('*') with specific AWS account IDs or IAM users",
+    "Enable S3 Block Public Access: Use put_public_access_block to prevent accidental public access",
+    "Implement least privilege: Grant only the minimum necessary permissions to specific users or services",
+    "Regular auditing: Periodically review bucket permissions and access patterns",
+    "Use pre-signed URLs: For temporary public access, use pre-signed URLs instead of making buckets public"
+  ],
+  "security_mappings": {
+    "cwe": ["CWE-284", "CWE-732", "CWE-668"],
+    "owasp": ["A01:2021-Broken Access Control", "A02:2021-Cryptographic Failures"],
+    "cert": ["MSC01-J"],
+    "sans": ["CWE-284"]
+  },
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["put_bucket_acl"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keywords", "*", "value", "value"],
+            "forbidden_values": ["public-read", "public-read-write"]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["create_bucket"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["keywords", "*", "value", "value"],
+            "forbidden_values": ["public-read", "public-read-write"]
+          }
+        ]
+      },
+      {
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["put_bucket_policy"]
+          },
+          {
+            "check_type": "regex",
+            "property_path": ["keywords", "*", "value", "value"],
+            "regex": ".*\"Principal\"\\s*:\\s*\"\\*\".*"
+          }
+        ]
+      }
+    ]
+  }
+}

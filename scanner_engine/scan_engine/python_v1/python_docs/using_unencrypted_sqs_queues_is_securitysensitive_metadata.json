@@ -1,0 +1,264 @@
+{
+  "rule_id": "using_unencrypted_sqs_queues_is_securitysensitive",
+  "title": "Using unencrypted SQS queues is security-sensitive",
+  "type": "SECURITY_HOTSPOT",
+  "code": {
+    "impacts": {
+      "RELIABILITY": "LOW",
+      "SECURITY": "HIGH"
+    },
+    "attribute": "TRUSTWORTHY"
+  },
+  "status": "ready",
+  "defaultSeverity": "Major",
+  "description": "Amazon Simple Queue Service (SQS) queues can be configured with server-side encryption to protect message data at rest and in transit. When SQS queues are created without encryption, sensitive message content becomes vulnerable to unauthorized access, data breaches, and compliance violations. Unencrypted queues expose message data to potential interception and unauthorized access, especially in shared or multi-tenant environments. This security risk is particularly critical when processing personally identifiable information (PII), financial data, or other sensitive business information through SQS messages.",
+  "message": "Make sure that using unencrypted SQS queues is safe here.",
+  "remediation": {
+    "func": "Constant/Issue",
+    "constantCost": "15min"
+  },
+  "tags": [
+    "security",
+    "aws",
+    "cwe",
+    "owasp-a02",
+    "sans-top25-porous",
+    "encryption",
+    "sqs"
+  ],
+  "impact": {
+    "security": "High impact as unencrypted SQS queues can expose sensitive message data to unauthorized access and potential data breaches",
+    "reliability": "Low impact on system reliability, but high risk of compliance violations and data exposure incidents"
+  },
+  "recommendation": "Enable server-side encryption for SQS queues using AWS Key Management Service (KMS) customer managed keys (CMK) or AWS managed keys. Configure encryption at queue creation time and ensure all message producers and consumers are properly configured to handle encrypted queues.",
+  "references": [
+    {
+      "title": "SonarSource Python Rules - Using unencrypted SQS queues is security-sensitive",
+      "url": "https://rules.sonarsource.com/python/RSPEC-6330"
+    },
+    {
+      "title": "AWS SQS Developer Guide - Server-Side Encryption",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html"
+    },
+    {
+      "title": "AWS SQS API Reference - CreateQueue",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_CreateQueue.html"
+    },
+    {
+      "title": "AWS CDK Documentation - SQS Queue Encryption",
+      "url": "https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_sqs.Queue.html#encryption"
+    },
+    {
+      "title": "CWE-311 - Missing Encryption of Sensitive Data",
+      "url": "https://cwe.mitre.org/data/definitions/311.html"
+    }
+  ],
+  "examples": {
+    "noncompliant": [
+      {
+        "description": "Creating SQS queue without encryption using boto3",
+        "code": "import boto3\n\n# Noncompliant: SQS queue created without encryption\nsqs = boto3.client('sqs')\nqueue_url = sqs.create_queue(\n    QueueName='my-queue',\n    Attributes={\n        'VisibilityTimeoutSeconds': '60',\n        'MessageRetentionPeriod': '1209600'\n    }\n)"
+      },
+      {
+        "description": "AWS CDK SQS queue without encryption",
+        "code": "from aws_cdk import aws_sqs as sqs\nfrom aws_cdk import core\n\nclass MyStack(core.Stack):\n    def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:\n        super().__init__(scope, id, **kwargs)\n        \n        # Noncompliant: SQS queue without encryption\n        queue = sqs.Queue(\n            self, \"MyQueue\",\n            queue_name=\"my-queue\",\n            visibility_timeout=core.Duration.seconds(60)\n        )"
+      },
+      {
+        "description": "CloudFormation template with unencrypted SQS queue",
+        "code": "from aws_cdk import aws_sqs as sqs\n\n# Noncompliant: CfnQueue without KmsMasterKeyId\nqueue = sqs.CfnQueue(\n    self, \"MyCfnQueue\",\n    queue_name=\"my-queue\",\n    visibility_timeout_seconds=60,\n    message_retention_period=1209600\n)"
+      },
+      {
+        "description": "SQS resource creation without encryption attributes",
+        "code": "import boto3\n\n# Noncompliant: Missing KmsMasterKeyId and KmsDataKeyReusePeriodSeconds\nsqs_resource = boto3.resource('sqs')\nqueue = sqs_resource.create_queue(\n    QueueName='my-sensitive-queue',\n    Attributes={\n        'DelaySeconds': '5',\n        'MaxReceiveCount': '3'\n    }\n)"
+      },
+      {
+        "description": "Queue attributes without encryption configuration",
+        "code": "import boto3\n\nsqs = boto3.client('sqs')\n\n# Noncompliant: Updating queue attributes without encryption\nsqs.set_queue_attributes(\n    QueueUrl=queue_url,\n    Attributes={\n        'VisibilityTimeoutSeconds': '30',\n        'ReceiveMessageWaitTimeSeconds': '10'\n        # Missing KmsMasterKeyId\n    }\n)"
+      }
+    ],
+    "compliant": [
+      {
+        "description": "Creating SQS queue with AWS managed KMS encryption",
+        "code": "import boto3\n\n# Compliant: SQS queue with AWS managed KMS encryption\nsqs = boto3.client('sqs')\nqueue_url = sqs.create_queue(\n    QueueName='my-secure-queue',\n    Attributes={\n        'VisibilityTimeoutSeconds': '60',\n        'MessageRetentionPeriod': '1209600',\n        'KmsMasterKeyId': 'alias/aws/sqs',  # AWS managed key\n        'KmsDataKeyReusePeriodSeconds': '300'\n    }\n)"
+      },
+      {
+        "description": "AWS CDK SQS queue with customer managed KMS key",
+        "code": "from aws_cdk import aws_sqs as sqs\nfrom aws_cdk import aws_kms as kms\nfrom aws_cdk import core\n\nclass MyStack(core.Stack):\n    def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:\n        super().__init__(scope, id, **kwargs)\n        \n        # Create customer managed KMS key\n        kms_key = kms.Key(\n            self, \"MyQueueKey\",\n            description=\"KMS key for SQS queue encryption\"\n        )\n        \n        # Compliant: SQS queue with customer managed KMS encryption\n        queue = sqs.Queue(\n            self, \"MySecureQueue\",\n            queue_name=\"my-secure-queue\",\n            visibility_timeout=core.Duration.seconds(60),\n            encryption=sqs.QueueEncryption.KMS,\n            encryption_master_key=kms_key\n        )"
+      },
+      {
+        "description": "CloudFormation template with encrypted SQS queue",
+        "code": "from aws_cdk import aws_sqs as sqs\n\n# Compliant: CfnQueue with KMS encryption\nqueue = sqs.CfnQueue(\n    self, \"MySecureCfnQueue\",\n    queue_name=\"my-secure-queue\",\n    visibility_timeout_seconds=60,\n    message_retention_period=1209600,\n    kms_master_key_id=\"alias/aws/sqs\",\n    kms_data_key_reuse_period_seconds=300\n)"
+      },
+      {
+        "description": "Using specific customer managed KMS key ARN",
+        "code": "import boto3\n\n# Compliant: SQS queue with specific KMS key ARN\nsqs = boto3.client('sqs')\nkms_key_arn = \"arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012\"\n\nqueue_url = sqs.create_queue(\n    QueueName='my-encrypted-queue',\n    Attributes={\n        'KmsMasterKeyId': kms_key_arn,\n        'KmsDataKeyReusePeriodSeconds': '300'\n    }\n)"
+      },
+      {
+        "description": "Queue with proper encryption and access policy",
+        "code": "import boto3\nimport json\n\nsqs = boto3.client('sqs')\n\n# Compliant: Encrypted queue with proper access policy\nqueue_policy = {\n    \"Version\": \"2012-10-17\",\n    \"Statement\": [\n        {\n            \"Effect\": \"Allow\",\n            \"Principal\": {\"AWS\": \"arn:aws:iam::123456789012:root\"},\n            \"Action\": \"sqs:*\",\n            \"Resource\": \"*\"\n        }\n    ]\n}\n\nqueue_url = sqs.create_queue(\n    QueueName='secure-encrypted-queue',\n    Attributes={\n        'KmsMasterKeyId': 'alias/aws/sqs',\n        'KmsDataKeyReusePeriodSeconds': '300',\n        'Policy': json.dumps(queue_policy)\n    }\n)"
+      }
+    ]
+  },
+  "devsecops": {
+    "category": "cloud-security",
+    "priority": "high",
+    "remediation_guidance": "Enable SQS server-side encryption with KMS"
+  },
+  "why_is_this_an_issue": "Amazon SQS queues without encryption expose sensitive message data to potential security risks. When messages are stored in unencrypted queues, they are vulnerable to unauthorized access from malicious actors who might gain access to the underlying storage infrastructure. This creates compliance risks for organizations handling sensitive data and violates security best practices for cloud-based message queuing systems. The lack of encryption also makes it difficult to meet regulatory requirements such as GDPR, HIPAA, and PCI DSS that mandate encryption of sensitive data at rest and in transit.",
+  "how_to_fix": [
+    {
+      "step": 1,
+      "description": "Identify all SQS queue creation and configuration code in your application"
+    },
+    {
+      "step": 2,
+      "description": "Choose an appropriate KMS key: AWS managed key (alias/aws/sqs) or customer managed key for better control"
+    },
+    {
+      "step": 3,
+      "description": "For boto3 clients, add 'KmsMasterKeyId' to the queue attributes during creation"
+    },
+    {
+      "step": 4,
+      "description": "For AWS CDK, set the encryption property to QueueEncryption.KMS and specify the encryption_master_key"
+    },
+    {
+      "step": 5,
+      "description": "Configure 'KmsDataKeyReusePeriodSeconds' (recommended: 300 seconds) to optimize performance"
+    },
+    {
+      "step": 6,
+      "description": "Update IAM policies to include necessary KMS permissions for queue encryption/decryption"
+    },
+    {
+      "step": 7,
+      "description": "Test queue operations to ensure encryption doesn't break existing message processing logic"
+    },
+    {
+      "step": 8,
+      "description": "Update monitoring and logging to account for encrypted queue operations"
+    }
+  ],
+  "security_mappings": {
+    "CWE": [
+      "CWE-311",
+      "CWE-312",
+      "CWE-326"
+    ],
+    "CERT": [
+      "MSC61-J"
+    ],
+    "OWASP": [
+      "A02:2021",
+      "A04:2021"
+    ]
+  },
+  "ruleSpecification": "RSPEC-6330",
+  "scope": "Main",
+  "securityStandards": {
+    "CWE": [311, 312, 326],
+    "OWASP Top 10 2021": ["A02", "A04"],
+    "SANS Top 25": ["CWE-311"]
+  },
+  "quickfix": "feasible",
+  "logic": {
+    "operator": "or",
+    "conditions": [
+      {
+        "comment": "Detect boto3 SQS create_queue calls without KmsMasterKeyId in Attributes",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["create_queue"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["func", "value", "id"],
+            "forbidden_values": ["sqs"]
+          },
+          {
+            "check_type": "not_contains",
+            "property_path": ["keywords", "*", "arg"],
+            "forbidden_values": ["KmsMasterKeyId"]
+          }
+        ]
+      },
+      {
+        "comment": "Detect AWS CDK SQS Queue instantiation without encryption configuration",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "id"],
+            "required_values": ["Queue"]
+          },
+          {
+            "check_type": "not_contains",
+            "property_path": ["keywords", "*", "arg"],
+            "forbidden_values": ["encryption", "encryption_master_key"]
+          }
+        ]
+      },
+      {
+        "comment": "Detect AWS CDK CfnQueue instantiation without kms_master_key_id",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "id"],
+            "required_values": ["CfnQueue"]
+          },
+          {
+            "check_type": "not_contains",
+            "property_path": ["keywords", "*", "arg"],
+            "forbidden_values": ["kms_master_key_id"]
+          }
+        ]
+      },
+      {
+        "comment": "Detect set_queue_attributes calls without KmsMasterKeyId",
+        "operator": "and",
+        "conditions": [
+          {
+            "check_type": "node_type",
+            "property_path": [],
+            "value": "Call"
+          },
+          {
+            "check_type": "equals",
+            "property_path": ["func", "attr"],
+            "required_values": ["set_queue_attributes"]
+          },
+          {
+            "check_type": "contains",
+            "property_path": ["func", "value", "id"],
+            "forbidden_values": ["sqs"]
+          },
+          {
+            "comment": "TODO: refine logic to check Attributes dict for missing KmsMasterKeyId",
+            "check_type": "contains",
+            "property_path": ["keywords", "*", "arg"],
+            "forbidden_values": ["Attributes"]
+          }
+        ]
+      }
+    ]
+  }
+}
